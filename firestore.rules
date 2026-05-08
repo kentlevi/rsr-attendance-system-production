@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Note: The following rules use `request.auth` which requires Firebase Authentication. 
+    // Since this project relies on a custom pin/password UI layer while in Preview Mode, 
+    // these rules are left open for development. They must be enabled when deploying to production with Auth.
+
+    // function isAdmin() {
+    //   return request.auth != null && get(/databases/$(database)/documents/adminAccounts/$(request.auth.uid)).data.role == "Admin";
+    // }
+    
+    // function isHR() {
+    //   return request.auth != null && get(/databases/$(database)/documents/adminAccounts/$(request.auth.uid)).data.role in ["Admin", "HR"];
+    // }
+
+    // function isEmployeeOwner(employeeId) {
+    //   return request.auth != null && request.auth.uid == employeeId;
+    // }
+
+    match /{document=**} {
+      allow read, write: if true; // OPEN FOR DEVELOPMENT PREVIEW
+    }
+
+    // -- Production Rules Example --
+    // match /adminAccounts/{accountId} {
+    //   allow read: if isHR();
+    //   allow write: if isAdmin();
+    // }
+
+    // match /allowances/{recordId} {
+    //   allow read: if isHR() || isEmployeeOwner(resource.data.employeeId);
+    //   allow write: if isAdmin(); // Only admins edit money
+    // }
+
+    // match /leaves/{requestId} {
+    //   allow read: if isHR() || isEmployeeOwner(resource.data.employeeId);
+    //   allow create: if isEmployeeOwner(request.resource.data.employeeId);
+    //   allow update: if isHR();
+    // }
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "Employee": {
+      "title": "Employee",
+      "description": "Information about an employee",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "pin": { "type": "string" },
+        "department": { "type": "string" },
+        "position": { "type": "string" },
+        "status": { "type": "string" },
+        "avatar": { "type": "string" },
+        "lastLogin": { "type": "string" },
+        "vlBalance": { "type": "number" },
+        "slBalance": { "type": "number" }
+      },
+      "required": ["name", "email", "pin"]
+    },
+    "AttendanceLog": {
+      "title": "AttendanceLog",
+      "description": "Log of employee attendance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string" },
+        "timeIn": { "type": "string" },
+        "timeOut": { "type": "string" },
+        "workHours": { "type": "string" },
+        "overtime": { "type": "string" },
+        "status": { "type": "string" },
+        "location": { "type": "string" }
+      },
+      "required": ["employeeId", "date"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "activeSite": { "type": "string" },
+        "sites": { "type": "array", "items": { "type": "string" } },
+        "dailyAllowance": { "type": "number" },
+        "otAllowance": { "type": "number" },
+        "awaySiteAllowance": { "type": "number" },
+        "awaySiteAllowanceRule": { "type": "string" },
+        "shiftStartTime": { "type": "string" },
+        "shiftEndTime": { "type": "string" },
+        "gracePeriodMins": { "type": "number" },
+        "lunchBreakStart": { "type": "string" },
+        "lunchBreakEnd": { "type": "string" },
+        "pmBreakStart": { "type": "string" },
+        "pmBreakEnd": { "type": "string" },
+        "autoTimeoutRule": { "type": "string" },
+        "smsEnabled": { "type": "boolean" },
+        "semaphoreApiKey": { "type": "string" },
+        "senderName": { "type": "string" },
+        "adminMobile": { "type": "string" },
+        "notificationGroup": { "type": "string" },
+        "logoDataUrl": { "type": "string" }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System or user notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "time": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "success", "user"] },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "message", "time", "type", "isRead"]
+    },
+    "UndertimeRequest": {
+      "title": "UndertimeRequest",
+      "description": "Request for undertime or lost time",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string" },
+        "type": { "type": "string" },
+        "timeLost": { "type": "string" },
+        "deduction": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["employeeId", "date", "type", "status"]
+    },
+    "LeaveRequest": {
+      "title": "LeaveRequest",
+      "description": "Request for leave of absence",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "required": ["employeeId", "startDate", "endDate", "type", "status", "reason"]
+    },
+    "AllowanceRecord": {
+      "title": "AllowanceRecord",
+      "description": "Daily allowance record for an employee",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string" },
+        "baseAllowance": { "type": "string" },
+        "otBonus": { "type": "string" },
+        "override": { "type": "string" },
+        "finalAmount": { "type": "string" },
+        "isOverride": { "type": "boolean" }
+      },
+      "required": ["employeeId", "date"]
+    },
+    "SmsLog": {
+      "title": "SmsLog",
+      "description": "Log of sent SMS messages",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "preview": { "type": "string" },
+        "status": { "type": "string", "enum": ["Delivered", "Failed", "Pending"] },
+        "sentAt": { "type": "string", "format": "date-time" },
+        "employeeId": { "type": "string" }
+      },
+      "required": ["name", "phone", "status", "sentAt"]
+    },
+    "IncidentReport": {
+      "title": "IncidentReport",
+      "description": "Log of an employee incident",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string" },
+        "acknowledged": { "type": "boolean" },
+        "acknowledgedAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["employeeId", "type", "date", "title", "description", "severity", "acknowledged", "createdBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/incidents/{incidentId}": {
+      "schema": "IncidentReport",
+      "description": "Employee incidents, infractions, merits, and accidents"
+    },
+    "/employees/{employeeId}": {
+      "schema": "Employee",
+      "description": "Collection of all employees"
+    },
+    "/attendance/{logId}": {
+      "schema": "AttendanceLog",
+      "description": "Attendance logs for all employees"
+    },
+    "/settings/config": {
+      "schema": "SystemSettings",
+      "description": "Global system settings document"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "System-wide notifications"
+    },
+    "/undertime/{requestId}": {
+      "schema": "UndertimeRequest",
+      "description": "Undertime requests"
+    },
+    "/leaves/{requestId}": {
+      "schema": "LeaveRequest",
+      "description": "Leave requests"
+    },
+    "/allowances/{recordId}": {
+      "schema": "AllowanceRecord",
+      "description": "Employee allowances"
+    },
+    "/sms_logs/{logId}": {
+      "schema": "SmsLog",
+      "description": "SMS communication logs"
+    },
+    "/test/connection": {
+      "schema": "object",
+      "description": "Used only for connectivity testing"
+    }
+  }
+}

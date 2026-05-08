@@ -1,0 +1,8 @@
+{
+  "name": "RSR Attendance System",
+  "description": "RSR Engineering Employee Management System with real-time biometric attendance, workforce insights, and interactive employee portal.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}

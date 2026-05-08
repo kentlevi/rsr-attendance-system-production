@@ -1,0 +1,185 @@
+import React, { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
+import { employeeService } from '../../services/EmployeeService';
+import { DataTable } from '../common/DataTable';
+import { Modal } from '../common/Modal';
+import { Select } from '../common/Select';
+import { DatePicker } from '../common/DatePicker';
+import { cn } from '../../lib/utils';
+
+export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
+  const { showToast } = useToast();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [employeeId, setEmployeeId] = useState('');
+  const [date, setDate] = useState('');
+  const [reason, setReason] = useState('');
+  const [records, setRecords] = useState<{id: string, empName: string, date: string, reason: string, status: string}[]>([]); 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const employees = employeeService.getAllEmployeesSync();
+
+  const handleFile = () => {
+    if (!employeeId || !date) {
+      showToast("Employee and date are required.", "warning");
+      return;
+    }
+    const emp = employees.find(e => e.data.id === employeeId);
+    setRecords(prev => [...prev, {
+      id: Math.random().toString(36).substring(7),
+      empName: emp?.data.name || 'Unknown',
+      date,
+      reason,
+      status: 'Pending'
+    }]);
+    showToast("Straight duty request submitted pending approval.", "success");
+    setIsModalOpen(false);
+    setEmployeeId('');
+    setDate('');
+    setReason('');
+  };
+
+  const approveRecord = (id: string) => {
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: 'Approved' } : r));
+    showToast("Request approved.", "success");
+  }
+
+  const rejectRecord = (id: string) => {
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: 'Rejected' } : r));
+    showToast("Request rejected.", "success");
+  }
+
+  const filteredRecords = records.filter(r => 
+    !searchQuery || 
+    r.empName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.reason.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const columns = [
+    {
+      header: 'Employee',
+      accessor: (record: typeof records[0]) => (
+        <span className="font-semibold text-[#1a1a1a]">{record.empName}</span>
+      ),
+    },
+    {
+      header: 'Date',
+      accessor: (record: typeof records[0]) => (
+        <span className="font-medium text-text-secondary">{record.date}</span>
+      ),
+    },
+    {
+      header: 'Reason',
+      accessor: (record: typeof records[0]) => (
+        <span className="text-sm text-text-secondary max-w-[200px] truncate block">{record.reason}</span>
+      ),
+    },
+    {
+      header: 'Status',
+      accessor: (record: typeof records[0]) => (
+        <span className={cn(
+          "px-2.5 py-1 rounded-md text-[13px] font-semibold",
+          record.status === 'Approved' ? "bg-emerald-50 text-emerald-700" :
+          record.status === 'Rejected' ? "bg-red-50 text-red-700" :
+          "bg-amber-50 text-amber-700"
+        )}>
+          {record.status}
+        </span>
+      ),
+    },
+    ...(!isAssistant ? [{
+      header: 'Actions',
+      accessor: (record: typeof records[0]) => (
+        record.status === 'Pending' ? (
+          <div className="flex justify-end gap-2">
+            <button onClick={() => approveRecord(record.id)} className="btn-secondary px-3 text-emerald-700 hover:bg-emerald-50">Approve</button>
+            <button onClick={() => rejectRecord(record.id)} className="btn-secondary px-3 text-red-700 hover:bg-red-50">Reject</button>
+          </div>
+        ) : null
+      ),
+      className: 'text-right',
+    }] : []),
+  ];
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-[#1a1a1a]">Straight Duty Records</h2>
+          <p className="text-text-secondary text-sm">View and manage employee straight duty records and approvals.</p>
+        </div>
+        {isAssistant && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="btn-primary"
+          >
+            <Plus size={18} className="mr-2" /> File Straight Duty
+          </button>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-border overflow-hidden">
+        <div className="p-4 border-b border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="relative w-full md:w-64">
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search..." 
+              className="control-field w-full"
+            />
+          </div>
+        </div>
+        
+        <DataTable
+          columns={columns}
+          data={filteredRecords}
+          emptyMessage="No straight duty records found."
+          totalItems={filteredRecords.length}
+          minHeight="320px"
+        />
+      </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="File Straight Duty"
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <button onClick={() => setIsModalOpen(false)} className="btn-secondary text-[14px]">Cancel</button>
+            <button onClick={handleFile} className="btn-primary text-[14px]">Submit Request</button>
+          </>
+        }
+      >
+        <div className="p-6 flex flex-col gap-6">
+          <Select
+            label="Select Employee"
+            value={employeeId}
+            onChange={e => setEmployeeId(e.target.value)}
+            options={employees.map(emp => ({ value: emp.data.id, label: emp.data.name }))}
+            placeholder="-- Choose --"
+          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label pl-1">Date</label>
+            <DatePicker 
+              value={date} 
+              onChange={setDate} 
+              placeholder="Select date" 
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-label pl-1">Reason</label>
+            <textarea 
+              className="control-field py-3 resize-none" 
+              rows={3} 
+              value={reason} 
+              onChange={e => setReason(e.target.value)} 
+              placeholder="Provide context..." 
+            />
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
