@@ -40,12 +40,10 @@ export interface SystemSettings {
   pmBreakEnd: string;
   autoTimeoutRule: string;
   smsEnabled: boolean;
-  semaphoreApiKey: string;
   senderName: string;
   adminMobile: string;
   notificationGroup: string;
   telegramEnabled: boolean;
-  telegramBotToken: string;
   telegramChatId: string;
   logoDataUrl?: string;
 }
@@ -67,12 +65,10 @@ const defaultSettings: SystemSettings = {
   pmBreakEnd: "15:15",
   autoTimeoutRule: "Out automatically after shift end time + grace period",
   smsEnabled: true,
-  semaphoreApiKey: "",
   senderName: "RSR-ATTEND",
   adminMobile: "+63 917 123 4567",
   notificationGroup: "Attendance Alerts",
   telegramEnabled: false,
-  telegramBotToken: "",
   telegramChatId: "",
 };
 

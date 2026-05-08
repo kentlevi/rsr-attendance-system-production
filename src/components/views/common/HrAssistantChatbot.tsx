@@ -3,6 +3,7 @@ import { Send, X, MessageSquare, Loader2, Bot, User } from 'lucide-react';
 import { cn } from "../../../lib/utils";
 import { useToast } from "../../../context/ToastContext";
 import { leaveService } from '../../../services/LeaveService';
+import { authenticatedFetch } from '../../../lib/api';
 
 interface Message {
   role: 'user' | 'assistant' | 'tool' | 'system';
@@ -70,7 +71,7 @@ Company Settings:
       let done = false;
       
       while(!done) {
-          const response = await fetch('/api/hr-assistant', {
+          const response = await authenticatedFetch('/api/hr-assistant', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

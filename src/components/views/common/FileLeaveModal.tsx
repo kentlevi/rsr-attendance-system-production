@@ -7,6 +7,7 @@ import { employeeService } from '../../../services/EmployeeService';
 import { Modal } from '../../common/Modal';
 import { Select } from '../../common/Select';
 import { DatePicker } from '../../common/DatePicker';
+import { authenticatedFetch } from '../../../lib/api';
 
 interface FileLeaveModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
     if (!leaveAiText.trim()) return;
     setIsParsingLeave(true);
     try {
-      const response = await fetch('/api/extract-leave', {
+      const response = await authenticatedFetch('/api/extract-leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: leaveAiText }),

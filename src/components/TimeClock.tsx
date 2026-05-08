@@ -12,6 +12,7 @@ import { PageLayout } from './layout/PageLayout';
 import { BreakPunchAction, calculateBreakPunchUpdate, calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 import { findBlockingIncompleteAttendance, getIncompleteAttendanceReviewUpdate } from '../lib/AttendanceApprovalRules';
 import { canEmployeeAccessAttendance } from '../lib/EmployeeAccessRules';
+import { attendancePhotoService } from '../services/AttendancePhotoService';
 
 interface TimeClockProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -150,13 +151,15 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     setIdentifiedEmpId(empId);
     setIdentifiedEmpName(emp.name);
 
-    const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     try {
       const logs = attendanceService.getAllLogs();
       const existingLog = logs.find(l => l.data.employeeId === empId && l.data.date === todayStr);
       const todayISO = new Date().toISOString().slice(0, 10);
+
+      const photoUrl = photo ? await attendancePhotoService.uploadPhoto(photo, empId, action) : null;
 
       if (action === "Time In") {
         const blockingIncompleteLog = findBlockingIncompleteAttendance(logs, empId, todayStr);
@@ -182,7 +185,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           if (existingLog) {
             await attendanceService.updateLog(existingLog.data.id, {
                timeIn: payroll.adjustedTimeIn,
-               imageIn: photo,
+               ...(photoUrl && { imageIn: photoUrl }),
                status: payroll.status,
                location: selectedSite,
                ...(userLat && { latitude: userLat }),
@@ -201,7 +204,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
               overtime: '-',
               status: payroll.status,
               location: selectedSite,
-              imageIn: photo,
+              ...(photoUrl && { imageIn: photoUrl }),
               ...(userLat && { latitude: userLat }),
               ...(userLng && { longitude: userLng }),
               ...(userDistance && { geofenceDistance: userDistance }),
@@ -233,7 +236,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           });
           await attendanceService.updateLog(existingLog.data.id, {
             timeOut: payroll.adjustedTimeOut,
-            imageOut: photo,
+            ...(photoUrl && { imageOut: photoUrl }),
             workHours: payroll.workHours,
             overtime: payroll.overtime,
             status: payroll.requiresApproval ? 'Pending Approval' : existingLog.data.status,

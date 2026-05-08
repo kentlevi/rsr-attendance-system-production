@@ -35,6 +35,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 import kotlin.math.sqrt
+import org.tensorflow.lite.Interpreter
+import java.io.FileInputStream
+import java.nio.channels.FileChannel
 
 private const val FACE_MATCH_THRESHOLD = 0.95f
 
@@ -294,23 +297,45 @@ class WebAppInterface(private val context: MainActivity, private val db: KioskDa
  * ML Kit detects faces and liveness signals, but it does not produce identity embeddings.
  */
 class FaceEmbeddingModel(private val context: MainActivity) {
+    private var interpreter: Interpreter? = null
+    
+    init {
+        try {
+            val assetFileDescriptor = context.assets.openFd("mobile_face_net.tflite")
+            val fileInputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
+            val fileChannel = fileInputStream.channel
+            val startOffset = assetFileDescriptor.startOffset
+            val declaredLength = assetFileDescriptor.declaredLength
+            val mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
+            interpreter = Interpreter(mappedByteBuffer)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun extractEmbedding(bitmap: Bitmap): FloatArray {
-        // TODO: Load assets/mobile_face_net.tflite and return its normalized embedding vector.
-        // This placeholder keeps the bridge contract stable while the model asset is added.
-        val resized = Bitmap.createScaledBitmap(bitmap, 16, 16, true)
-        val embedding = FloatArray(192)
-        var cursor = 0
-        for (y in 0 until resized.height) {
-            for (x in 0 until resized.width) {
-                if (cursor >= embedding.size) break
+        if (interpreter == null) return FloatArray(192)
+        
+        // MobileFaceNet usually expects 112x112 input
+        val resized = Bitmap.createScaledBitmap(bitmap, 112, 112, true)
+        val inputBuffer = ByteBuffer.allocateDirect(1 * 112 * 112 * 3 * 4)
+        inputBuffer.order(ByteOrder.nativeOrder())
+        
+        for (y in 0 until 112) {
+            for (x in 0 until 112) {
                 val pixel = resized.getPixel(x, y)
-                val r = (pixel shr 16 and 0xff) / 255f
-                val g = (pixel shr 8 and 0xff) / 255f
-                val b = (pixel and 0xff) / 255f
-                embedding[cursor++] = (r + g + b) / 3f
+                // Normalize to [-1, 1]
+                inputBuffer.putFloat(((pixel shr 16 and 0xFF) - 127.5f) / 128f)
+                inputBuffer.putFloat(((pixel shr 8 and 0xFF) - 127.5f) / 128f)
+                inputBuffer.putFloat(((pixel and 0xFF) - 127.5f) / 128f)
             }
         }
-        return l2Normalize(embedding)
+        
+        // Typical MobileFaceNet output is 192 or 128 dimensions. We use 192 here.
+        val outputBuffer = Array(1) { FloatArray(192) }
+        interpreter?.run(inputBuffer, outputBuffer)
+        
+        return l2Normalize(outputBuffer[0])
     }
 
     private fun l2Normalize(values: FloatArray): FloatArray {

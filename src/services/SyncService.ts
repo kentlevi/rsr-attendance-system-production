@@ -61,7 +61,7 @@ export class SyncService {
         try {
           // Construct the required AttendanceLog shape based on the punch
           const dateObj = new Date(punch.timestamp);
-          const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+          const dateStr = dateObj.toLocaleDateString('en-CA'); // YYYY-MM-DD
           const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
           // Smart mapping: check if log for today already exists

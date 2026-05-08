@@ -1,110 +1,40 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, User } from 'lucide-react';
 import { PageLayout } from './layout/PageLayout';
-import { adminAccountService, AdminAccountRecord } from '../services/AdminAccountService';
+import { auth } from '../lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '../context/ToastContext';
 
 interface AdminLoginProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
 }
 
-const ADMIN_ACCOUNTS = {
-  admin: {
-    fullName: "Admin User",
-    username: "admin",
-    email: "admin@rsrengineering.com",
-    department: "Administration",
-    mobile: "+63 917 123 4567",
-    position: "System Administrator",
-    gender: "Male",
-    dateRegistered: "January 5, 2024",
-    address: "RSR Engineering Office, Cebu City, Philippines",
-    lastLogin: "May 10, 2024 08:45 AM",
-    timezone: "(GMT+08:00) Asia/Manila",
-    role: "Administrator",
-    avatar: "https://i.pravatar.cc/150?img=11",
-  },
-  assistant: {
-    fullName: "Assistant User",
-    username: "assistant",
-    email: "assistant@rsrengineering.com",
-    department: "Administration",
-    mobile: "+63 917 765 4321",
-    position: "Administrative Assistant",
-    gender: "Female",
-    dateRegistered: "January 5, 2024",
-    address: "RSR Engineering Office, Cebu City, Philippines",
-    lastLogin: "May 10, 2024 08:45 AM",
-    timezone: "(GMT+08:00) Asia/Manila",
-    role: "Assistant",
-    avatar: "https://i.pravatar.cc/150?img=47",
-  },
-};
-
-const LOGIN_MODES = {
-  admin: {
-    title: "Admin access",
-    helper: "Enter your admin credentials to continue.",
-    password: "admin",
-    switchLabel: "Assistant Login",
-    switchTargetLabel: "Assistant access",
-    account: ADMIN_ACCOUNTS.admin,
-  },
-  assistant: {
-    title: "Assistant access",
-    helper: "Enter your assistant credentials to continue.",
-    password: "assistant",
-    switchLabel: "Admin Login",
-    switchTargetLabel: "Admin access",
-    account: ADMIN_ACCOUNTS.assistant,
-  },
-};
-
 export default function AdminLogin({ onNavigate }: AdminLoginProps) {
-  const [loginMode, setLoginMode] = useState<keyof typeof LOGIN_MODES>('admin');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const activeLogin = LOGIN_MODES[loginMode];
-
-  const completeLogin = (loginId: keyof typeof LOGIN_MODES, account: typeof ADMIN_ACCOUNTS.admin) => {
-    sessionStorage.setItem('rsr_active_role', 'admin');
-    sessionStorage.setItem('rsr_admin_login_id', loginId);
-    sessionStorage.setItem('rsr_admin_account', JSON.stringify(account));
-    onNavigate('admin');
-  };
+  const { showToast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoggingIn(true);
+    setLoginError("");
 
     try {
-      const account = await adminAccountService.getAccount(loginMode, {
-        ...activeLogin.account,
-        password: activeLogin.password,
-      } as AdminAccountRecord);
-
-      if (password.trim() === account.password) {
-        const { password: _password, ...sessionAccount } = account;
-        setLoginError("");
-        completeLogin(loginMode, sessionAccount);
-        return;
-      }
-
-      setLoginError("Invalid password. Please try again.");
-    } catch (error) {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Wait for authStore to update and role to be assigned.
+      showToast("Login successful!", "success");
+      // The auth observer in App.tsx or similar usually handles routing,
+      // but we navigate to admin here safely.
+      onNavigate('admin');
+    } catch (error: any) {
       console.error(error);
-      setLoginError("Unable to verify login. Check Firebase connection.");
+      setLoginError("Invalid credentials. Please try again.");
     } finally {
       setIsLoggingIn(false);
     }
-  };
-
-  const toggleLoginMode = () => {
-    setLoginMode((mode) => (mode === 'admin' ? 'assistant' : 'admin'));
-    setPassword('');
-    setLoginError('');
-    setShowPassword(false);
   };
 
   return (
@@ -119,11 +49,28 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
               <path d="M10 11.5V10C10 8.89543 10.8954 8 12 8C13.1046 8 14 8.89543 14 10V11.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
-          <h1 className="text-[28px] font-bold text-text-primary">{activeLogin.title}</h1>
-          <p className="text-[16px] text-text-secondary">{activeLogin.helper}</p>
+          <h1 className="text-[28px] font-bold text-text-primary">System Access</h1>
+          <p className="text-[16px] text-text-secondary">Sign in with your administrative account.</p>
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <label className="block text-[16px] font-medium text-text-primary">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setLoginError("");
+              }}
+              placeholder="Enter your email"
+              className={`control-field h-12 px-4 ${
+                loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
+              }`}
+              autoFocus
+            />
+          </div>
+
           <div className="flex flex-col gap-2">
             <label className="block text-[16px] font-medium text-text-primary">Password</label>
             <div className="relative">
@@ -138,7 +85,6 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                 className={`control-field h-12 px-4 pr-12 ${
                   loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
                 }`}
-                autoFocus
               />
               <button
                 type="button"
@@ -160,27 +106,9 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
             disabled={isLoggingIn}
             className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoggingIn ? "Checking" : "Login"}
+            {isLoggingIn ? "Authenticating..." : "Login"}
           </button>
         </form>
-
-        <div className="flex flex-col pt-6 border-t border-border/60 relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3">
-            <span className="text-[14px] font-medium text-text-muted">OR</span>
-          </div>
-          
-          <button 
-            type="button"
-            onClick={toggleLoginMode}
-            className="btn-secondary w-full text-primary"
-          >
-            <User size={18} strokeWidth={2.5} />
-            {activeLogin.switchLabel}
-          </button>
-          <p className="pt-3 text-center text-[13px] font-medium text-text-muted">
-            Switch to {activeLogin.switchTargetLabel}
-          </p>
-        </div>
       </div>
     </PageLayout>
   );

@@ -23,6 +23,7 @@ import { facialRecognitionService } from '../services/FacialRecognitionService';
 import { PageLayout } from './layout/PageLayout';
 import ProfileView from './views/ProfileView';
 import { HrAssistantChatbot } from './views/common/HrAssistantChatbot';
+import { authenticatedFetch } from '../lib/api';
 
 interface EmployeePortalProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -192,7 +193,12 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
         });
       }
 
-      if (!employee || employee.data.pin !== pin) {
+      const msgUint8 = new TextEncoder().encode(pin);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+      if (!employee || (employee.data.pin !== pin && employee.data.pin !== hashedPin)) {
         console.error("Login failed. Employees available:", employees.map(e => e.data.email));
         showToast("Invalid employee credentials.", "error");
         return;
@@ -279,7 +285,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     if (!leaveAiText.trim()) return;
     setIsParsingLeave(true);
     try {
-      const response = await fetch('/api/extract-leave', {
+      const response = await authenticatedFetch('/api/extract-leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: leaveAiText }),

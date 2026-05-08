@@ -3,6 +3,7 @@ import { attendanceService } from './AttendanceService';
 import { leaveService } from './LeaveService';
 import { calculateAbsenceStreak } from '../lib/AbsenceRules';
 import { getEmployeeStatusTransitionUpdate } from '../lib/EmployeeStatusRules';
+import { authenticatedFetch } from '../lib/api';
 
 class AwolService {
   async processAwolAlerts() {
@@ -61,7 +62,7 @@ class AwolService {
 
     try {
       // Call the Semaphore SMS API endpoint implemented in server.ts
-      const response = await fetch('/api/send-sms', {
+      const response = await authenticatedFetch('/api/send-sms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

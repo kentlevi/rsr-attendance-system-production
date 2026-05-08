@@ -5,13 +5,38 @@ import fs from "fs/promises";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import cron from "node-cron";
+import * as admin from "firebase-admin";
 
 dotenv.config({ path: ".env.local" });
+
+// Initialize Firebase Admin
+if (admin.apps.length === 0) {
+  admin.initializeApp({
+      projectId: "gen-lang-client-0587506116",
+  });
+}
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const DB_FILE = path.join(process.cwd(), "employees-db.json");
 const SETTINGS_FILE = path.join(process.cwd(), "settings-db.json");
 const SMS_LOGS_FILE = path.join(process.cwd(), "sms-logs-db.json");
+
+// Middleware to verify Firebase Auth token
+const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    const token = authHeader.split("Bearer ")[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    (req as any).user = decodedToken;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+};
+
 
 async function getSmsLogsFile() {
   try {
@@ -174,7 +199,7 @@ async function startServer() {
   });
 
   // API Route for Semaphore SMS
-  app.get("/api/sms-logs", async (req, res) => {
+  app.get("/api/sms-logs", verifyAuth, async (req, res) => {
     try {
       const logs = await getSmsLogsFile();
       res.json({ success: true, logs });
@@ -183,7 +208,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/send-sms", async (req, res) => {
+  app.post("/api/send-sms", verifyAuth, async (req, res) => {
     try {
       const { phone, message, sendername, apikey, employeeName } = req.body;
       const params = new URLSearchParams({
@@ -226,7 +251,7 @@ async function startServer() {
   });
 
   // AI Endpoint for Leave Extraction
-  app.post("/api/extract-leave", async (req, res) => {
+  app.post("/api/extract-leave", verifyAuth, async (req, res) => {
     try {
       const { text } = req.body;
       const response = await ai.models.generateContent({
@@ -264,7 +289,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/hr-assistant", async (req, res) => {
+  app.post("/api/hr-assistant", verifyAuth, async (req, res) => {
     try {
       const { messages, context } = req.body;
       // Handle the case where the last message is a tool response
@@ -343,7 +368,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/sync/employees", async (req, res) => {
+  app.post("/api/sync/employees", verifyAuth, async (req, res) => {
     const employee = req.body;
     if (!employee?.empCode) {
       res.status(400).json({ success: false, error: "empCode is required" });
@@ -365,7 +390,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/sync/punches", async (req, res) => {
+  app.post("/api/sync/punches", verifyAuth, async (req, res) => {
     const punches = Array.isArray(req.body?.punches) ? req.body.punches : [];
     res.json({
       success: true,

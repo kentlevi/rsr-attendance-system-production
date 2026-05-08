@@ -5,6 +5,7 @@ import { TimePicker } from "../common/TimePicker";
 import { Select } from "../common/Select";
 import { settingsService, SystemSettings } from "../../services/SettingsService";
 import { useToast } from "../../context/ToastContext";
+import { authenticatedFetch } from "../../lib/api";
 import {
   Save,
   Info,
@@ -72,22 +73,12 @@ export function SettingsView() {
     setTestSmsStatus("sending");
     setTestSmsError("");
     try {
-      if (!settings.semaphoreApiKey) {
-        // Simulated success when no API key is set for demo purposes
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setTestSmsStatus("success");
-        showToast("Test SMS sent successfully (Simulated)");
-        setTimeout(() => setTestSmsStatus("idle"), 3000);
-        return;
-      }
-
-      const response = await fetch("/api/send-sms", {
+      const response = await authenticatedFetch("/api/send-sms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone: settings.adminMobile,
           message: `This is a test message from the system.`,
-          apikey: settings.semaphoreApiKey,
           sendername: settings.senderName
         }),
       });
@@ -482,27 +473,6 @@ export function SettingsView() {
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
-                Semaphore API Key
-              </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={settings.semaphoreApiKey}
-                  onChange={e => handleUpdate("semaphoreApiKey", e.target.value)}
-                  className={cn("control-field pr-10", !showApiKey && "tracking-[0.25em]")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors"
-                >
-                  {showApiKey ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
-              <label className="text-label">
                 Sender Name
               </label>
               <input
@@ -609,27 +579,6 @@ export function SettingsView() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
-              <label className="text-label">
-                Bot Token
-              </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={settings.telegramBotToken || ""}
-                  onChange={e => handleUpdate("telegramBotToken", e.target.value)}
-                  className={cn("control-field pr-10", !showApiKey && "tracking-[0.25em]")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors"
-                >
-                  {showApiKey ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
-              </div>
-            </div>
-
             <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Chat ID
