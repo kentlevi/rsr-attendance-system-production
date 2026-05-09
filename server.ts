@@ -131,40 +131,47 @@ async function startServer() {
 
   app.post("/api/login-employee", async (req, res) => {
     try {
-      const { pin } = req.body;
-      const employees = await getEmployeesFile();
-      const employee = employees.find((e: any) => e.pin === pin);
-      
-      if (!employee) {
-        // Fallback to checking hashed pin against Firestore if not found in db.json
-        // Wait, server.ts reads employees-db.json above.
-        // Let's implement full check:
-        // Actually, employee list is also in firestore. Let's fetch from Firestore:
-        const db = admin.firestore();
-        const empsSnap = await db.collection("employees").get();
-        let foundEmp = null;
-        for (const doc of empsSnap.docs) {
-            const data = doc.data();
-            const msgUint8 = new TextEncoder().encode(pin);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-            if (data.pin === pin || data.pin === hashedPin) {
-                foundEmp = { ...data, id: doc.id };
-                break;
-            }
-        }
+      const { loginId, pin } = req.body;
+      const db = admin.firestore();
+      const empsSnap = await db.collection("employees").get();
+      let foundEmp = null;
 
-        if (!foundEmp) {
-            return res.status(401).json({ success: false, error: "Invalid PIN" });
-        }
-        
-        const token = await admin.auth().createCustomToken(foundEmp.id, { role: "employee" });
-        return res.json({ success: true, token, employee: foundEmp });
+      for (const doc of empsSnap.docs) {
+          const data = doc.data();
+          const empIdMatches = data.id?.toLowerCase() === loginId || doc.id.toLowerCase() === loginId;
+          const emailMatches = data.email?.toLowerCase() === loginId;
+          
+          if (empIdMatches || emailMatches) {
+              // Now check PIN
+              let pinMatches = false;
+              if (data.pin === pin) {
+                  pinMatches = true; // Plaintext fallback
+              } else if (data.pin?.startsWith("$2b$") || data.pin?.startsWith("$2a$")) {
+                  pinMatches = await bcrypt.compare(pin, data.pin);
+              } else {
+                  // Legacy SHA-256 fallback
+                  const msgUint8 = new TextEncoder().encode(pin);
+                  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+                  const hashArray = Array.from(new Uint8Array(hashBuffer));
+                  const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+                  if (data.pin === hashedPin) {
+                      pinMatches = true;
+                  }
+              }
+
+              if (pinMatches) {
+                  foundEmp = { ...data, id: doc.id };
+                  break;
+              }
+          }
       }
 
-      const token = await admin.auth().createCustomToken(employee.id, { role: "employee" });
-      res.json({ success: true, token, employee });
+      if (!foundEmp) {
+          return res.status(401).json({ success: false, error: "Invalid employee credentials." });
+      }
+      
+      const token = await admin.auth().createCustomToken(foundEmp.id, { role: "employee" });
+      res.json({ success: true, token, employee: foundEmp });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }

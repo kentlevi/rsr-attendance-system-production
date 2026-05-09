@@ -171,7 +171,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       const response = await fetch('/api/login-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin })
+        body: JSON.stringify({ loginId, pin })
       });
 
       const result = await response.json();
