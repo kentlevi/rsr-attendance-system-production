@@ -39,13 +39,22 @@ vi.mock('firebase/firestore', () => {
 
 vi.mock('firebase/auth', () => ({
   getAuth: vi.fn(() => ({
-    currentUser: { uid: 'admin-1', email: 'admin@rsrengineering.test.com' },
-    onAuthStateChanged: vi.fn((callback) => {
-      callback({ uid: 'admin-1', email: 'admin@rsrengineering.test.com' });
-      return vi.fn();
-    }),
+    currentUser: { uid: 'admin-1', email: 'admin@rsrengineering.test.com' }
   })),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    // wait for a microtask to mock auth state resolution
+    Promise.resolve().then(() => {
+        callback({ 
+           uid: 'admin-1', 
+           email: 'admin@rsrengineering.test.com',
+           getIdTokenResult: async () => ({ claims: { role: 'admin' } }) 
+        });
+    });
+    return vi.fn();
+  }),
   signInWithPopup: vi.fn(),
+  signInWithCustomToken: vi.fn(),
+  signOut: vi.fn(),
   GoogleAuthProvider: vi.fn(),
 }));
 

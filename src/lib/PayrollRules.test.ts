@@ -19,12 +19,10 @@ const settings: SystemSettings = {
   pmBreakEnd: '15:15',
   autoTimeoutRule: 'Out automatically after shift end time + grace period',
   smsEnabled: true,
-  semaphoreApiKey: '',
   senderName: 'RSR-ATTEND',
   adminMobile: '',
   notificationGroup: 'Attendance Alerts',
   telegramEnabled: false,
-  telegramBotToken: '',
   telegramChatId: '',
 };
 

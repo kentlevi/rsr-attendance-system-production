@@ -30,7 +30,10 @@ export const monthlyLeaveReplenishment = functions.pubsub.schedule('0 0 1 * *')
 export const dailyAwolDetection = functions.pubsub.schedule('59 23 * * *')
   .timeZone('Asia/Manila')
   .onRun(async (context) => {
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    // Generate ISO date YYYY-MM-DD without time zone shift issues in Manila timezone
+    const nowManila = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Manila"}));
+    const today = nowManila.toLocaleDateString("en-CA"); // YYYY-MM-DD
+
     const batch = db.batch();
     
     // Get active employees

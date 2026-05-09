@@ -24,6 +24,7 @@ import { PageLayout } from './layout/PageLayout';
 import ProfileView from './views/ProfileView';
 import { HrAssistantChatbot } from './views/common/HrAssistantChatbot';
 import { authenticatedFetch } from '../lib/api';
+import { getAuth, signInWithCustomToken } from 'firebase/auth';
 
 interface EmployeePortalProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -167,55 +168,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
     setIsEmployeeLoggingIn(true);
     try {
-      let employees = employeeService.getAllEmployeesSync();
-
-      if (employees.length === 0) {
-        employees = await employeeService.loadEmployees();
-      }
-
-      let employee = employees.find((emp) => {
-        const data = emp.data;
-        return (
-          data.id.toLowerCase() === loginId ||
-          data.email?.toLowerCase() === loginId
-        );
+      const response = await fetch('/api/login-employee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
       });
 
-      // Fallback: reload and check again if not found
-      if (!employee) {
-        employees = await employeeService.loadEmployees();
-        employee = employees.find((emp) => {
-          const data = emp.data;
-          return (
-            data.id.toLowerCase() === loginId ||
-            data.email?.toLowerCase() === loginId
-          );
-        });
-      }
+      const result = await response.json();
 
-      const msgUint8 = new TextEncoder().encode(pin);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-
-      if (!employee || (employee.data.pin !== pin && employee.data.pin !== hashedPin)) {
-        console.error("Login failed. Employees available:", employees.map(e => e.data.email));
-        showToast("Invalid employee credentials.", "error");
+      if (!response.ok || !result.success) {
+        showToast(result.error || "Invalid employee credentials.", "error");
         return;
       }
 
-      const access = canEmployeeAccessPortal(employee.data);
+      const auth = getAuth();
+      await signInWithCustomToken(auth, result.token);
+
+      const access = canEmployeeAccessPortal(result.employee);
       if (!access.allowed) {
         showToast(access.message, "error");
         return;
       }
 
-      completeEmployeeLogin(employee.data);
+      completeEmployeeLogin(result.employee);
       setEmployeeLoginId("");
       setEmployeeLoginPin("");
     } catch (error) {
       console.error(error);
-      showToast("Unable to verify employee login. Check Firebase connection.", "error");
+      showToast("Unable to verify employee login. Check API connection.", "error");
     } finally {
       setIsEmployeeLoggingIn(false);
     }

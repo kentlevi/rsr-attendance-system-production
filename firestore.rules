@@ -6,31 +6,39 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+    
+    function isOwner(employeeId) {
+      return isAuthenticated() && request.auth.uid == employeeId;
+    }
+
     match /settings/{document=**} {
-      allow read: if true; // Public configuration for Kiosk
-      allow write: if isAuthenticated();
+      allow read: if true; // Public configuration for Kiosk is usually needed
+      allow write: if isAdmin();
     }
     
     match /employees/{employeeId} {
-      // Employees must be listed on the kiosk
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read: if isOwner(employeeId) || isAdmin();
+      allow write: if isAdmin();
     }
     
     match /attendance/{logId} {
-      // Kiosk needs to be able to create & update punches
-      allow read, create, update: if true;
-      allow delete: if isAuthenticated();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.employeeId == request.auth.uid);
+      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.employeeId == request.auth.uid);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /leaves/{document=**} {
-      // Leaves can be seen and requested by employees
-      allow read, create: if true;
-      allow update, delete: if isAuthenticated();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.employeeId == request.auth.uid);
+      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.employeeId == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {
-      allow read, write: if isAuthenticated(); 
+      allow read, write: if isAdmin(); 
     }
   }
 }

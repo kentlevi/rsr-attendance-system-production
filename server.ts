@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import cron from "node-cron";
 import * as admin from "firebase-admin";
+import bcrypt from "bcrypt";
 
 dotenv.config({ path: ".env.local" });
 
@@ -128,49 +129,93 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Employees REST API
-  app.get("/api/employees", async (req, res) => {
-    const employees = await getEmployeesFile();
-    res.json({ success: true, employees });
-  });
-
-  app.post("/api/employees", async (req, res) => {
+  app.post("/api/login-employee", async (req, res) => {
     try {
+      const { pin } = req.body;
       const employees = await getEmployeesFile();
-      const newEmployee = { ...req.body, id: Date.now().toString() };
-      employees.push(newEmployee);
-      await fs.writeFile(DB_FILE, JSON.stringify(employees, null, 2));
-      res.json({ success: true, employee: newEmployee });
-    } catch (e: any) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+      const employee = employees.find((e: any) => e.pin === pin);
+      
+      if (!employee) {
+        // Fallback to checking hashed pin against Firestore if not found in db.json
+        // Wait, server.ts reads employees-db.json above.
+        // Let's implement full check:
+        // Actually, employee list is also in firestore. Let's fetch from Firestore:
+        const db = admin.firestore();
+        const empsSnap = await db.collection("employees").get();
+        let foundEmp = null;
+        for (const doc of empsSnap.docs) {
+            const data = doc.data();
+            const msgUint8 = new TextEncoder().encode(pin);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+            if (data.pin === pin || data.pin === hashedPin) {
+                foundEmp = { ...data, id: doc.id };
+                break;
+            }
+        }
 
-  app.put("/api/employees/:id", async (req, res) => {
-    try {
-      const employees = await getEmployeesFile();
-      const index = employees.findIndex((e: any) => e.id === req.params.id);
-      if (index > -1) {
-        employees[index] = {
-          ...employees[index],
-          ...req.body,
-          id: req.params.id,
-        };
-        await fs.writeFile(DB_FILE, JSON.stringify(employees, null, 2));
-        res.json({ success: true, employee: employees[index] });
-      } else {
-        res.status(404).json({ success: false, error: "Not found" });
+        if (!foundEmp) {
+            return res.status(401).json({ success: false, error: "Invalid PIN" });
+        }
+        
+        const token = await admin.auth().createCustomToken(foundEmp.id, { role: "employee" });
+        return res.json({ success: true, token, employee: foundEmp });
       }
+
+      const token = await admin.auth().createCustomToken(employee.id, { role: "employee" });
+      res.json({ success: true, token, employee });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
   });
 
-  app.delete("/api/employees/:id", async (req, res) => {
+  // Employees REST API
+  app.get("/api/employees", verifyAuth, async (req, res) => {
     try {
-      const employees = await getEmployeesFile();
-      const filtered = employees.filter((e: any) => e.id !== req.params.id);
-      await fs.writeFile(DB_FILE, JSON.stringify(filtered, null, 2));
+      const db = admin.firestore();
+      const snapshot = await db.collection("employees").get();
+      const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      res.json({ success: true, employees });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post("/api/employees", verifyAuth, async (req, res) => {
+    try {
+      const db = admin.firestore();
+      const employeeData = { ...req.body };
+      if (employeeData.pin) {
+        const salt = await bcrypt.genSalt(10);
+        employeeData.pin = await bcrypt.hash(employeeData.pin, salt);
+      }
+      const docRef = await db.collection("employees").add(employeeData);
+      res.json({ success: true, employee: { ...employeeData, id: docRef.id } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.put("/api/employees/:id", verifyAuth, async (req, res) => {
+    try {
+      const db = admin.firestore();
+      const employeeData = { ...req.body };
+      if (employeeData.pin && employeeData.pin.length < 60) {
+        const salt = await bcrypt.genSalt(10);
+        employeeData.pin = await bcrypt.hash(employeeData.pin, salt);
+      }
+      await db.collection("employees").doc(req.params.id).update(employeeData);
+      res.json({ success: true, employee: { ...employeeData, id: req.params.id } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.delete("/api/employees/:id", verifyAuth, async (req, res) => {
+    try {
+      const db = admin.firestore();
+      await db.collection("employees").doc(req.params.id).delete();
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
@@ -178,7 +223,7 @@ async function startServer() {
   });
 
   // Settings API
-  app.get("/api/settings", async (req, res) => {
+  app.get("/api/settings", verifyAuth, async (req, res) => {
     try {
       const settings = await getSettingsFile();
       res.json({ success: true, settings });
@@ -187,7 +232,7 @@ async function startServer() {
     }
   });
 
-  app.put("/api/settings", async (req, res) => {
+  app.put("/api/settings", verifyAuth, async (req, res) => {
     try {
       const existingSettings = await getSettingsFile();
       const updatedSettings = { ...existingSettings, ...req.body };
