@@ -26,7 +26,6 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
     
     const matchesSearch = 
       emp?.data.name.toLowerCase().includes(searchStr) ||
-      emp?.data.pin.toLowerCase().includes(searchStr) ||
       log.data.date.toLowerCase().includes(searchStr);
       
     const matchesStatus = statusFilter === "All" || log.data.status === statusFilter;
@@ -66,7 +65,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
       header: "PIN",
       accessor: (log: any) => {
         const emp = employeeService.getEmployeeByIdSync(log.data.employeeId)?.data;
-        return <span className="font-medium text-[#1a1a1a]">{emp?.pin }</span>;
+        return <span className="font-medium text-[#1a1a1a]">{emp?.department || log.data.employeeId}</span>;
       },
       className: "w-[100px]"
     },
@@ -242,7 +241,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
       return [
         log.data.id,
         log.data.employeeId,
-        emp?.pin || "",
+        emp?.department || log.data.employeeId,
         emp?.name || "Unknown",
         emp?.department || "",
         log.data.date,

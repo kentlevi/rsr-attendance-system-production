@@ -14,8 +14,7 @@ export function LeaveBalanceModal({ isOpen, onClose, employees }: LeaveBalanceMo
 
   const filteredEmployees = employees.filter(emp => 
     emp.data.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.data.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.data.pin?.toLowerCase().includes(searchTerm.toLowerCase())
+    emp.data.department?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
@@ -30,7 +29,7 @@ export function LeaveBalanceModal({ isOpen, onClose, employees }: LeaveBalanceMo
           />
           <div>
             <div className="text-[16px] font-medium text-[#1a1a1a]">{emp.data.name}</div>
-            <div className="text-[14px] text-text-secondary">{emp.data.department} • {emp.data.pin}</div>
+            <div className="text-[14px] text-text-secondary">{emp.data.department}</div>
           </div>
         </div>
       ),

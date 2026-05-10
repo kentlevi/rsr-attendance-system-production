@@ -1706,7 +1706,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       <ProfileView
         personalInfo={{
           fullName: identifiedEmp?.name || "Employee",
-          username: identifiedEmp?.pin || "Set your username",
+          username: identifiedEmp?.id || "Set your username",
           email: identifiedEmp?.email || "employee@example.com",
           department: identifiedEmp?.department || "General",
           mobile: identifiedEmp?.phone || "No phone",
@@ -1722,7 +1722,6 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
           try {
             const up = {
               name: info.fullName,
-              pin: info.username,
               email: info.email,
               department: info.department,
               phone: info.mobile,

@@ -69,7 +69,7 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
               {employee.status === 'Inactive' && <span className="px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#DC2626] text-[16px] font-medium tracking-wide uppercase">Inactive</span>}
             </div>
             <div className="flex items-center gap-2 mt-1 -mb-0.5">
-              <span className="text-[16px] font-medium text-text-secondary">{employee.pin}</span>
+              <span className="text-[16px] font-medium text-text-secondary">{employee.department}</span>
               <div className="w-1 h-1 rounded-full bg-border" />
               <span className="text-[16px] font-medium text-text-secondary">{employee.position}</span>
             </div>
@@ -256,8 +256,8 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
               </div>
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex items-center justify-between text-[16px]">
-                  <span className="text-text-secondary">Login PIN</span>
-                  <span className="font-medium text-[#1a1a1a] tracking-wider">{employee.pin}</span>
+                  <span className="text-text-secondary">Login Method</span>
+                  <span className="font-medium text-[#1a1a1a]">Biometric Verification</span>
                 </div>
                 <div className="flex items-center justify-between text-[16px]">
                   <span className="text-text-secondary">Last Login</span>

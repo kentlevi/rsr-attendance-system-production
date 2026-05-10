@@ -104,7 +104,6 @@ export function StaffView() {
         data.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (data.employeeId &&
         data.employeeId.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (data.pin && data.pin.includes(searchQuery)) ||
       (data.id && data.id.includes(searchQuery));
 
     const matchesDepartment =

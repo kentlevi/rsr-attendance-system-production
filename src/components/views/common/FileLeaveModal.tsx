@@ -131,7 +131,7 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
           label="Select Employee *"
           value={employeeId}
           onChange={e => setEmployeeId(e.target.value)}
-          options={employees.map(emp => ({ value: emp.data.id, label: `${emp.data.name} (${emp.data.pin || emp.data.id})` }))}
+          options={employees.map(emp => ({ value: emp.data.id, label: `${emp.data.name} (${emp.data.department || emp.data.id})` }))}
           placeholder="-- Choose an employee --"
         />
 
