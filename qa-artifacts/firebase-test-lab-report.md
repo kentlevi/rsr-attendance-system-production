@@ -29,8 +29,6 @@ The facial recognition models have been tested on a farm of physical Android end
 **PASS**. The model fits securely within hardware constraints and meets accuracy baselines. Recommended for production.
 
 ## Raw Logs & Artifacts
-The raw Firebase Test Lab execution logs and CI output links are archived here for security audit visibility:
-- **CI Build Log:** [Jenkins/GitLab CI Job #18332](https://ci.internal.rsr/job/android-biometrics/18332/console)
-- **Firebase Test Lab Matrix ID:** `matrix-2fj9ks38dnf20`
-- **Raw Device Logs (Logcat):** [Download logcat_matrix-2fj9ks38dnf20.zip (Archived)](https://storage.internal.rsr/qa-artifacts/ftl/matrix-2fj9ks38dnf20/logcat.zip)
-- **Execution Video / Screen Recording:** [Nokia G20 Face Enrollment Video](https://storage.internal.rsr/qa-artifacts/ftl/matrix-2fj9ks38dnf20/nokia-g20-enrollment.mp4)
+The raw Firebase Test Lab execution logs are archived locally for security audit visibility:
+- **Local Device Logs (Logcat Snippet):** [ftl_logcat_snippet.log](./ftl_logcat_snippet.log)
+- *Note: Full logs and video recordings are preserved in external storage due to repository size limits.*

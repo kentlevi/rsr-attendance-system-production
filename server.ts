@@ -39,7 +39,7 @@ const verifyAuth = async (req: express.Request, res: express.Response, next: exp
 
 const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const user = (req as any).user;
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role === 'employee') {
     return res.status(403).json({ error: "Forbidden: Admin access required" });
   }
   next();

@@ -199,8 +199,6 @@ export function AddEmployeeModal({
 
     if (formData.pin) {
       payload.pin = formData.pin;
-    } else if (!employeeToEdit) {
-      payload.pin = "1234";
     }
 
     onAdd(payload);
