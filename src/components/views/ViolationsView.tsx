@@ -43,7 +43,7 @@ export function ViolationsView() {
           <div className="relative w-full md:w-64">
             <input 
               type="text" 
-              placeholder="Search by name or PIN..." 
+              placeholder="Search by name or ID..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="control-field w-full"

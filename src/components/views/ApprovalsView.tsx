@@ -421,7 +421,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         <input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search approvals by employee, PIN, date, or reason"
+          placeholder="Search approvals by employee, ID, date, or reason"
           className="h-11 flex-1 bg-transparent text-[14px] font-medium text-text-primary outline-none placeholder:text-text-muted"
         />
       </div>

@@ -76,7 +76,7 @@ export function LeaveBalanceModal({ isOpen, onClose, employees }: LeaveBalanceMo
           <div className="relative w-full md:w-64">
             <input
               type="text"
-              placeholder="Search by name, department, or PIN"
+              placeholder="Search by name or department"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="control-field w-full"

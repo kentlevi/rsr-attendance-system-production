@@ -20,7 +20,7 @@ export class FacialRecognitionService {
   }
 
   async initModels() {
-    if (this.modelsLoaded || typeof window === 'undefined' || process.env.NODE_ENV === 'test') return;
+    if (this.modelsLoaded || typeof window === 'undefined' || process.env.NODE_ENV === 'test' || process.env.VITEST) return;
     try {
       await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
       await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
