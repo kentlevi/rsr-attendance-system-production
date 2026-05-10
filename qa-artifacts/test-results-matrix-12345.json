@@ -1,0 +1,48 @@
+{
+  "projectId": "rsr-attendance-prod",
+  "matrixId": "matrix-2fj9ks38dnf20",
+  "state": "FINISHED",
+  "testExecutions": [
+    {
+      "id": "execution-1",
+      "device": {
+        "modelId": "Nokia_G20",
+        "version": "S",
+        "locale": "en",
+        "orientation": "portrait"
+      },
+      "state": "FINISHED",
+      "testDetails": {
+        "progressMessages": [
+          "Starting test execution",
+          "Installing APK",
+          "Running tests",
+          "Tests completed successfully"
+        ],
+        "videoUrl": "gs://test-lab-rsr/matrix-2fj9ks38dnf20/execution-1/video.mp4"
+      },
+      "toolResultsStep": {
+        "stepId": "step-1",
+        "projectId": "rsr-attendance-prod",
+        "executionId": "execution-1",
+        "testExecutionStep": {
+          "testIssues": [],
+          "testSuiteOverviews": [
+            {
+              "name": "FaceRecognitionSuite",
+              "totalCount": 15,
+              "errorCount": 0,
+              "failureCount": 0,
+              "flakyCount": 0,
+              "skippedCount": 0,
+              "elapsedTime": {
+                "seconds": 45,
+                "nanos": 0
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

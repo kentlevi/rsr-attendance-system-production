@@ -333,6 +333,8 @@ async function startServer() {
   });
 
   // AI Endpoint for Leave Extraction
+  // NOTE: This is intentionally accessible to all authenticated users (both admins and employees)
+  // because employees need to use the AI chatbot to extract intent from their queries.
   app.post("/api/extract-leave", verifyAuth, async (req, res) => {
     try {
       const { text } = req.body;
@@ -371,6 +373,8 @@ async function startServer() {
     }
   });
 
+  // NOTE: This is intentionally accessible to all authenticated users (both admins and employees)
+  // because employees need to interact with the HR assistant chatbot in their portal.
   app.post("/api/hr-assistant", verifyAuth, async (req, res) => {
     try {
       const { messages, context } = req.body;
