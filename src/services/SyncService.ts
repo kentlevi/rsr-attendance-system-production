@@ -2,6 +2,8 @@ import { attendanceService } from './AttendanceService';
 import { calculateBreakPunchUpdate, calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 import { employeeService } from './EmployeeService';
 import { settingsService } from './SettingsService';
+import { attendancePhotoService } from './AttendancePhotoService';
+import { LocalAttendancePunch, localAttendanceService } from './LocalAttendanceService';
 
 declare global {
   interface Window {
@@ -17,11 +19,15 @@ declare global {
 export class SyncService {
   private syncInterval: number | null = null;
   private isSyncing: boolean = false;
+  private onlineHandler = () => {
+    this.processSync();
+  };
 
   startAutoSync(intervalMs: number = 30000) {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
     }
+    window.removeEventListener('online', this.onlineHandler);
     
     // Initial sync
     this.processSync();
@@ -29,6 +35,8 @@ export class SyncService {
     this.syncInterval = window.setInterval(() => {
       this.processSync();
     }, intervalMs);
+
+    window.addEventListener('online', this.onlineHandler);
   }
 
   stopAutoSync() {
@@ -36,22 +44,31 @@ export class SyncService {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
     }
+    window.removeEventListener('online', this.onlineHandler);
   }
 
   async processSync() {
-    // Only run if native Android interface exists and we're not currently syncing
-    if (!window.Android || !window.Android.getUnsyncedPunches || this.isSyncing) return;
-    
-    // Also verify online status
-    if (!navigator.onLine) return;
-
+    if (this.isSyncing || !navigator.onLine) return;
     this.isSyncing = true;
+
+    try {
+      await this.processNativeAndroidPunches();
+      await this.processLocalAttendancePunches();
+    } catch (e) {
+      console.error("SyncService: Error during sync process", e);
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
+  private async processNativeAndroidPunches() {
+    if (!window.Android || !window.Android.getUnsyncedPunches) return;
+
     try {
       const unsyncedPunchesStr = window.Android.getUnsyncedPunches();
       const unsyncedPunches = JSON.parse(unsyncedPunchesStr);
 
       if (!Array.isArray(unsyncedPunches) || unsyncedPunches.length === 0) {
-        this.isSyncing = false;
         return;
       }
 
@@ -164,10 +181,159 @@ export class SyncService {
         }
       }
     } catch (e) {
-      console.error("SyncService: Error during sync process", e);
-    } finally {
-      this.isSyncing = false;
+      console.error("SyncService: Error during native Android sync", e);
     }
+  }
+
+  private async processLocalAttendancePunches() {
+    const pendingPunches = await localAttendanceService.getRetryablePunches();
+    if (pendingPunches.length === 0) return;
+
+    console.log(`SyncService: Found ${pendingPunches.length} browser offline punches.`);
+    const syncedDates = new Set<string>();
+
+    for (const punch of pendingPunches) {
+      try {
+        await localAttendanceService.markSyncing(punch.id);
+        await this.syncLocalPunchToCloud(punch);
+        await localAttendanceService.markSynced(punch.id);
+        syncedDates.add(punch.date);
+        console.log(`SyncService: Synced local punch ${punch.id} for ${punch.employeeId}`);
+      } catch (error) {
+        await localAttendanceService.markFailed(punch.id, error);
+        console.error(`SyncService: Failed to sync local punch ${punch.id}`, error);
+      }
+    }
+
+    if (syncedDates.size > 0) {
+      await attendanceService.refreshLogsByDates(Array.from(syncedDates));
+    }
+  }
+
+  private async syncLocalPunchToCloud(punch: LocalAttendancePunch) {
+    const existingLogs = attendanceService.getAllLogs();
+    const existingLog = existingLogs.find((log) => log.data.employeeId === punch.employeeId && log.data.date === punch.date);
+    const employee = employeeService.getEmployeeByIdSync(punch.employeeId)?.data;
+    const settings = settingsService.getSettings();
+
+    if (!employee) {
+      throw new Error(`Employee ${punch.employeeId} was not found for offline sync.`);
+    }
+
+    const photoUrl = punch.photoDataUrl && settings.attendancePhotoUploadEnabled === true
+      ? await attendancePhotoService.uploadPhoto(punch.photoDataUrl, punch.employeeId, punch.action)
+      : null;
+
+    if (punch.action === 'Time In') {
+      const payroll = calculatePayrollForTimeIn({
+        employee,
+        actualSite: punch.siteId || existingLog?.data.location || 'Head Office',
+        timeIn: punch.time,
+        settings,
+      });
+
+      if (existingLog) {
+        if (existingLog.data.timeIn !== '-') return;
+
+        await attendanceService.updateLog(existingLog.data.id, {
+          timeIn: payroll.adjustedTimeIn,
+          ...(photoUrl && { imageIn: photoUrl }),
+          status: payroll.status,
+          location: punch.siteId || existingLog.data.location,
+          ...(punch.latitude && { latitude: punch.latitude }),
+          ...(punch.longitude && { longitude: punch.longitude }),
+          ...(punch.geofenceDistance && { geofenceDistance: punch.geofenceDistance }),
+          ...(punch.geofenceStatus && { geofenceStatus: punch.geofenceStatus }),
+          ...payroll,
+        });
+      } else {
+        await attendanceService.addLog({
+          employeeId: punch.employeeId,
+          date: punch.date,
+          timeIn: payroll.adjustedTimeIn,
+          timeOut: '-',
+          workHours: '-',
+          overtime: '-',
+          status: payroll.status,
+          location: punch.siteId || 'Head Office',
+          ...(photoUrl && { imageIn: photoUrl }),
+          ...(punch.latitude && { latitude: punch.latitude }),
+          ...(punch.longitude && { longitude: punch.longitude }),
+          ...(punch.geofenceDistance && { geofenceDistance: punch.geofenceDistance }),
+          ...(punch.geofenceStatus && { geofenceStatus: punch.geofenceStatus }),
+          ...payroll,
+        });
+      }
+
+      return;
+    }
+
+    if (punch.action === 'Time Out') {
+      if (!existingLog) {
+        await attendanceService.addLog({
+          employeeId: punch.employeeId,
+          date: punch.date,
+          timeIn: '-',
+          timeOut: punch.time,
+          workHours: '-',
+          overtime: '-',
+          status: 'Pending Approval',
+          location: punch.siteId || 'Head Office',
+          ...(photoUrl && { imageOut: photoUrl }),
+        });
+        return;
+      }
+
+      if (existingLog.data.timeOut !== '-') return;
+
+      const payroll = calculatePayrollForTimeOut({
+        employee,
+        actualSite: existingLog.data.location || punch.siteId || 'Head Office',
+        timeIn: existingLog.data.timeIn,
+        timeOut: punch.time,
+        settings,
+        existingPayroll: existingLog.data,
+      });
+
+      await attendanceService.updateLog(existingLog.data.id, {
+        timeOut: payroll.adjustedTimeOut,
+        ...(photoUrl && { imageOut: photoUrl }),
+        workHours: payroll.workHours,
+        overtime: payroll.overtime,
+        status: payroll.requiresApproval ? 'Pending Approval' : existingLog.data.status,
+        ...payroll,
+      });
+
+      return;
+    }
+
+    if (!existingLog) {
+      await attendanceService.addLog({
+        employeeId: punch.employeeId,
+        date: punch.date,
+        timeIn: '-',
+        timeOut: '-',
+        workHours: '-',
+        overtime: '-',
+        status: 'Pending Approval',
+        location: punch.siteId || 'Head Office',
+        payrollReviewStatus: 'Pending Review',
+        payrollNotes: [`${punch.action} synced without a Time In record.`],
+      });
+      return;
+    }
+
+    const breakUpdate = calculateBreakPunchUpdate({
+      action: punch.action,
+      time: punch.time,
+      settings,
+      existingLog: existingLog.data,
+    });
+
+    await attendanceService.updateLog(existingLog.data.id, {
+      status: breakUpdate.requiresApproval ? 'Pending Approval' : existingLog.data.status,
+      ...breakUpdate,
+    });
   }
 
   // Use this when the kiosk records a punch

@@ -1,7 +1,15 @@
 import { create } from 'zustand';
-import { collection, onSnapshot, query, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, updateDoc, doc, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AttendanceLog, AttendanceLogModel } from '../models/AttendanceLog';
+
+const LIVE_ATTENDANCE_WINDOW_DAYS = 31;
+
+const getISODateDaysAgo = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+};
 
 interface AttendanceState {
   logs: AttendanceLogModel[];
@@ -19,8 +27,9 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
 
   subscribeToLogs: () => {
     set({ isLoading: true });
+    const startDate = getISODateDaysAgo(LIVE_ATTENDANCE_WINDOW_DAYS);
     const unsubscribe = onSnapshot(
-      collection(db, 'attendance'),
+      query(collection(db, 'attendance'), where('date', '>=', startDate)),
       (snapshot) => {
         const logs = snapshot.docs.map(doc => new AttendanceLogModel({
           ...doc.data(),

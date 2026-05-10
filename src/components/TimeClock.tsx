@@ -5,7 +5,6 @@ import { Select } from './common/Select';
 import Webcam from 'react-webcam';
 import { useToast } from '../context/ToastContext';
 import { attendanceService } from '../services/AttendanceService';
-import { facialRecognitionService } from '../services/FacialRecognitionService';
 import { employeeService } from '../services/EmployeeService';
 import { settingsService } from '../services/SettingsService';
 import { PageLayout } from './layout/PageLayout';
@@ -13,6 +12,7 @@ import { BreakPunchAction, calculateBreakPunchUpdate, calculatePayrollForTimeIn,
 import { findBlockingIncompleteAttendance, getIncompleteAttendanceReviewUpdate } from '../lib/AttendanceApprovalRules';
 import { canEmployeeAccessAttendance } from '../lib/EmployeeAccessRules';
 import { attendancePhotoService } from '../services/AttendancePhotoService';
+import { LocalAttendanceSyncSummary, localAttendanceService } from '../services/LocalAttendanceService';
 
 interface TimeClockProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -27,6 +27,13 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [identifiedEmpId, setIdentifiedEmpId] = useState<string | null>(null);
   const [identifiedEmpName, setIdentifiedEmpName] = useState<string | null>(null);
+  const [syncSummary, setSyncSummary] = useState<LocalAttendanceSyncSummary>({
+    pending: 0,
+    syncing: 0,
+    failed: 0,
+    retryReady: 0,
+    totalOpen: 0,
+  });
   const webcamRef = useRef<Webcam>(null);
 
   useEffect(() => {
@@ -52,6 +59,20 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     };
   }, []);
 
+  const refreshPendingSyncCount = useCallback(async () => {
+    try {
+      setSyncSummary(await localAttendanceService.getSyncSummary());
+    } catch (error) {
+      console.error('Failed to load pending local punches', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPendingSyncCount();
+    window.addEventListener('online', refreshPendingSyncCount);
+    return () => window.removeEventListener('online', refreshPendingSyncCount);
+  }, [refreshPendingSyncCount]);
+
   const capture = useCallback(() => {
     return webcamRef.current?.getScreenshot();
   }, [webcamRef]);
@@ -72,6 +93,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     }
 
     // Identify Face
+    const { facialRecognitionService } = await import('../services/FacialRecognitionService');
     const empId = await facialRecognitionService.verifyFace(photo);
     if (!empId) {
        showToast("Face not recognized. Please enroll first.", "error");
@@ -152,14 +174,15 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     setIdentifiedEmpName(emp.name);
 
     const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const punchDate = new Date();
+    const timestamp = punchDate.toISOString();
+    const timeStr = punchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let localPunchId: string | null = null;
     
     try {
       const logs = attendanceService.getAllLogs();
       const existingLog = logs.find(l => l.data.employeeId === empId && l.data.date === todayStr);
       const todayISO = new Date().toISOString().slice(0, 10);
-
-      const photoUrl = photo ? await attendancePhotoService.uploadPhoto(photo, empId, action) : null;
 
       if (action === "Time In") {
         const blockingIncompleteLog = findBlockingIncompleteAttendance(logs, empId, todayStr);
@@ -174,86 +197,119 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
         if (existingLog && existingLog.data.timeIn !== '-') {
           showToast(`Welcome ${emp.name}! You have already clocked in today`, "warning");
-        } else {
-          const settings = settingsService.getSettings();
-          const payroll = calculatePayrollForTimeIn({
-            employee: emp,
-            actualSite: selectedSite,
-            timeIn: timeStr,
-            settings,
-          });
-          if (existingLog) {
-            await attendanceService.updateLog(existingLog.data.id, {
-               timeIn: payroll.adjustedTimeIn,
-               ...(photoUrl && { imageIn: photoUrl }),
-               status: payroll.status,
-               location: selectedSite,
-               ...(userLat && { latitude: userLat }),
-               ...(userLng && { longitude: userLng }),
-               ...(userDistance && { geofenceDistance: userDistance }),
-               ...(userDistance && { geofenceStatus: 'Inside' }),
-               ...payroll,
-            });
-          } else {
-            await attendanceService.addLog({
-              employeeId: empId,
-              date: todayStr,
-              timeIn: payroll.adjustedTimeIn,
-              timeOut: '-',
-              workHours: '-',
-              overtime: '-',
-              status: payroll.status,
-              location: selectedSite,
-              ...(photoUrl && { imageIn: photoUrl }),
-              ...(userLat && { latitude: userLat }),
-              ...(userLng && { longitude: userLng }),
-              ...(userDistance && { geofenceDistance: userDistance }),
-              ...(userDistance && { geofenceStatus: 'Inside' }),
-              ...payroll,
-            });
-          }
-          if (!emp.dateHired) {
-            await employeeService.updateEmployee(emp.id, { dateHired: todayISO });
-          }
-          if (payroll.status === 'Pending Approval') {
-            showToast(`Welcome ${emp.name}! Time In recorded at ${timeStr} (Pending Approval)`);
-          } else {
-            showToast(`Welcome ${emp.name}! Time In recorded at ${timeStr}`);
-          }
+          return;
         }
       } else if (action === "Time Out") {
         if (!existingLog || existingLog.data.timeIn === '-') {
           showToast(`${emp.name}, you must clock in before clocking out`, "error");
-        } else {
-          const settings = settingsService.getSettings();
-          const payroll = calculatePayrollForTimeOut({
-            employee: emp,
-            actualSite: existingLog.data.location || selectedSite,
-            timeIn: existingLog.data.timeIn,
-            timeOut: timeStr,
-            settings,
-            existingPayroll: existingLog.data,
-          });
-          await attendanceService.updateLog(existingLog.data.id, {
-            timeOut: payroll.adjustedTimeOut,
-            ...(photoUrl && { imageOut: photoUrl }),
-            workHours: payroll.workHours,
-            overtime: payroll.overtime,
-            status: payroll.requiresApproval ? 'Pending Approval' : existingLog.data.status,
-            ...payroll,
-          });
-          if (payroll.requiresApproval) {
-            showToast(`Goodbye ${emp.name}! Time Out recorded at ${timeStr} (Pending Approval)`);
-          } else {
-            showToast(`Goodbye ${emp.name}! Time Out recorded at ${timeStr}`);
-          }
-        }
-      } else {
-        if (!existingLog || existingLog.data.timeIn === '-') {
-          showToast(`${emp.name}, you must clock in before recording ${action}`, "error");
           return;
         }
+      } else if (!existingLog || existingLog.data.timeIn === '-') {
+        showToast(`${emp.name}, you must clock in before recording ${action}`, "error");
+        return;
+      }
 
+      const localPunch = await localAttendanceService.savePunch({
+        employeeId: empId,
+        employeeName: emp.name,
+        action,
+        timestamp,
+        date: todayStr,
+        time: timeStr,
+        siteId: selectedSite,
+        photoDataUrl: photo,
+        photoCaptured: Boolean(photo),
+        ...(userLat && { latitude: userLat }),
+        ...(userLng && { longitude: userLng }),
+        ...(userDistance && { geofenceDistance: userDistance }),
+        ...(userDistance && { geofenceStatus: 'Inside' as const }),
+      });
+      localPunchId = localPunch.id;
+      await refreshPendingSyncCount();
+
+      if (!navigator.onLine) {
+        showToast(`${emp.name}, ${action} saved locally and will sync when internet returns.`, "warning");
+        return;
+      }
+
+      await localAttendanceService.markSyncing(localPunch.id);
+      await refreshPendingSyncCount();
+
+      const photoUploadEnabled = settingsService.getSettings().attendancePhotoUploadEnabled === true;
+      const photoUrl = photo && photoUploadEnabled
+        ? await attendancePhotoService.uploadPhoto(photo, empId, action)
+        : null;
+
+      if (action === "Time In") {
+        const settings = settingsService.getSettings();
+        const payroll = calculatePayrollForTimeIn({
+          employee: emp,
+          actualSite: selectedSite,
+          timeIn: timeStr,
+          settings,
+        });
+        if (existingLog) {
+          await attendanceService.updateLog(existingLog.data.id, {
+             timeIn: payroll.adjustedTimeIn,
+             ...(photoUrl && { imageIn: photoUrl }),
+             status: payroll.status,
+             location: selectedSite,
+             ...(userLat && { latitude: userLat }),
+             ...(userLng && { longitude: userLng }),
+             ...(userDistance && { geofenceDistance: userDistance }),
+             ...(userDistance && { geofenceStatus: 'Inside' }),
+             ...payroll,
+          });
+        } else {
+          await attendanceService.addLog({
+            employeeId: empId,
+            date: todayStr,
+            timeIn: payroll.adjustedTimeIn,
+            timeOut: '-',
+            workHours: '-',
+            overtime: '-',
+            status: payroll.status,
+            location: selectedSite,
+            ...(photoUrl && { imageIn: photoUrl }),
+            ...(userLat && { latitude: userLat }),
+            ...(userLng && { longitude: userLng }),
+            ...(userDistance && { geofenceDistance: userDistance }),
+            ...(userDistance && { geofenceStatus: 'Inside' }),
+            ...payroll,
+          });
+        }
+        if (!emp.dateHired) {
+          await employeeService.updateEmployee(emp.id, { dateHired: todayISO });
+        }
+        if (payroll.status === 'Pending Approval') {
+          showToast(`Welcome ${emp.name}! Time In recorded at ${timeStr} (Pending Approval)`);
+        } else {
+          showToast(`Welcome ${emp.name}! Time In recorded at ${timeStr}`);
+        }
+      } else if (action === "Time Out") {
+        const settings = settingsService.getSettings();
+        const payroll = calculatePayrollForTimeOut({
+          employee: emp,
+          actualSite: existingLog.data.location || selectedSite,
+          timeIn: existingLog.data.timeIn,
+          timeOut: timeStr,
+          settings,
+          existingPayroll: existingLog.data,
+        });
+        await attendanceService.updateLog(existingLog.data.id, {
+          timeOut: payroll.adjustedTimeOut,
+          ...(photoUrl && { imageOut: photoUrl }),
+          workHours: payroll.workHours,
+          overtime: payroll.overtime,
+          status: payroll.requiresApproval ? 'Pending Approval' : existingLog.data.status,
+          ...payroll,
+        });
+        if (payroll.requiresApproval) {
+          showToast(`Goodbye ${emp.name}! Time Out recorded at ${timeStr} (Pending Approval)`);
+        } else {
+          showToast(`Goodbye ${emp.name}! Time Out recorded at ${timeStr}`);
+        }
+      } else {
         const settings = settingsService.getSettings();
         const breakUpdate = calculateBreakPunchUpdate({
           action,
@@ -273,8 +329,16 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           showToast(`${emp.name}, ${action} recorded successfully!`);
         }
       }
+      await localAttendanceService.markSynced(localPunch.id);
+      await refreshPendingSyncCount();
     } catch (error) {
-      showToast("An error occurred. Please try again.", "error");
+      if (localPunchId) {
+        await localAttendanceService.markFailed(localPunchId, error);
+        await refreshPendingSyncCount();
+        showToast(`${action} saved locally. Cloud sync failed and will be retried later.`, "warning");
+      } else {
+        showToast("An error occurred. Please try again.", "error");
+      }
     } finally {
       setTimeout(() => {
         setIsProcessing(false);
@@ -319,6 +383,15 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
               <p className="text-[#64748B] font-medium text-[15px]">
                 {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
+              {syncSummary.totalOpen > 0 && (
+                <p className={cn(
+                  "text-[13px] font-semibold",
+                  syncSummary.failed > 0 ? "text-red-600" : "text-amber-600"
+                )}>
+                  {syncSummary.totalOpen} offline sync pending
+                  {syncSummary.failed > 0 ? ` (${syncSummary.failed} failed)` : ""}
+                </p>
+              )}
             </div>
 
             <div className="w-full rounded-[32px] bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] border border-white flex flex-col gap-4">

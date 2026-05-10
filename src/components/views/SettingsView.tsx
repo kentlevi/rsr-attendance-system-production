@@ -601,6 +601,34 @@ export function SettingsView() {
           </div>
         </div>
 
+        {/* 5. Cloud Storage */}
+        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full bg-[#0B7A4B] text-white flex items-center justify-center text-[16px] font-medium">
+                5
+              </div>
+              <h2 className="text-[16px] font-medium text-[#1a1a1a]">
+                Cloud Storage
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[16px] font-medium text-[#1a1a1a]">
+                Attendance Photo Uploads
+              </span>
+              <Toggle
+                enabled={settings.attendancePhotoUploadEnabled === true}
+                onChange={v => handleUpdate("attendancePhotoUploadEnabled", v)}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-[14px] text-[#64748B]">
+            <Info size={16} />
+            When disabled, attendance photos remain local and attendance records sync without image URLs.
+          </div>
+        </div>
+
       </div>
 
       {/* Footer Banner */}

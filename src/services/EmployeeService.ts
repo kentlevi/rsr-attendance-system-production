@@ -9,7 +9,7 @@ import {
   query,
   onSnapshot
 } from "firebase/firestore";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { auth, db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { Employee, EmployeeModel } from "../models/Employee";
 import { calculateLeaveReplenishment } from "../lib/LeaveReplenishmentRules";
 
@@ -89,7 +89,7 @@ class EmployeeService {
     try {
       const response = await fetch('/api/employees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` },
         body: JSON.stringify(employee)
       });
       if (!response.ok) throw new Error("Failed to add employee");
@@ -102,7 +102,7 @@ class EmployeeService {
     try {
       const response = await fetch(`/api/employees/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` },
         body: JSON.stringify(data)
       });
       if (!response.ok) throw new Error("Failed to update employee");
@@ -115,7 +115,7 @@ class EmployeeService {
     try {
       const response = await fetch(`/api/employees/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` }
+        headers: { 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` }
       });
       if (!response.ok) throw new Error("Failed to delete employee");
     } catch (e) {

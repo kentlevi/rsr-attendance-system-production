@@ -45,6 +45,7 @@ export interface SystemSettings {
   notificationGroup: string;
   telegramEnabled: boolean;
   telegramChatId: string;
+  attendancePhotoUploadEnabled?: boolean;
   logoDataUrl?: string;
 }
 
@@ -70,6 +71,7 @@ const defaultSettings: SystemSettings = {
   notificationGroup: "Attendance Alerts",
   telegramEnabled: false,
   telegramChatId: "",
+  attendancePhotoUploadEnabled: false,
 };
 
 export class SettingsService {

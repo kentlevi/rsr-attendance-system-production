@@ -84,6 +84,7 @@ const defaultSettings = {
   senderName: "RSR-ATTEND",
   adminMobile: "+63 917 123 4567",
   notificationGroup: "Attendance Alerts",
+  attendancePhotoUploadEnabled: false,
 };
 
 async function getSettingsFile() {

@@ -93,6 +93,10 @@ Offline behavior:
 * Duplicate attendance prevention
 * Offline photo persistence
 
+Implementation checklist:
+
+* [Offline-First Firebase Free-Tier Plan](./docs/offline-first-firebase-free-tier-plan.md)
+
 ---
 
 ## Full Facial Recognition Employee Verification
@@ -870,4 +874,3 @@ To ensure we stay on track with the Master Plan, here is the current implementat
 - [ ] Implement SQLite Room database queries in Kotlin layer
 - [ ] Build JavaScript-to-Native bridge for syncing (Sync Service)
 - [ ] Implement Offline Photo Persistence and queued uploads fallback
-

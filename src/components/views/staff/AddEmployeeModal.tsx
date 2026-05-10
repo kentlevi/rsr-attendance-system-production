@@ -13,7 +13,6 @@ import { Select } from "../../common/Select";
 import { DatePicker } from "../../common/DatePicker";
 import { cn } from "../../../lib/utils";
 import Webcam from "react-webcam";
-import { facialRecognitionService } from "../../../services/FacialRecognitionService";
 import { settingsService } from "../../../services/SettingsService";
 import { useToast } from "../../../context/ToastContext";
 
@@ -37,6 +36,7 @@ export function AddEmployeeModal({
       const imageSrc = webcamRef.current.getScreenshot();
       if (imageSrc && capturedImages.length < 5) {
         showToast("Analyzing face model...", "info");
+        const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
         const descriptor = await facialRecognitionService.extractFaceDescriptor(imageSrc);
         if (descriptor) {
            setCapturedDescriptors(prev => [...prev, descriptor]);
@@ -158,6 +158,7 @@ export function AddEmployeeModal({
     let facialRecognitionProfileId = employeeToEdit?.facialRecognitionProfileId;
     
     if (capturedDescriptors.length > 0) {
+      const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
       facialRecognitionProfileId = await facialRecognitionService.registerFace(employeeId, capturedDescriptors);
     }
 

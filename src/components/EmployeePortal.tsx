@@ -19,7 +19,6 @@ import { settingsService } from '../services/SettingsService';
 import { requestAttachmentService } from '../services/RequestAttachmentService';
 import { validateLeaveRequest } from '../lib/LeaveRules';
 import { canEmployeeAccessPortal } from '../lib/EmployeeAccessRules';
-import { facialRecognitionService } from '../services/FacialRecognitionService';
 import { PageLayout } from './layout/PageLayout';
 import ProfileView from './views/ProfileView';
 import { HrAssistantChatbot } from './views/common/HrAssistantChatbot';
@@ -117,6 +116,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     }
 
     try {
+      const { facialRecognitionService } = await import('../services/FacialRecognitionService');
       const employeeId = await facialRecognitionService.verifyFace(photo);
 
       if (!employeeId) {

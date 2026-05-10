@@ -4,6 +4,16 @@ With the core mock data replaced with full Firestore functionality (data seeding
 
 Here are the recommended objectives for our next phase (Phase 2), aimed at hardening the application and finalizing end-to-end features:
 
+## Active Priority
+
+The current deployment priority is the local-first Firebase free-tier plan:
+
+- [ ] Execute [Offline-First Firebase Free-Tier Plan](./docs/offline-first-firebase-free-tier-plan.md).
+- [ ] Implement local-first attendance writes.
+- [ ] Implement background sync queue.
+- [ ] Add Firebase quota protection and cloud retention controls.
+- [ ] Validate offline punch, reconnect sync, export, and cleanup dry-run before client deployment.
+
 ## 1. Automated Cron Jobs & Cloud Functions
 *Our current system simulates scheduled behavior directly from client-side logic. To be production-ready, we need server-authoritative jobs.*
 - [x] **Midnight Leave Replenishment:** Move leave resetting logic to a Firebase Schedule Function.
