@@ -10,8 +10,8 @@ interface AdminLoginProps {
 }
 
 export default function AdminLogin({ onNavigate }: AdminLoginProps) {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isAssistant, setIsAssistant] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -22,24 +22,94 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
     setIsLoggingIn(true);
     setLoginError("");
 
+    const emailToUse = isAssistant ? "hr@rsr.com" : "admin@rsr.com";
+    const usernameToUse = isAssistant ? "assistant" : "admin";
+    
+    let firebasePassword = password;
+    if (firebasePassword.length < 6) {
+      firebasePassword = firebasePassword.padEnd(6, '0');
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // Wait for authStore to update and role to be assigned.
+      try {
+        await signInWithEmailAndPassword(auth, emailToUse, firebasePassword);
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            const defaultFirebasePass = usernameToUse.padEnd(6, '0');
+            // Check if we can rescue the account because they typed their correct new password
+            // but Firebase Auth is stuck on the default password.
+            if (password.trim() !== (isAssistant ? "assistant" : "admin")) {
+                try {
+                    // Sign in with default password
+                    await signInWithEmailAndPassword(auth, emailToUse, defaultFirebasePass);
+                    // Now we are logged in! We can read adminAccounts to verify the password they typed.
+                    const { adminAccountService } = await import('../services/AdminAccountService');
+                    const account = await adminAccountService.getAccount(usernameToUse, null as any);
+                    
+                    if (account && password.trim() === account.password) {
+                        // The password they typed IS correct according to Firestore!
+                        // Let's fix Firebase Auth password.
+                        const { updatePassword: updateFirebaseAuthPassword } = await import('firebase/auth');
+                        if (auth.currentUser) {
+                           await updateFirebaseAuthPassword(auth.currentUser, firebasePassword);
+                        }
+                    } else {
+                        // Not correct in Firestore either. Sign out and throw.
+                        await auth.signOut();
+                        throw new Error("Invalid credentials");
+                    }
+                } catch (rescueErr) {
+                    throw new Error("Invalid credentials");
+                }
+            } else {
+                // They typed the default password. Let's try to create if it doesn't exist.
+                try {
+                    const { createUserWithEmailAndPassword } = await import('firebase/auth');
+                    await createUserWithEmailAndPassword(auth, emailToUse, firebasePassword);
+                } catch (createErr: any) {
+                    throw new Error("Invalid credentials");
+                }
+            }
+        } else {
+          throw err;
+        }
+      }
+      
+      const { adminAccountService } = await import('../services/AdminAccountService');
+      const account = await adminAccountService.getAccount(usernameToUse, {
+        fullName: isAssistant ? "Assistant" : "Administrator",
+        username: usernameToUse,
+        email: emailToUse,
+        department: "Administration",
+        mobile: "",
+        position: isAssistant ? "HR Assistant" : "System Administrator",
+        gender: "Any",
+        dateRegistered: new Date().toISOString(),
+        address: "",
+        lastLogin: "",
+        timezone: "(GMT+08:00) Asia/Manila",
+        role: isAssistant ? "Assistant" : "Administrator",
+        avatar: "https://i.pravatar.cc/150",
+        password: password.trim(),
+      });
+
       showToast("Login successful!", "success");
-      // The auth observer in App.tsx or similar usually handles routing,
-      // but we navigate to admin here safely.
       onNavigate('admin');
     } catch (error: any) {
       console.error(error);
-      setLoginError("Invalid credentials. Please try again.");
+      if (error.code === 'auth/operation-not-allowed') {
+         setLoginError("Email/Password Auth is disabled! Please enable it in Firebase Console.");
+      } else {
+         setLoginError("Invalid credentials. Please try again.");
+      }
     } finally {
       setIsLoggingIn(false);
     }
   };
 
   return (
-    <PageLayout onNavigate={onNavigate as any} className="items-center justify-start py-12 px-6">
-      <div className="w-full max-w-[420px] mx-auto bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 border border-border/60 flex flex-col gap-8">
+    <PageLayout onNavigate={onNavigate as any} className="items-center justify-center sm:justify-start py-6 sm:py-12 px-4 sm:px-6">
+      <div className="w-full max-w-[420px] mx-auto bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-10 border border-border/60 flex flex-col gap-6 sm:gap-8">
         <div className="flex flex-col items-center gap-2">
           <div className="w-[68px] h-[68px] rounded-full bg-[#E8F3EE] flex items-center justify-center">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#0B7A4B]">
@@ -50,25 +120,29 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
             </svg>
           </div>
           <h1 className="text-[28px] font-bold text-text-primary">System Access</h1>
-          <p className="text-[16px] text-text-secondary">Sign in with your administrative account.</p>
+          <p className="text-[16px] text-text-secondary text-center">Sign in using your master password.</p>
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <label className="block text-[16px] font-medium text-text-primary">Email Address</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setLoginError("");
-              }}
-              placeholder="Enter your email"
-              className={`control-field h-12 px-4 ${
-                loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
+          <div className="flex bg-slate-100 p-1.5 rounded-xl mb-2">
+            <button
+              type="button"
+              onClick={() => { setIsAssistant(false); setLoginError(""); }}
+              className={`flex-1 py-3 text-[15px] font-semibold rounded-lg transition-all ${
+                !isAssistant ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
               }`}
-              autoFocus
-            />
+            >
+              Administrator
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsAssistant(true); setLoginError(""); }}
+              className={`flex-1 py-3 text-[15px] font-semibold rounded-lg transition-all ${
+                isAssistant ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Assistant
+            </button>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -81,10 +155,11 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                   setPassword(e.target.value);
                   setLoginError("");
                 }}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 className={`control-field h-12 px-4 pr-12 ${
                   loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
                 }`}
+                autoFocus
               />
               <button
                 type="button"
@@ -104,7 +179,7 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
           <button 
             type="submit"
             disabled={isLoggingIn}
-            className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed mt-2"
           >
             {isLoggingIn ? "Authenticating..." : "Login"}
           </button>

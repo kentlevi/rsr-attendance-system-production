@@ -407,33 +407,35 @@ export function DashboardView() {
               pendingRequests.map((req) => (
                 <div
                   key={req.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 p-3 transition-colors hover:bg-slate-50"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-3 rounded-2xl border border-border/60 p-4 sm:p-3 transition-colors hover:bg-slate-50"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={req.avatar || undefined}
                       alt={req.name}
-                      className="w-10 h-10 rounded-full object-cover border border-border"
+                      className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
                     />
                     <div className="min-w-0 flex flex-col gap-0.5">
-                      <div className="text-[16px] font-medium text-[#1a1a1a] truncate">
+                      <div className="text-[14px] sm:text-[16px] font-medium text-[#1a1a1a] truncate">
                         {req.name}
                       </div>
-                      <div className="text-[13px] text-text-secondary">
+                      <div className="text-[12px] sm:text-[13px] text-text-secondary truncate">
                         {req.date}
                       </div>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[12px] font-semibold whitespace-nowrap">
-                    {req.type}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button className="btn-icon-sm h-8 w-8 text-[#22C55E] hover:bg-[#F0FDF4] hover:border-[#22C55E]">
-                      <Check size={16} strokeWidth={3} />
-                    </button>
-                    <button className="btn-icon-sm h-8 w-8 text-[#EF4444] hover:bg-[#FEF2F2] hover:border-[#EF4444]">
-                      <XIcon size={16} strokeWidth={3} />
-                    </button>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0 ml-13 sm:ml-0">
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[12px] font-semibold whitespace-nowrap">
+                      {req.type}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button className="btn-icon-sm h-8 w-8 text-[#22C55E] hover:bg-[#F0FDF4] hover:border-[#22C55E]">
+                        <Check size={16} strokeWidth={3} />
+                      </button>
+                      <button className="btn-icon-sm h-8 w-8 text-[#EF4444] hover:bg-[#FEF2F2] hover:border-[#EF4444]">
+                        <XIcon size={16} strokeWidth={3} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -480,7 +482,7 @@ export function DashboardView() {
                       <img
                         src={item.avatar || undefined}
                         alt={item.name}
-                        className="w-9 h-9 rounded-full object-cover border border-border"
+                        className="w-9 h-9 shrink-0 rounded-full object-cover border border-border"
                       />
                       <span className="text-[15px] font-medium text-[#1a1a1a] truncate">
                         {item.name}
@@ -651,6 +653,10 @@ export function DashboardView() {
         notifications={notifications}
         onMarkAllAsRead={() => notificationService.markAllAsRead()}
         onClearAll={() => notificationService.clearAll()}
+        onNotificationClick={async (n) => {
+          if (!n.isRead) await notificationService.markAsRead(n.id);
+          setIsActivityModalOpen(false);
+        }}
       />
     </div>
   );

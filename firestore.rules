@@ -2,16 +2,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Global lock for unmatched paths
+    match /{document=**} {
+      allow read, write: if false; 
+    }
+    
     function isAuthenticated() {
       return request.auth != null;
     }
     
     function isAdmin() {
-      return isAuthenticated() && request.auth.token.role == 'admin';
+      return isAuthenticated() && 
+        (request.auth.token.email.matches('.*@rsr.com') || 
+         request.auth.token.email == 'skaelex1@gmail.com' ||
+         request.auth.token.email == 'admin@example.com' ||
+         request.auth.token.role == 'admin');
     }
-    
-    function isOwner(employeeId) {
-      return isAuthenticated() && request.auth.uid == employeeId;
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDataOwner() {
+      return isAuthenticated() && (resource.data.employeeId == request.auth.uid || resource.data.employeeId == request.auth.token.email);
+    }
+
+    function isIncomingDataOwner() {
+      return isAuthenticated() && (request.resource.data.employeeId == request.auth.uid || request.resource.data.employeeId == request.auth.token.email);
+    }
+
+    function isUpdatingOnly(allowedFieldsList) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFieldsList);
     }
 
     match /settings/{document=**} {
@@ -19,26 +40,65 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    match /employees/{employeeId} {
-      allow read: if isOwner(employeeId) || isAdmin();
-      allow write: if isAdmin();
+    match /adminProfiles/{document} {
+       allow read, write: if isAdmin();
+    }
+
+    match /adminAccounts/{document} {
+       allow read, write: if isAdmin() || isOwner(document);
+    }
+
+    match /facialRecognitionProfiles/{document=**} {
+      allow read, list: if true;
+      allow write: if isAuthenticated(); 
     }
     
-    match /attendance/{logId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.employeeId == request.auth.uid);
-      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.employeeId == request.auth.uid);
+    match /attendance/{document=**} {
+      allow read, create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    match /employees/{employeeId} {
+      allow read, list: if true; 
+      allow create: if isAdmin() || isOwner(employeeId);
+      allow update: if isAdmin() || isOwner(employeeId);
+      allow delete: if isAdmin();
+    }
+
+    match /leaves/{document} {
+      allow read: if isAdmin() || isDataOwner();
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || isDataOwner();
+      allow delete: if isAdmin() || isDataOwner();
+    }
+
+    match /undertime/{document} {
+      allow read: if isAdmin() || isDataOwner();
+      allow create: if isAdmin() || isIncomingDataOwner();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    match /leaves/{document=**} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.employeeId == request.auth.uid);
-      allow create: if isAdmin() || (isAuthenticated() && request.resource.data.employeeId == request.auth.uid);
-      allow update, delete: if isAdmin();
+    match /incidents/{document} {
+      allow read: if isAdmin() || isDataOwner();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isDataOwner() && isUpdatingOnly(['acknowledged', 'acknowledgedAt']));
+      allow delete: if isAdmin();
     }
 
-    match /{document=**} {
-      allow read, write: if isAdmin(); 
+    match /notifications/{document} {
+      allow read: if isAdmin() || isDataOwner();
+      allow create: if isAdmin() || isIncomingDataOwner();
+      allow update: if isAdmin() || (isDataOwner() && isUpdatingOnly(['isRead']));
+      allow delete: if isAdmin();
+    }
+
+    match /allowances/{document} {
+      allow read, write: if isAdmin();
+    }
+
+    match /sms_logs/{document} {
+      allow read, write: if isAdmin();
     }
   }
 }

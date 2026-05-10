@@ -26,10 +26,16 @@ export class FacialRecognitionService {
        this.unsubscribe = null;
     }
     this.unsubscribe = onSnapshot(collection(db, this.collectionPath), (snapshot) => {
-      this.profiles = snapshot.docs.map((snapshotDoc) => ({
-        ...snapshotDoc.data(),
-        id: snapshotDoc.id,
-      } as FacialRecognitionProfile));
+      this.profiles = snapshot.docs.map((snapshotDoc) => {
+        const data = snapshotDoc.data();
+        return {
+          ...data,
+          id: snapshotDoc.id,
+          faceDataEncodings: typeof data.faceDataEncodings === 'string' 
+            ? JSON.parse(data.faceDataEncodings) 
+            : data.faceDataEncodings,
+        } as FacialRecognitionProfile;
+      });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
@@ -44,24 +50,58 @@ export class FacialRecognitionService {
 
   async initModels() {
     if (this.modelsLoaded || typeof window === 'undefined' || process.env.NODE_ENV === 'test' || process.env.VITEST) return;
-    try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-      this.modelsLoaded = true;
-    } catch (e) {
-      console.error("Failed to load face-api models", e);
+    
+    // Attempt to load models with retries
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts && !this.modelsLoaded) {
+      try {
+        console.log(`Loading face-api models (attempt ${attempts + 1})...`);
+        
+        // Wait for tf to be ready and available
+        if ((faceapi as any).tf) {
+          await (faceapi as any).tf.ready();
+        }
+
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ]);
+        
+        this.modelsLoaded = true;
+        console.log("Face-api models loaded successfully");
+      } catch (e) {
+        attempts++;
+        console.error(`Attempt ${attempts} failed to load face-api models:`, e);
+        if (attempts >= maxAttempts) {
+          console.error("Critical: Failed to load face-api models after multiple attempts.");
+        } else {
+          // Wait a bit before retry
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
     }
   }
 
   async loadProfiles(): Promise<FacialRecognitionProfile[]> {
     try {
+      console.log("Fetching facial recognition profiles...");
       const querySnapshot = await getDocs(collection(db, this.collectionPath));
-      this.profiles = querySnapshot.docs.map((snapshotDoc) => ({
-        ...snapshotDoc.data(),
-        id: snapshotDoc.id,
-      } as FacialRecognitionProfile));
+      this.profiles = querySnapshot.docs.map((snapshotDoc) => {
+        const data = snapshotDoc.data();
+        return {
+          ...data,
+          id: snapshotDoc.id,
+          faceDataEncodings: typeof data.faceDataEncodings === 'string' 
+            ? JSON.parse(data.faceDataEncodings) 
+            : data.faceDataEncodings,
+        } as FacialRecognitionProfile;
+      });
+      console.log(`Loaded ${this.profiles.length} profiles.`);
     } catch (error) {
+      console.error("Failed to load facial recognition profiles:", error);
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     }
 
@@ -76,7 +116,10 @@ export class FacialRecognitionService {
       const img = new Image();
       img.onload = async () => {
         try {
-          const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+          // Use a larger input size for better detection accuracy if possible
+          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
+          const detections = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
+          
           if (detections) {
             resolve(Array.from(detections.descriptor));
           } else {
@@ -105,11 +148,12 @@ export class FacialRecognitionService {
       await setDoc(doc(db, this.collectionPath, profileId), {
         id: newProfile.id,
         employeeId: newProfile.employeeId,
-        faceDataEncodings: faceData,
+        faceDataEncodings: JSON.stringify(faceData),
         createdAt: newProfile.createdAt,
       });
+      // Update local cache
       this.profiles = [
-        ...this.profiles.filter((profile) => profile.id !== profileId),
+        ...this.profiles.filter((profile) => profile.employeeId !== employeeId),
         newProfile,
       ];
       return profileId;
@@ -131,14 +175,18 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.5; // threshold (0.5 is safe for face recognition, 0.6 is default)
+    let minDistance = 0.6; // Increased threshold for better recognition (default face-api.js threshold is 0.6)
 
     for (const profile of this.profiles) {
-      const encodings = profile.faceDataEncodings as any as number[][];
-      if (!encodings || encodings.length === 0) continue;
+      const encodingsString = profile.faceDataEncodings;
+      const encodings = typeof encodingsString === 'string' 
+        ? JSON.parse(encodingsString) 
+        : encodingsString;
+        
+      if (!encodings || !Array.isArray(encodings) || encodings.length === 0) continue;
 
       for (const savedDescriptorArray of encodings) {
-         if (!savedDescriptorArray) continue;
+         if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
          const savedDescriptor = new Float32Array(savedDescriptorArray);
          const currentDescriptor = new Float32Array(descriptor);
          

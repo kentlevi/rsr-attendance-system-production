@@ -35,9 +35,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (user) {
         try {
             const idTokenResult = await user.getIdTokenResult();
-            if (idTokenResult.claims.role === 'admin') {
+            const isAdminEmail = user.email === 'admin@rsr.com' || 
+                                user.email === 'hr@rsr.com' || 
+                                user.email === 'skaelex1@gmail.com';
+                                
+            if (idTokenResult.claims.role === 'admin' || isAdminEmail) {
                 isAdmin = true;
-            } else if (idTokenResult.claims.role === 'employee') {
+            } else if (idTokenResult.claims.role === 'employee' || user.email?.includes('@rsrengineering.com')) {
                 isEmployee = true;
             } else {
                 isAdmin = false;

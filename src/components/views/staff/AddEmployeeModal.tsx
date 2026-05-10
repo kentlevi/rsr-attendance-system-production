@@ -11,7 +11,7 @@ import {
 import { Modal } from "../../common/Modal";
 import { Select } from "../../common/Select";
 import { DatePicker } from "../../common/DatePicker";
-import { cn } from "../../../lib/utils";
+import { cn, formatTimeTo12h, resizeImage } from "../../../lib/utils";
 import Webcam from "react-webcam";
 import { settingsService } from "../../../services/SettingsService";
 import { useToast } from "../../../context/ToastContext";
@@ -27,23 +27,61 @@ export function AddEmployeeModal({
     "personal" | "employment" | "financial" | "account"
   >("personal");
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isProcessingCapture, setIsProcessingCapture] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isModelsLoading, setIsModelsLoading] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [capturedDescriptors, setCapturedDescriptors] = useState<number[][]>([]);
   const webcamRef = React.useRef<Webcam>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollParent = scrollContainerRef.current.closest('.custom-scrollbar');
+      const globalOverlay = document.getElementById('global-modal-overlay');
+      
+      const resetScroll = () => {
+        if (scrollParent) scrollParent.scrollTop = 0;
+        if (globalOverlay) globalOverlay.scrollTop = 0;
+      };
+
+      requestAnimationFrame(resetScroll);
+      setTimeout(resetScroll, 50);
+    }
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab === "account") {
+      // Pre-import the service to start loading models
+      setIsModelsLoading(true);
+      import("../../../services/FacialRecognitionService").then(({ facialRecognitionService }) => {
+        facialRecognitionService.initModels().finally(() => {
+          setIsModelsLoading(false);
+        });
+      });
+    }
+  }, [activeTab]);
 
   const handleCapture = React.useCallback(async () => {
     if (webcamRef.current) {
       const imageSrc = webcamRef.current.getScreenshot();
       if (imageSrc && capturedImages.length < 5) {
-        showToast("Analyzing face model...", "info");
-        const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
-        const descriptor = await facialRecognitionService.extractFaceDescriptor(imageSrc);
-        if (descriptor) {
-           setCapturedDescriptors(prev => [...prev, descriptor]);
-           setCapturedImages((prev) => [...prev, imageSrc]);
-           showToast("Face matched and registered!", "success");
-        } else {
-           showToast("No face detected! Move closer or into better light.", "error");
+        setIsProcessingCapture(true);
+        try {
+          const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
+          const descriptor = await facialRecognitionService.extractFaceDescriptor(imageSrc);
+          if (descriptor) {
+             setCapturedDescriptors(prev => [...prev, descriptor]);
+             setCapturedImages((prev) => [...prev, imageSrc]);
+             showToast("Face matched and registered!", "success");
+          } else {
+             showToast("No face detected! Move closer or into better light.", "error");
+          }
+        } catch (error) {
+          console.error("Capture Error:", error);
+          showToast("Failed to process image", "error");
+        } finally {
+          setIsProcessingCapture(false);
         }
       }
     }
@@ -60,7 +98,7 @@ export function AddEmployeeModal({
     gender: employeeToEdit?.gender || "",
     civilStatus: employeeToEdit?.civilStatus || "",
     address: employeeToEdit?.address || "",
-    pin: "",
+    pin: employeeToEdit?.pin || "",
     rfid: employeeToEdit?.rfid || "",
     employeeId: employeeToEdit?.employeeId || "",
     department: employeeToEdit?.department || "",
@@ -92,7 +130,7 @@ export function AddEmployeeModal({
         gender: employeeToEdit.gender || "",
         civilStatus: employeeToEdit.civilStatus || "",
         address: employeeToEdit.address || "",
-        pin: "",
+        pin: employeeToEdit.pin || "",
         rfid: employeeToEdit.rfid || "",
         employeeId: employeeToEdit.employeeId || "",
         department: employeeToEdit.department || "",
@@ -145,6 +183,8 @@ export function AddEmployeeModal({
     }
   }, [employeeToEdit]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -153,86 +193,98 @@ export function AddEmployeeModal({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async () => {
-    const employeeId = employeeToEdit ? employeeToEdit.id : Date.now().toString();
-    let facialRecognitionProfileId = employeeToEdit?.facialRecognitionProfileId;
-    
-    if (capturedDescriptors.length > 0) {
-      const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
-      facialRecognitionProfileId = await facialRecognitionService.registerFace(employeeId, capturedDescriptors);
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && 'preventDefault' in e) {
+      e.preventDefault();
     }
 
-    const payload: any = {
-      id: employeeId,
-      avatar:
-        formData.avatar ||
-        (employeeToEdit
-          ? employeeToEdit.avatar
-          : "https://i.pravatar.cc/150?u=" + Date.now()),
-      name:
-        `${formData.firstName} ${formData.lastName}`.trim() || "New Employee",
-      email: formData.email,
-      department: formData.department || "Engineering",
-      position: formData.position || "Staff",
-      status: employeeToEdit ? employeeToEdit.status : "Active",
-      lastLogin: employeeToEdit ? employeeToEdit.lastLogin : "-",
-      phone: formData.phone,
-      dob: formData.dob,
-      gender: formData.gender,
-      civilStatus: formData.civilStatus,
-      address: formData.address,
-      rfid: formData.rfid,
-      employmentType: formData.employmentType,
-      workLocation: formData.workLocation,
-      supervisor: formData.supervisor,
-      shiftTemplateId: formData.shiftTemplateId,
-      dateHired: formData.dateHired,
-      dailyRate: formData.dailyRate,
-      payPeriodType: formData.payPeriodType,
-      taxId: formData.taxId,
-      sssNumber: formData.sssNumber,
-      pagibigNumber: formData.pagibigNumber,
-      philhealthNumber: formData.philhealthNumber,
-      allowanceType: formData.allowanceType,
-      notes: formData.notes,
-      facialRecognitionProfileId,
-    };
-
-    if (formData.pin) {
-      payload.pin = formData.pin;
+    if (!formData.firstName || !formData.lastName || !formData.department || !formData.position) {
+      showToast("Please fill in all required fields", "warning");
+      return;
     }
 
-    onAdd(payload);
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phone: "",
-      dob: "",
-      gender: "",
-      civilStatus: "",
-      address: "",
-      pin: "",
-      rfid: "",
-      employeeId: "",
-      department: "",
-      position: "",
-      employmentType: "",
-      workLocation: "",
-      supervisor: "",
-      shiftTemplateId: "",
-      dateHired: "",
-      dailyRate: "",
-      payPeriodType: "",
-      taxId: "",
-      sssNumber: "",
-      pagibigNumber: "",
-      philhealthNumber: "",
-      allowanceType: "",
-      notes: "",
-      avatar: "",
-    });
-    setActiveTab("personal");
+    setIsSubmitting(true);
+    try {
+      const employeeId = employeeToEdit ? employeeToEdit.id : Date.now().toString();
+      
+      // Face registration
+      let facialRecognitionProfileId = employeeToEdit?.facialRecognitionProfileId || null;
+      if (capturedDescriptors.length > 0) {
+        const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
+        // Registration ID should be the human-readable ID or internal ID
+        const regId = formData.employeeId || employeeId;
+        const newProfileId = await facialRecognitionService.registerFace(regId, capturedDescriptors);
+        if (newProfileId) {
+          facialRecognitionProfileId = newProfileId;
+        }
+      }
+
+      // Image processing
+      const avatar = formData.avatar && formData.avatar.startsWith('data:')
+        ? await resizeImage(formData.avatar)
+        : (employeeToEdit ? employeeToEdit.avatar : "https://i.pravatar.cc/150?u=" + Date.now());
+
+      const facialDataImage = capturedImages.length > 0 
+        ? await resizeImage(capturedImages[0]) 
+        : (employeeToEdit?.facialDataImage || null);
+
+      const payload: any = {
+        // Basic Info
+        id: employeeId,
+        avatar,
+        name: `${formData.firstName} ${formData.lastName}`.trim() || "New Employee",
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        dob: formData.dob,
+        gender: formData.gender,
+        civilStatus: formData.civilStatus,
+        address: formData.address.trim(),
+        
+        // Access Credentials
+        employeeId: formData.employeeId.trim(),
+        pin: formData.pin.trim(),
+        rfid: (formData.rfid || "").trim(),
+        facialDataImage,
+        facialRecognitionProfileId: facialRecognitionProfileId,
+        
+        // Employment Info
+        department: formData.department,
+        position: formData.position,
+        status: formData.status || (employeeToEdit?.status || "Active"),
+        lastLogin: employeeToEdit ? employeeToEdit.lastLogin : "-",
+        employmentType: formData.employmentType,
+        workLocation: formData.workLocation,
+        supervisor: formData.supervisor,
+        shiftTemplateId: formData.shiftTemplateId,
+        dateHired: formData.dateHired,
+        
+        // Financial Info
+        dailyRate: formData.dailyRate,
+        payPeriodType: formData.payPeriodType,
+        taxId: formData.taxId,
+        sssNumber: formData.sssNumber,
+        pagibigNumber: formData.pagibigNumber,
+        philhealthNumber: formData.philhealthNumber,
+        allowanceType: formData.allowanceType,
+        
+        // Meta
+        notes: formData.notes?.trim() || "",
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (!employeeToEdit) {
+        payload.createdAt = new Date().toISOString();
+      }
+
+      await onAdd(payload);
+      showToast(employeeToEdit ? "Employee updated successfully!" : "Employee added successfully!", "success");
+      onClose();
+    } catch (error) {
+      console.error("Submit Error:", error);
+      showToast("Failed to save employee. " + (error instanceof Error ? error.message : ""), "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -244,10 +296,10 @@ export function AddEmployeeModal({
       title={employeeToEdit ? "Edit Employee" : "Add Employee"}
       maxWidth="max-w-[700px]"
       footer={
-        <>
+        <div className="flex flex-row w-full gap-3 sm:justify-end">
           <button
             onClick={onClose}
-            className="btn-secondary btn-sm"
+            className="btn-secondary flex-1 sm:flex-initial sm:btn-sm"
           >
             Cancel
           </button>
@@ -261,74 +313,89 @@ export function AddEmployeeModal({
                     ? () => setActiveTab("account")
                     : handleSubmit
             }
-            className="btn-primary btn-sm"
+            disabled={isSubmitting}
+            className="btn-primary flex-1 sm:flex-initial sm:btn-sm flex items-center justify-center gap-2"
           >
-            {activeTab === "account" ? "Save Employee" : "Next"}
+            {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+            {employeeToEdit 
+              ? (activeTab === "account" ? "Save Changes" : "Next")
+              : (activeTab === "account" ? "Save Employee" : "Next")
+            }
           </button>
-        </>
+          {employeeToEdit && activeTab !== "account" && (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="flex-1 sm:flex-initial btn-primary sm:btn-sm flex items-center justify-center gap-2"
+            >
+              {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
+              Save Changes
+            </button>
+          )}
+        </div>
       }
     >
       <div className="flex flex-col">
         {/* Tabs */}
-        <div className="flex items-center border-b border-border/60 px-6 sticky top-0 bg-white z-10">
+        <div className="flex items-center border-b border-border/60 px-5 sm:px-6 sticky top-0 bg-white z-10 overflow-x-auto whitespace-nowrap hide-scrollbar -mx-5 sm:mx-0">
           <button
             onClick={() => setActiveTab("personal")}
             className={cn(
-              "flex-1 text-[16px] font-medium py-4 px-2 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
               activeTab === "personal"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
-            Personal Information
+            Personal
           </button>
           <button
             onClick={() => setActiveTab("employment")}
             className={cn(
-              "flex-1 text-[16px] font-medium py-4 px-4 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
               activeTab === "employment"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
-            Employment Details
+            Employment
           </button>
           <button
             onClick={() => setActiveTab("financial")}
             className={cn(
-              "flex-1 text-[16px] font-medium py-4 px-4 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
               activeTab === "financial"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
-            Financial Details
+            Financial
           </button>
           <button
             onClick={() => setActiveTab("account")}
             className={cn(
-              "flex-1 text-[16px] font-medium py-4 px-4 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
               activeTab === "account"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
-            Facial Recognition Data
+            Facial Data
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[65vh]">
+        <div ref={scrollContainerRef} className="p-5 sm:p-8 pb-12">
           {activeTab === "personal" && (
             <div className="flex flex-col gap-6">
               {/* Profile Photo and Basic Info */}
-              <div className="flex gap-6">
+              <div className="flex flex-col sm:flex-row gap-6">
                 {/* Profile Photo */}
                 <div className="flex flex-col gap-2 shrink-0">
                   <label className="text-label">
                     Profile Photo
                   </label>
-                  <label className="w-[140px] h-[140px] border-2 border-dashed border-[#CBD5E1] rounded-2xl bg-white flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors overflow-hidden relative">
+                  <label className="w-full sm:w-[140px] aspect-video sm:aspect-[1/1] sm:h-[140px] border-2 border-dashed border-[#CBD5E1] rounded-2xl bg-white flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors overflow-hidden relative">
                     {formData.avatar ? (
                       <img
                         src={formData.avatar || undefined}
@@ -352,14 +419,15 @@ export function AddEmployeeModal({
                       type="file"
                       accept="image/png, image/jpeg, image/jpg"
                       className="hidden"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
-                          reader.onloadend = () => {
+                          reader.onloadend = async () => {
+                            const resized = await resizeImage(reader.result as string);
                             setFormData((prev) => ({
                               ...prev,
-                              avatar: reader.result as string,
+                              avatar: resized,
                             }));
                           };
                           reader.readAsDataURL(file);
@@ -370,7 +438,7 @@ export function AddEmployeeModal({
                 </div>
 
                 {/* Name, Email, Phone */}
-                <div className="flex-1 grid grid-cols-2 gap-4">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-label">
                       First Name <span className="text-[#DC2626]">*</span>
@@ -434,7 +502,7 @@ export function AddEmployeeModal({
               </div>
 
               {/* Middle Section: DOB, Gender, Civil Status */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Date of Birth
@@ -500,7 +568,7 @@ export function AddEmployeeModal({
               </div>
 
               {/* Bottom: PIN, RFID */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-label flex items-center justify-between">
                     Fallback PIN (Optional)
@@ -537,7 +605,7 @@ export function AddEmployeeModal({
 
           {activeTab === "employment" && (
             <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Employee ID <span className="text-[#DC2626]">*</span>
@@ -570,7 +638,7 @@ export function AddEmployeeModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Position / Job Title{" "}
@@ -603,7 +671,7 @@ export function AddEmployeeModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Work Location / Site{" "}
@@ -639,7 +707,7 @@ export function AddEmployeeModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Shift Template
@@ -650,10 +718,10 @@ export function AddEmployeeModal({
                     onChange={handleChange}
                   >
                     <option value="">
-                      Default Shift ({settingsService.getSettings().shiftStartTime} - {settingsService.getSettings().shiftEndTime})
+                      Default Shift ({formatTimeTo12h(settingsService.getSettings().shiftStartTime)} - {formatTimeTo12h(settingsService.getSettings().shiftEndTime)})
                     </option>
                     {settingsService.getSettings().shiftTemplates?.map(t => (
-                      <option key={t.id} value={t.id}>{t.name} ({t.startTime} - {t.endTime})</option>
+                      <option key={t.id} value={t.id}>{t.name} ({formatTimeTo12h(t.startTime)} - {formatTimeTo12h(t.endTime)})</option>
                     ))}
                   </Select>
                 </div>
@@ -663,22 +731,18 @@ export function AddEmployeeModal({
                   </label>
                   <div className="relative">
                     <input
-                      type="text"
+                      type="date"
                       name="dateHired"
                       value={formData.dateHired}
                       onChange={handleChange}
-                      className="control-field pl-4 pr-10"
+                      className="control-field px-4"
                       placeholder="Select date"
-                    />
-                    <Calendar
-                      size={18}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] pointer-events-none"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Daily Rate (₱) <span className="text-[#DC2626]">*</span>
@@ -733,7 +797,7 @@ export function AddEmployeeModal({
 
           {activeTab === "financial" && (
             <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     Pay Period Type <span className="text-[#DC2626]">*</span>
@@ -763,7 +827,7 @@ export function AddEmployeeModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     SSS Number
@@ -792,7 +856,7 @@ export function AddEmployeeModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-label">
                     PhilHealth Number
@@ -812,6 +876,12 @@ export function AddEmployeeModal({
 
           {activeTab === "account" && (
             <div className="flex flex-col gap-5 w-full">
+              {isModelsLoading && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center gap-3 animate-pulse">
+                  <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin shrink-0"></div>
+                  <span className="text-[14px] font-medium text-amber-700">Loading AI Models... This may take a few seconds.</span>
+                </div>
+              )}
               {/* Top Alert */}
               <div className="bg-[#E8F3EE] p-4 rounded-xl flex items-start gap-4">
                 <div className="w-9 h-9 rounded-full border-[1.5px] border-[#0B7A4B] bg-white flex items-center justify-center text-[#0B7A4B] shrink-0">
@@ -837,43 +907,89 @@ export function AddEmployeeModal({
               </h4>
 
               {/* Main Content */}
-              <div className="flex gap-8">
+              <div className="flex flex-col sm:flex-row gap-6 md:gap-8">
                 {/* Left Panel - Capture Box */}
-                <div className="relative w-[300px] h-[340px] bg-[#F8FAFC] border-[1.5px] border-dashed border-[#CBD5E1] rounded-2xl p-6 flex flex-col items-center justify-center text-center overflow-hidden">
+                <div className="relative w-full sm:w-[300px] aspect-[1/1.13] sm:h-[340px] bg-[#F8FAFC] border-[1.5px] border-dashed border-[#CBD5E1] rounded-2xl p-6 flex flex-col items-center justify-center text-center overflow-hidden shrink-0">
                   {isCapturing ? (
                     <>
+                      {!isCameraReady && (
+                        <div className="absolute inset-0 z-20 bg-[#F8FAFC] flex flex-col items-center justify-center p-6">
+                          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                          <p className="text-[14px] font-medium text-slate-600">Initializing Camera...</p>
+                          <p className="text-[12px] text-slate-400 mt-2">Please allow camera access if prompted</p>
+                        </div>
+                      )}
                       {/* @ts-ignore */}
                       <Webcam
                         audio={false}
                         ref={webcamRef}
                         screenshotFormat="image/jpeg"
-                        videoConstraints={{ width: 300, height: 340, facingMode: "user" }}
+                        onUserMedia={() => setIsCameraReady(true)}
+                        onUserMediaError={(err) => {
+                          console.error("Webcam Error:", err);
+                          showToast("Failed to access camera", "error");
+                          setIsCapturing(false);
+                        }}
+                        mirrored={true}
+                        videoConstraints={{ 
+                          width: { ideal: 1280 },
+                          height: { ideal: 720 },
+                          facingMode: "user" 
+                        }}
                         className="absolute inset-0 w-full h-full object-cover z-0"
                       />
-                      <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center">
-                        <button 
-                          onClick={(e) => { e.preventDefault(); handleCapture(); }}
-                          className="btn-primary btn-sm px-8"
-                        >
-                          <Camera size={16} /> Capture ({capturedImages.length}/5)
-                        </button>
-                      </div>
+
+                      {/* Scanner corners and line */}
+                      <div className="absolute top-4 left-4 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg z-10"></div>
+                      <div className="absolute top-4 right-4 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg z-10"></div>
+                      <div className="absolute bottom-4 left-4 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg z-10"></div>
+                      <div className="absolute bottom-4 right-4 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg z-10"></div>
+                      
+                      <style>{`
+                        @keyframes scan {
+                          0% { top: 0%; opacity: 0; }
+                          10% { opacity: 1; }
+                          90% { opacity: 1; }
+                          100% { top: 100%; opacity: 0; }
+                        }
+                      `}</style>
+                      <div className="absolute left-0 right-0 h-1 bg-primary/40 shadow-[0_0_20px_rgba(11,122,75,0.5)] z-20" style={{ animation: 'scan 2.5s ease-in-out infinite' }}></div>
+
+                      {isProcessingCapture && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20 backdrop-blur-[2px]">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <span className="text-white font-medium text-sm tracking-widest uppercase">Processing Image</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {isCameraReady && (
+                        <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center">
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleCapture(); }}
+                            className="btn-primary btn-sm px-6 shadow-lg"
+                          >
+                            <Camera size={16} /> Capture ({capturedImages.length}/5)
+                          </button>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
-                      <div className="text-[#94A3B8] mb-6">
-                        <ScanFace size={72} strokeWidth={1} />
+                      <div className="text-[#94A3B8] mb-4 sm:mb-6">
+                        <ScanFace size={64} strokeWidth={1} className="sm:w-[72px] sm:h-[72px]" />
                       </div>
                       <h5 className="text-[16px] font-medium text-[#1a1a1a] mb-2">
                         {capturedImages.length >= 5 ? "Capture complete" : "Ready to capture"}
                       </h5>
-                      <p className="text-[16px] text-[#64748B] mb-8">
-                        {capturedImages.length >= 5 ? "5 samples captured" : <>Position the employee in front<br />of the camera</>}
+                      <p className="text-[14px] sm:text-[16px] text-[#64748B] mb-6 sm:mb-8">
+                        {capturedImages.length >= 5 ? "5 samples captured" : <>Position the employee in front<br className="hidden sm:block" /> of the camera</>}
                       </p>
                       {capturedImages.length < 5 && (
                         <button 
                           onClick={(e) => { e.preventDefault(); setIsCapturing(true); }}
-                          className="btn-primary btn-sm w-[200px] px-8"
+                          className="btn-primary btn-sm w-full sm:w-[200px] px-8"
                         >
                           <Camera size={16} /> Start Capture
                         </button>
@@ -883,70 +999,60 @@ export function AddEmployeeModal({
                 </div>
 
                 {/* Right Panel - Info */}
-                <div className="flex-1 flex flex-col pt-2">
+                <div className="flex-1 flex flex-col pt-0 sm:pt-2">
                   <h5 className="text-[16px] font-medium text-[#1a1a1a] mb-4">
                     Capture Requirements
                   </h5>
-                  <ul className="flex flex-col gap-3.5 mb-8 text-[16px] text-[#1a1a1a]">
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2
-                        size={16}
-                        className="text-[#0B7A4B] shrink-0 mt-0.5"
-                      />{" "}
-                      Ensure good lighting
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2
-                        size={16}
-                        className="text-[#0B7A4B] shrink-0 mt-0.5"
-                      />{" "}
-                      Face should be clearly visible
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2
-                        size={16}
-                        className="text-[#0B7A4B] shrink-0 mt-0.5"
-                      />{" "}
-                      <span>
-                        Remove glasses, mask or anything
-                        <br />
-                        that covers the face
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2
-                        size={16}
-                        className="text-[#0B7A4B] shrink-0 mt-0.5"
-                      />{" "}
-                      Look directly at the camera
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <CheckCircle2
-                        size={16}
-                        className="text-[#0B7A4B] shrink-0 mt-0.5"
-                      />{" "}
-                      Keep a neutral expression
-                    </li>
-                  </ul>
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h5 className="text-[16px] font-medium text-[#1a1a1a]">
-                        Samples to Capture
-                      </h5>
-                      <Info size={14} className="text-text-muted" />
+                  <div className="grid grid-cols-1 gap-3 mb-6 sm:mb-8">
+                    <div className="flex items-start gap-3 text-[14px] sm:text-[15px] text-[#1a1a1a] bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="w-5 h-5 rounded-full bg-[#E8F3EE] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 size={13} className="text-[#0B7A4B]" />
+                      </div>
+                      <span>Ensure <strong>good lighting</strong> (avoid backlighting)</span>
                     </div>
-                    <p className="text-[12px] text-[#64748B] mb-4">
-                      {capturedImages.length} / 5 captured
-                    </p>
-                    <div className="flex gap-3 relative">
+                    <div className="flex items-start gap-3 text-[14px] sm:text-[15px] text-[#1a1a1a] bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="w-5 h-5 rounded-full bg-[#E8F3EE] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 size={13} className="text-[#0B7A4B]" />
+                      </div>
+                      <span>Face should be <strong>clearly visible</strong> and centered</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-[14px] sm:text-[15px] text-[#1a1a1a] bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="w-5 h-5 rounded-full bg-[#E8F3EE] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 size={13} className="text-[#0B7A4B]" />
+                      </div>
+                      <span>Remove accessories like <strong>glasses or masks</strong></span>
+                    </div>
+                    <div className="flex items-start gap-3 text-[14px] sm:text-[15px] text-[#1a1a1a] bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="w-5 h-5 rounded-full bg-[#E8F3EE] flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 size={13} className="text-[#0B7A4B]" />
+                      </div>
+                      <span>Look <strong>directly</strong> at the camera</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#F8FAFC] p-4 rounded-xl border border-slate-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <h5 className="text-[14px] font-semibold text-[#64748B] uppercase tracking-wider">
+                          Capture Progress
+                        </h5>
+                        <Info size={14} className="text-text-muted" />
+                      </div>
+                      <p className="text-[14px] font-medium text-[#1a1a1a]">
+                        {capturedImages.length} / 5 
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2.5">
                       {[0, 1, 2, 3, 4].map((i) => (
                         <div
                           key={i}
-                          className="w-8 h-8 rounded-full border-[1.5px] border-[#E2E8F0] bg-white overflow-hidden flex items-center justify-center"
+                          className="w-10 h-10 rounded-lg border-2 border-[#E2E8F0] bg-white overflow-hidden flex items-center justify-center relative shadow-sm"
                         >
-                          {capturedImages[i] && (
-                            <img src={capturedImages[i]} alt={`Sample ${i + 1}`} className="w-full h-full object-cover" />
+                          {capturedImages[i] ? (
+                            <img src={capturedImages[i]} alt={`Sample ${i + 1}`} className="w-full h-full object-cover shadow-inner" />
+                          ) : (
+                            <span className="text-[12px] font-bold text-slate-300">{i + 1}</span>
                           )}
                         </div>
                       ))}
@@ -954,7 +1060,7 @@ export function AddEmployeeModal({
                         <button
                           title="Clear Photos"
                           onClick={(e) => { e.preventDefault(); setCapturedImages([]); setIsCapturing(false); }}
-                          className="text-[12px] text-danger hover:underline ml-2"
+                          className="btn-ghost btn-sm text-red-500 hover:bg-red-50 px-2 h-10 flex items-center transition-colors"
                         >
                           Clear
                         </button>

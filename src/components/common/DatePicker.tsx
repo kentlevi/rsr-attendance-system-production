@@ -9,6 +9,8 @@ interface DatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  minYear?: number;
+  maxYear?: number;
 }
 
 const MONTHS = [
@@ -16,7 +18,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-export function DatePicker({ value, onChange, placeholder = "Select date", className, disabled }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder = "Select date", className, disabled, minYear, maxYear }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -74,7 +76,9 @@ export function DatePicker({ value, onChange, placeholder = "Select date", class
   };
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 31 }, (_, i) => currentYear - 15 + i);
+  const startYear = minYear !== undefined ? minYear : currentYear - 80;
+  const endYear = maxYear !== undefined ? maxYear : currentYear + 15;
+  const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
   const days = Array.from({ length: daysInMonth(tempYear, tempMonth) }, (_, i) => i + 1);
 
   // Refs for auto-scroll
@@ -132,8 +136,9 @@ export function DatePicker({ value, onChange, placeholder = "Select date", class
             exit={{ opacity: 0 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
             className={cn(
-              "absolute top-full mt-2 w-[340px] bg-white border border-border rounded-xl z-[9999] p-2 flex gap-1 h-[260px]",
-              className?.includes("right") || className?.includes("left-0") ? "left-0" : "right-0 md:left-0"
+              "absolute top-full mt-2 w-[calc(100vw-48px)] sm:w-[340px] max-w-[340px] bg-white border border-border rounded-xl z-[9999] p-2 flex gap-1 h-[260px]",
+              className?.includes("right") ? "right-0" : "left-0",
+              "sm:left-0" // Always left-align on mobile so it doesn't spill off the left edge
             )}
           >
             {/* Month Column */}

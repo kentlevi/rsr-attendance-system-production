@@ -31,6 +31,7 @@ interface NotificationModalProps {
   notifications: AppNotification[];
   onMarkAllAsRead: () => void;
   onClearAll: () => void;
+  onNotificationClick?: (notification: AppNotification) => void;
 }
 
 export function NotificationModal({
@@ -38,7 +39,8 @@ export function NotificationModal({
   onClose,
   notifications,
   onMarkAllAsRead,
-  onClearAll
+  onClearAll,
+  onNotificationClick
 }: NotificationModalProps) {
   const getIcon = (type: string) => {
     switch (type) {
@@ -92,6 +94,7 @@ export function NotificationModal({
             notifications.map((notif) => (
               <div 
                 key={notif.id}
+                onClick={() => onNotificationClick?.(notif)}
                 className={cn(
                   "px-6 py-5 border-b border-border/40 hover:bg-slate-50/80 transition-colors cursor-pointer relative group",
                   !notif.isRead && "bg-[#0B7A4B]/[0.02]"

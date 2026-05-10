@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { deleteField } from "firebase/firestore";
+import { auth } from "../lib/firebase";
 import { employeeService } from "../services/EmployeeService";
 import { Employee } from "../models/Employee";
 import { useToast } from "../context/ToastContext";
@@ -20,11 +21,29 @@ export function useStaffManagementController() {
   );
 
   useEffect(() => {
-    refreshEmployees();
+    // Determine admin status from current auth
+    const isAdmin = !!(auth.currentUser?.email?.includes('@rsr.com') || 
+                      auth.currentUser?.email === 'skaelex1@gmail.com' ||
+                      auth.currentUser?.email === 'admin@example.com');
+
+    employeeService.initializeForUser(isAdmin, auth.currentUser?.uid);
+    
+    // Also initialize facial recognition service for admin if applicable
+    import("../services/FacialRecognitionService").then(({ facialRecognitionService }) => {
+      facialRecognitionService.initializeForAdmin();
+    });
+
     const unsubscribe = employeeService.subscribe(() => {
       setEmployees(employeeService.getAllEmployeesSync());
     });
-    return () => unsubscribe();
+    
+    return () => {
+      employeeService.stopSubscription();
+      import("../services/FacialRecognitionService").then(({ facialRecognitionService }) => {
+        facialRecognitionService.stopSubscription();
+      });
+      unsubscribe();
+    };
   }, []);
 
   const refreshEmployees = async () => {
@@ -81,6 +100,7 @@ export function useStaffManagementController() {
     await employeeService.updateEmployee(id, {
       pin: newPin,
       facialRecognitionProfileId: deleteField(),
+      facialDataImage: deleteField(),
     } as any);
     refreshEmployees();
     showToast(`Access reset. New PIN: ${newPin}`, "warning");

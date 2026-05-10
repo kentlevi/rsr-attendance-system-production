@@ -37,26 +37,28 @@ export default function App() {
   }, []);
 
   const handleNavigate = (view: AppView) => {
-    const activeRole = sessionStorage.getItem(SESSION_ROLE_KEY);
-
-    if (view === 'welcome') {
-      if (isAdmin) {
-        setCurrentView('admin');
-        return;
-      }
-      if (activeRole === 'employee') {
-        setCurrentView('employee');
-        return;
-      }
-    }
-
     if (view === 'admin' && !isAdmin) {
       setCurrentView('adminLogin');
       return;
     }
 
+    if (view === 'adminLogin' && isAdmin) {
+      setCurrentView('admin');
+      return;
+    }
+
     setCurrentView(view);
   };
+
+  // Ensure scroll is reset when the view changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    // Also try to find any scrollable containers and reset them
+    const scrollContainers = document.querySelectorAll('.overflow-y-auto');
+    scrollContainers.forEach(container => {
+      container.scrollTop = 0;
+    });
+  }, [currentView]);
 
   // If user is admin but wants to go to admin view, but is logged out at Firebase level
   if (currentView === 'admin' && !isLoading && !isAdmin) {

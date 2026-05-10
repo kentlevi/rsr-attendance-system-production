@@ -90,24 +90,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <AnimatePresence>
         {message && (
           <motion.div
-            initial={{ opacity: 0, y: 50, x: "-50%", scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, x: "-50%", scale: 1 }}
-            exit={{ opacity: 0, y: 20, x: "-50%", scale: 0.95 }}
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ 
               type: "spring", 
               stiffness: 400, 
               damping: 25,
               opacity: { duration: 0.2 }
             }}
-            className="fixed bottom-8 left-1/2 z-[999] pointer-events-none"
+            className="fixed bottom-6 left-0 right-0 z-[9999] pointer-events-none flex justify-center px-4"
           >
-            <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border backdrop-blur-md ${activeToast.container}`}>
-              {isLoading ? (
-                <Loader2 className={`animate-spin ${activeToast.icon}`} size={18} />
-              ) : (
-                <ActiveIcon className={activeToast.icon} size={18} />
-              )}
-              <span className="text-[16px] font-semibold tracking-tight whitespace-nowrap">
+            <div className={`px-5 py-3 rounded-2xl flex items-center gap-3 border shadow-lg backdrop-blur-md max-w-full md:max-w-md ${activeToast.container}`}>
+              <div className="shrink-0">
+                {isLoading ? (
+                  <Loader2 className={`animate-spin ${activeToast.icon}`} size={18} />
+                ) : (
+                  <ActiveIcon className={activeToast.icon} size={18} />
+                )}
+              </div>
+              <span className="text-[14px] md:text-[15px] font-semibold tracking-tight leading-snug">
                 {message}
               </span>
             </div>

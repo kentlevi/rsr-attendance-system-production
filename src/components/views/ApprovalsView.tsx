@@ -9,6 +9,7 @@ import { applyAttendanceApprovalDecision, needsAttendanceApproval } from '../../
 import { applyLeaveApprovalDecision, calculateLeaveBalanceUpdate } from '../../lib/RequestApprovalRules';
 import { cn } from '../../lib/utils';
 import { DataTable } from '../common/DataTable';
+import { TimePicker } from '../common/TimePicker';
 import { useToast } from '../../context/ToastContext';
 import { FileLeaveModal } from './common/FileLeaveModal';
 
@@ -173,7 +174,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             <img
               src={employee?.avatar || `https://i.pravatar.cc/150?u=${log.data.employeeId}`}
               alt={employee?.name }
-              className="h-10 w-10 rounded-full border border-border object-cover"
+              className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
             />
             <div className="flex flex-col gap-1">
               <span className="text-[14px] font-semibold text-text-primary">
@@ -221,7 +222,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
       header: 'Review',
       accessor: (log: AttendanceLogModel) => (
         <div className="flex flex-col gap-1 text-[12px] font-medium text-text-secondary">
-          <span>Payroll: {log.data.payrollReviewStatus || '-'}</span>
+          {/*<span>Payroll: {log.data.payrollReviewStatus || '-'}</span>*/}
           <span>Lunch: {log.data.lunchApprovalStatus || '-'}</span>
           <span>PM: {log.data.pmBreakApprovalStatus || '-'}</span>
         </div>
@@ -233,17 +234,15 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         const isUpdating = isUpdatingId === log.data.id;
         const needsOfficialTimeOut = log.data.timeOut !== '-' && log.data.payrollReviewStatus === 'Pending Review';
         return (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 relative">
             {needsOfficialTimeOut ? (
-              <input
-                type="time"
+              <TimePicker
                 value={officialTimeOutByLogId[log.data.id] || ''}
-                onChange={(event) => setOfficialTimeOutByLogId((current) => ({
+                onChange={(val) => setOfficialTimeOutByLogId((current) => ({
                   ...current,
-                  [log.data.id]: event.target.value,
+                  [log.data.id]: val,
                 }))}
-                className="h-9 w-[118px] rounded-lg border border-border bg-white px-3 text-[14px] font-medium text-text-primary outline-none transition-colors hover:border-primary/40 focus:border-primary"
-                aria-label="Official Time Out"
+                className="w-[125px]"
               />
             ) : null}
             <button
@@ -281,7 +280,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             <img
               src={employee?.avatar || `https://i.pravatar.cc/150?u=${request.data.employeeId}`}
               alt={employee?.name || request.data.employeeId}
-              className="h-10 w-10 rounded-full border border-border object-cover"
+              className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
             />
             <div className="flex flex-col gap-1">
               <span className="text-[14px] font-semibold text-text-primary">

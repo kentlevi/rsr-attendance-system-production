@@ -427,7 +427,7 @@ export function WorkforceInsightsView() {
       header: "Employee",
       accessor: (row: any) => (
         <div className="flex items-center gap-3">
-          <div className="relative">
+          <div className="relative shrink-0">
             <img
               src={row.avatar || undefined}
               alt={row.name}
@@ -451,7 +451,7 @@ export function WorkforceInsightsView() {
             </span>
           </div>
         </div>
-      )
+      ),
     },
     {
       header: "Status",
@@ -498,11 +498,21 @@ export function WorkforceInsightsView() {
     },
     {
       header: "Shift",
-      accessor: (row: any) => (
-        <span className="text-text-secondary font-medium whitespace-pre-line leading-tight text-sm">
-          {row.shift}
-        </span>
-      )
+      accessor: (row: any) => {
+        const parts = row.shift.split("\n");
+        return (
+          <div className="flex flex-col items-start leading-tight min-w-[130px]">
+            <span className="text-text-secondary font-medium text-sm whitespace-nowrap">
+              {parts[0]}
+            </span>
+            {parts[1] && (
+              <span className="text-text-muted text-[12px] whitespace-nowrap">
+                {parts[1]}
+              </span>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: "Allowance",

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Modal } from "./Modal";
 import { downloadCSV } from "../../lib/utils";
 import { useToast } from "../../context/ToastContext";
+import { DatePicker } from "./DatePicker";
 import { attendanceService } from "../../services/AttendanceService";
 import { employeeService } from "../../services/EmployeeService";
 import { allowanceService } from "../../services/AllowanceService";
@@ -138,17 +139,27 @@ export function ExportPayrollModal({ isOpen, onClose }: ExportPayrollModalProps)
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Export Payroll & Reports" maxWidth="max-w-xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Export Settings & Reports" maxWidth="max-w-xl">
       <div className="p-6 flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <label className="text-[14px] font-medium text-[#1a1a1a]">Select Date Range</label>
           <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="control-field w-full" />
+            <div className="flex-[1.5] relative z-20">
+              <DatePicker 
+                 value={startDate} 
+                 onChange={setStartDate} 
+                 className="w-full" 
+                 placeholder="Start Date" 
+              />
             </div>
             <span className="text-text-muted">to</span>
-            <div className="flex-1">
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="control-field w-full" />
+            <div className="flex-[1.5] relative z-20">
+              <DatePicker 
+                 value={endDate} 
+                 onChange={setEndDate} 
+                 className="w-full" 
+                 placeholder="End Date" 
+              />
             </div>
           </div>
         </div>
@@ -181,8 +192,8 @@ export function ExportPayrollModal({ isOpen, onClose }: ExportPayrollModalProps)
               <Download size={20} />
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-[#1a1a1a]">Payroll Adjustments (.csv)</span>
-              <span className="text-[13px] text-text-secondary">Calculated total allowances vs. total undertime deductions for payroll encoding.</span>
+              <span className="font-semibold text-[#1a1a1a]">Financial Adjustments (.csv)</span>
+              <span className="text-[13px] text-text-secondary">Calculated total allowances vs. total undertime deductions.</span>
             </div>
           </button>
         </div>

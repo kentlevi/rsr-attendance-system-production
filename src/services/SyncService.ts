@@ -84,7 +84,8 @@ export class SyncService {
           // Smart mapping: check if log for today already exists
           const existingLogs = attendanceService.getAllLogs();
           const existingLog = existingLogs.find(l => l.data.employeeId === punch.empCode && l.data.date === dateStr);
-          const employee = employeeService.getEmployeeByIdSync(punch.empCode)?.data;
+          const employeeModel = await employeeService.getEmployeeById(punch.empCode);
+          const employee = employeeModel?.data;
           const settings = settingsService.getSettings();
 
           if (punch.type === 'Time In') {
@@ -211,9 +212,9 @@ export class SyncService {
   }
 
   private async syncLocalPunchToCloud(punch: LocalAttendancePunch) {
-    const existingLogs = attendanceService.getAllLogs();
-    const existingLog = existingLogs.find((log) => log.data.employeeId === punch.employeeId && log.data.date === punch.date);
-    const employee = employeeService.getEmployeeByIdSync(punch.employeeId)?.data;
+    const existingLog = attendanceService.getAllLogs().find((log) => log.data.employeeId === punch.employeeId && log.data.date === punch.date);
+    const employeeModel = await employeeService.getEmployeeById(punch.employeeId);
+    const employee = employeeModel?.data;
     const settings = settingsService.getSettings();
 
     if (!employee) {

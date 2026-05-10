@@ -93,6 +93,7 @@ import { notificationService } from "../services/NotificationService";
 import { PageLayout } from "./layout/PageLayout";
 import { adminProfileService } from "../services/AdminProfileService";
 import { adminAccountService } from "../services/AdminAccountService";
+import { useAuthStore } from "../store/authStore";
 
 interface AdminDashboardProps {
   onNavigate: (view: "welcome" | "employee" | "admin" | "adminLogin" | "timeclock") => void;
@@ -139,10 +140,42 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const profileImageStorageKey = `admin_profile_image_${adminLoginId}`;
   const personalInfoStorageKey = `admin_personal_info_${adminLoginId}`;
   const [activeTab, setActiveTab] = useState("dashboard");
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      // Use requestAnimationFrame to ensure layout is complete before scrolling
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      });
+      // Fallback for slower rendering
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, 50);
+      // Ensure window also scrolls just in case PageLayout is the scroll parent
+      window.scrollTo(0, 0);
+    }
+  }, [activeTab]);
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const { isAdmin } = useAuthStore();
+
+  useEffect(() => {
+    if (isAdmin) {
+      import("../services/EmployeeService").then(({ employeeService }) => {
+        employeeService.initializeForUser(true);
+      });
+      import("../services/FacialRecognitionService").then(({ facialRecognitionService }) => {
+        facialRecognitionService.initializeForAdmin();
+      });
+    }
+  }, [isAdmin]);
 
   useEffect(() => {
     const update = () => setNotifications(notificationService.getAdminNotifications());
@@ -159,6 +192,24 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   const clearAllNotifications = async () => {
     await notificationService.clearAll();
+  };
+
+  const handleNotificationClick = async (notif: AppNotification) => {
+    if (!notif.isRead) {
+      await notificationService.markAsRead(notif.id);
+    }
+    const title = notif.title.toLowerCase();
+    const msg = notif.message.toLowerCase();
+    if (title.includes("leave") || title.includes("time out") || title.includes("approval") || title.includes("punch")) {
+      setActiveTab("approvals");
+    } else if (title.includes("incident") || title.includes("performance") || title.includes("accident")) {
+      setActiveTab("incidents");
+    } else if (title.includes("duty")) {
+      setActiveTab("duty");
+    } else if (title.includes("photo")) {
+      setActiveTab("photos");
+    }
+    setIsNotificationModalOpen(false);
   };
 
   // Lifted Profile State with Persistence
@@ -257,6 +308,17 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     }
 
     await adminAccountService.updatePassword(adminLoginId, newPassword.trim());
+    
+    // Also update Firebase Auth password if logged in
+    const { getAuth, updatePassword: updateFirebaseAuthPassword } = await import('firebase/auth');
+    const auth = getAuth();
+    if (auth.currentUser) {
+        let firebasePassword = newPassword.trim();
+        if (firebasePassword.length < 6) {
+           firebasePassword = firebasePassword.padEnd(6, '0');
+        }
+        await updateFirebaseAuthPassword(auth.currentUser, firebasePassword);
+    }
   };
 
   const allTabs = [
@@ -264,7 +326,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     { id: "approvals", label: "Approvals", icon: ShieldCheck },
     { id: "logs", label: "Logs", icon: ClipboardList },
     { id: "workforce", label: "Workforce Insights", icon: BarChart2 },
-    { id: "payroll", label: "Payroll", icon: FileSpreadsheet },
+    // { id: "payroll", label: "Payroll", icon: FileSpreadsheet },
     { id: "photos", label: "Photos", icon: ImageIcon },
     { id: "duty", label: "Straight Duty", icon: Timer },
     { id: "incidents", label: "Incidents", icon: AlertTriangle },
@@ -290,8 +352,8 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       onNavigate={onNavigate as any}
       onLogoClick={() => setActiveTab("dashboard")}
       title={
-        <div className="flex flex-col items-center gap-1 min-w-0">
-          <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight whitespace-nowrap truncate w-full text-center">
+        <div className="flex flex-col items-center gap-1 min-w-0 w-full">
+          <h1 className="text-[20px] sm:text-[28px] font-bold text-[#1a1a1a] tracking-tight whitespace-normal sm:whitespace-nowrap truncate w-full text-center leading-tight">
             {activeTab === "dashboard" ? (
               <>{tabs.find((t) => t.id === activeTab)?.label}</>
             ) : activeTab === "logs" ? (
@@ -324,7 +386,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               ""
             )}
           </h1>
-          <p className="text-[14px] font-medium text-text-secondary max-w-xl text-center truncate">
+          <p className="text-[12px] sm:text-[14px] font-medium text-text-secondary max-w-xl text-center whitespace-normal sm:truncate w-full line-clamp-2 sm:line-clamp-none">
             {activeTab === "dashboard" && "Welcome back, Admin!"}
             {activeTab === "approvals" && "Review and resolve attendance records that need admin approval."}
             {activeTab === "logs" && "View and manage employee attendance records"}
@@ -386,7 +448,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         {/* Main Content */}
         <main className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto stable-scrollbar bg-transparent">
+          <div key={activeTab} ref={scrollContainerRef} className="flex-1 overflow-y-auto stable-scrollbar bg-transparent">
             <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-6 pb-12">
             {/* View Switching */}
             {activeTab === "dashboard" && <DashboardView />}
@@ -447,9 +509,15 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   
                   {/* Logout Card */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       sessionStorage.removeItem("rsr_active_role");
                       sessionStorage.removeItem("rsr_admin_account");
+                      try {
+                         const { useAuthStore } = await import('../store/authStore');
+                         await useAuthStore.getState().signOut();
+                      } catch (err) {
+                         console.error("Failed to sign out:", err);
+                      }
                       onNavigate("welcome");
                     }}
                     className="group flex items-center gap-4 bg-white border border-red-100 p-4 rounded-2xl hover:border-red-300 transition-all text-left"
@@ -512,6 +580,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         notifications={notifications}
         onMarkAllAsRead={markAllAsRead}
         onClearAll={clearAllNotifications}
+        onNotificationClick={handleNotificationClick}
       />
     </PageLayout>
   );

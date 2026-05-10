@@ -8,6 +8,7 @@ import { attendanceService } from '../services/AttendanceService';
 import { employeeService } from '../services/EmployeeService';
 import { settingsService } from '../services/SettingsService';
 import { PageLayout } from './layout/PageLayout';
+import { auth } from '../lib/firebase';
 import { BreakPunchAction, calculateBreakPunchUpdate, calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 import { findBlockingIncompleteAttendance, getIncompleteAttendanceReviewUpdate } from '../lib/AttendanceApprovalRules';
 import { canEmployeeAccessAttendance } from '../lib/EmployeeAccessRules';
@@ -40,6 +41,14 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     const unsub = employeeService.subscribe(() => setEmployees(employeeService.getAllEmployeesSync().map(e => e.data)));
     
+    // Load employees for kiosk mode if they aren't already loaded
+    const currentEmployees = employeeService.getAllEmployeesSync();
+    if (currentEmployees.length === 0) {
+      employeeService.loadEmployees().then(loaded => {
+        setEmployees(loaded.map(e => e.data));
+      });
+    }
+
     // Load settings to get sites
     const settings = settingsService.getSettings();
     setSites(settings.sites || ['Head Office']);
@@ -80,6 +89,10 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
   type TimeClockAction = 'Time In' | 'Time Out' | BreakPunchAction;
 
   const handleTimeAction = async (action: TimeClockAction) => {
+    if (!auth.currentUser) {
+      console.warn("System is not authenticated. Using public kiosk mode.");
+    }
+
     setIsProcessing(true);
     setIdentifiedEmpName(null);
     setIdentifiedEmpId(null);
@@ -101,7 +114,8 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
        return;
     }
     
-    const emp = employees.find(e => e.id === empId);
+    const empModel = employeeService.getEmployeeByIdSync(empId);
+    const emp = empModel?.data;
     if (!emp) {
       showToast("Identity recognized but employee not found in database.", "error");
       setIsProcessing(false);
@@ -170,7 +184,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       }
     }
 
-    setIdentifiedEmpId(empId);
+    setIdentifiedEmpId(emp.id);
     setIdentifiedEmpName(emp.name);
 
     const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
@@ -180,12 +194,14 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     let localPunchId: string | null = null;
     
     try {
-      const logs = attendanceService.getAllLogs();
-      const existingLog = logs.find(l => l.data.employeeId === empId && l.data.date === todayStr);
+      // Ensure we have the most recent data for this employee before proceeding
+      const freshLogs = await attendanceService.refreshLogsByDates([todayStr], false, emp.id);
+      const logs = freshLogs.length > 0 ? freshLogs : attendanceService.getAllLogs();
+      const existingLog = logs.find(l => l.data.employeeId === emp.id && l.data.date === todayStr);
       const todayISO = new Date().toISOString().slice(0, 10);
 
       if (action === "Time In") {
-        const blockingIncompleteLog = findBlockingIncompleteAttendance(logs, empId, todayStr);
+        const blockingIncompleteLog = findBlockingIncompleteAttendance(logs, emp.id, todayStr);
         if (blockingIncompleteLog) {
           await attendanceService.updateLog(
             blockingIncompleteLog.data.id,
@@ -210,7 +226,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       }
 
       const localPunch = await localAttendanceService.savePunch({
-        employeeId: empId,
+        employeeId: emp.id,
         employeeName: emp.name,
         action,
         timestamp,
@@ -237,7 +253,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
       const photoUploadEnabled = settingsService.getSettings().attendancePhotoUploadEnabled === true;
       const photoUrl = photo && photoUploadEnabled
-        ? await attendancePhotoService.uploadPhoto(photo, empId, action)
+        ? await attendancePhotoService.uploadPhoto(photo, emp.id, action)
         : null;
 
       if (action === "Time In") {
@@ -262,7 +278,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           });
         } else {
           await attendanceService.addLog({
-            employeeId: empId,
+            employeeId: emp.id,
             date: todayStr,
             timeIn: payroll.adjustedTimeIn,
             timeOut: '-',
@@ -353,20 +369,20 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       onNavigate={onNavigate as any}
       showMenu={true}
       onMenuClick={() => onNavigate('welcome')}
-      className="items-center justify-start gap-6 max-w-[1200px] mx-auto w-full px-4 py-12"
+      className="items-center justify-start gap-3 sm:gap-6 max-w-[1200px] mx-auto w-full px-4 py-4 sm:py-12 flex-1"
     >
-      <div className="w-full flex flex-col gap-6">
-        <div className="w-full min-h-[540px] rounded-[32px] overflow-hidden relative border border-[#E2E8F0] bg-white/50 backdrop-blur-sm p-6 flex items-center justify-center">
+      <div className="w-full flex-1 flex flex-col gap-4 sm:gap-6 min-h-0">
+        <div className="w-full flex-1 min-h-[500px] sm:min-h-[540px] rounded-[24px] sm:rounded-[32px] overflow-hidden relative border border-[#E2E8F0] bg-white/50 backdrop-blur-sm p-4 sm:p-6 flex flex-col items-center justify-center">
           {/* Live Camera Feed Background (optional, keep transparent or remove if they want flat bg) - User wants minimalist */}
           {/* We will hide the background camera feed for minimalist look */}
           
           {/* Site Selector */}
-          <div className="absolute top-6 left-6 z-20">
+          <div className="relative sm:absolute sm:top-6 sm:left-6 z-20 mb-4 sm:mb-0 self-start sm:self-auto w-full sm:w-auto">
             <Select
               value={selectedSite}
               onChange={(e) => setSelectedSite(e.target.value)}
               options={sites}
-              containerClassName="w-[180px]"
+              containerClassName="w-full sm:w-[180px]"
               className="bg-white border-[#E2E8F0] !h-12 !pl-12 !pr-10 rounded-[14px] text-[14px] font-medium text-[#1a1a1a] cursor-pointer"
             />
             <div className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-[#f0fdf4] flex items-center justify-center pointer-events-none z-30">
@@ -374,42 +390,42 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
             </div>
           </div>
 
-          <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center gap-4">
-            <div className="flex flex-col items-center gap-1">
-              <h2 className="text-[48px] font-bold text-[#1a1a1a] tabular-nums tracking-tight leading-none">
+          <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center gap-3 sm:gap-4 flex-1">
+            <div className="flex flex-col items-center gap-1 mt-0 sm:mt-0">
+              <h2 className="text-[32px] sm:text-[48px] font-bold text-[#1a1a1a] tabular-nums tracking-tight leading-none mt-2 sm:mt-0">
                 {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).replace('AM', '').replace('PM', '')}
-                <span className="text-[22px] font-bold text-text-secondary ml-2">{currentTime.toLocaleTimeString().split(' ')[1]}</span>
+                <span className="text-[14px] sm:text-[22px] font-bold text-text-secondary ml-2">{currentTime.toLocaleTimeString().split(' ')[1]}</span>
               </h2>
-              <p className="text-[#64748B] font-medium text-[15px]">
+              <p className="text-[#64748B] font-medium text-[12px] sm:text-[15px] hidden sm:block">
                 {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
               {syncSummary.totalOpen > 0 && (
                 <p className={cn(
-                  "text-[13px] font-semibold",
+                  "text-[11px] sm:text-[13px] font-semibold mt-1",
                   syncSummary.failed > 0 ? "text-red-600" : "text-amber-600"
                 )}>
-                  {syncSummary.totalOpen} offline sync pending
-                  {syncSummary.failed > 0 ? ` (${syncSummary.failed} failed)` : ""}
+                  {syncSummary.totalOpen} offline pending
                 </p>
               )}
             </div>
 
-            <div className="w-full rounded-[32px] bg-white p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] border border-white flex flex-col gap-4">
-             <div className="relative w-full aspect-[4/3] rounded-[24px] overflow-hidden bg-surface-muted border border-border shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
+            <div className="w-full rounded-[24px] sm:rounded-[32px] bg-white p-2 sm:p-4 shadow-[0_20px_50px_rgba(15,23,42,0.05)] border border-white flex flex-col gap-2 sm:gap-4 flex-1 min-h-[300px]">
+             <div className="relative w-full flex-1 aspect-[3/4] sm:aspect-[4/3] rounded-[16px] sm:rounded-[24px] overflow-hidden bg-surface-muted border border-border shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
                 {/* @ts-ignore */}
                 <Webcam 
                   audio={false}
                   ref={webcamRef}
                   screenshotFormat="image/jpeg"
+                  mirrored={true}
                   videoConstraints={{ facingMode: "user" }}
                   className="w-full h-full object-cover absolute inset-0 z-0"
                 />
                 
                 {/* Scanner corners */}
-                <div className="absolute top-6 left-6 w-10 h-10 border-t-[4px] border-l-[4px] border-primary rounded-tl-3xl z-10"></div>
-                <div className="absolute top-6 right-6 w-10 h-10 border-t-[4px] border-r-[4px] border-primary rounded-tr-3xl z-10"></div>
-                <div className="absolute bottom-6 left-6 w-10 h-10 border-b-[4px] border-l-[4px] border-primary rounded-bl-3xl z-10"></div>
-                <div className="absolute bottom-6 right-6 w-10 h-10 border-b-[4px] border-r-[4px] border-primary rounded-br-3xl z-10"></div>
+                <div className="absolute top-4 sm:top-6 left-4 sm:left-6 w-8 sm:w-10 h-8 sm:h-10 border-t-[4px] border-l-[4px] border-primary rounded-tl-2xl sm:rounded-tl-3xl z-10"></div>
+                <div className="absolute top-4 sm:top-6 right-4 sm:right-6 w-8 sm:w-10 h-8 sm:h-10 border-t-[4px] border-r-[4px] border-primary rounded-tr-2xl sm:rounded-tr-3xl z-10"></div>
+                <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 w-8 sm:w-10 h-8 sm:h-10 border-b-[4px] border-l-[4px] border-primary rounded-bl-2xl sm:rounded-bl-3xl z-10"></div>
+                <div className="absolute bottom-4 sm:bottom-6 right-4 sm:right-6 w-8 sm:w-10 h-8 sm:h-10 border-b-[4px] border-r-[4px] border-primary rounded-br-2xl sm:rounded-br-3xl z-10"></div>
                 
                 <div className="absolute inset-0 bg-success/5 z-0"></div>
                 <style>{`
@@ -443,7 +459,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                  {identifiedEmpName ? <Check size={28} strokeWidth={2.4} /> : <UserCircle size={28} strokeWidth={1.75} />}
                </div>
                <div className="flex flex-col gap-0.5 min-w-0">
-                 <span className="font-medium text-[#1a1a1a] text-[16px] truncate">
+                 <span className="font-medium text-[#1a1a1a] text-[13px] sm:text-[16px] truncate">
                    {identifiedEmpName || "Align your face within the frame"}
                  </span>
                  <span className="text-[12px] text-[#64748B] font-medium">
@@ -456,71 +472,71 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         </div>
 
         {/* Bottom Actions */}
-        <div className="w-full grid grid-cols-6 gap-4">
+        <div className="w-full grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           <button 
             onClick={() => handleTimeAction("Time In")}
             disabled={isProcessing}
-            className="h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
           >
-            <div className="w-10 h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
-              <LogIn size={20} />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
+              <LogIn size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="font-medium text-[18px]">Time In</span>
+            <span className="font-medium text-[14px] sm:text-[18px]">Time In</span>
           </button>
         
         <button 
           onClick={() => handleTimeAction("Lunch Out")}
           disabled={isProcessing}
-          className="h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
         >
-           <div className="w-10 h-10 rounded-full border-2 border-warning text-warning flex items-center justify-center bg-warning/5">
-              <Utensils size={18} />
+           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-warning text-warning flex items-center justify-center bg-warning/5">
+              <Utensils size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
-            <span className="font-medium text-[16px] text-text-primary">Lunch Out</span>
+            <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">Lunch Out</span>
         </button>
 
         <button 
           onClick={() => handleTimeAction("Lunch In")}
           disabled={isProcessing}
-          className="h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
         >
-           <div className="w-10 h-10 rounded-full border-2 border-info text-info flex items-center justify-center bg-info/5">
-              <Utensils size={18} />
+           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-info text-info flex items-center justify-center bg-info/5">
+              <Utensils size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
-           <span className="font-medium text-[16px] text-text-primary">Lunch In</span>
+           <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">Lunch In</span>
         </button>
 
         <button 
           onClick={() => handleTimeAction("PM Break Out")}
           disabled={isProcessing}
-          className="h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
         >
-           <div className="w-10 h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
-              <Coffee size={18} />
+           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
+              <Coffee size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
-           <span className="font-medium text-[16px] text-text-primary">PM Break Out</span>
+           <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">PM Break Out</span>
         </button>
 
         <button 
           onClick={() => handleTimeAction("PM Break In")}
           disabled={isProcessing}
-          className="h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
         >
-           <div className="w-10 h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
-              <Coffee size={18} />
+           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
+              <Coffee size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
-           <span className="font-medium text-[16px] text-text-primary">PM Break In</span>
+           <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">PM Break In</span>
         </button>
 
           <button 
             onClick={() => handleTimeAction("Time Out")}
             disabled={isProcessing}
-            className="h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
           >
-             <div className="w-10 h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
-               <LogOut size={20} />
+             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
+               <LogOut size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
              </div>
-             <span className="font-medium text-[18px]">Time Out</span>
+             <span className="font-medium text-[14px] sm:text-[18px]">Time Out</span>
           </button>
         </div>
       </div>

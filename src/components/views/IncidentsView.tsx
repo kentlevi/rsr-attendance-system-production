@@ -4,6 +4,7 @@ import { incidentService, IncidentReport } from '../../services/IncidentService'
 import { employeeService } from '../../services/EmployeeService';
 import { useToast } from '../../context/ToastContext';
 import { DatePicker } from '../common/DatePicker';
+import { DataTable } from '../common/DataTable';
 
 export function IncidentsView() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -94,70 +95,68 @@ export function IncidentsView() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col h-[500px]">
-         <div className="overflow-x-auto flex-1 h-full">
-           <table className="w-full min-w-[800px]">
-             <thead className="sticky top-0 bg-[#F8FAFC] z-10 border-b border-border shadow-sm">
-               <tr>
-                 <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Date</th>
-                 <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Employee</th>
-                 <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Type / Severity</th>
-                 <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Title</th>
-                 <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Status</th>
-               </tr>
-             </thead>
-             <tbody className="divide-y divide-border/50">
-               {filteredIncidents.length > 0 ? (
-                 filteredIncidents.map((incident) => (
-                   <tr key={incident.id} className="hover:bg-slate-50 transition-colors group">
-                     <td className="py-4 px-6 text-[15px] font-medium text-[#1a1a1a] whitespace-nowrap">
-                       {new Date(incident.data.date).toLocaleDateString()}
-                     </td>
-                     <td className="py-4 px-6 text-[15px] text-[#1a1a1a]">
-                       {getEmployeeName(incident.data.employeeId)}
-                     </td>
-                     <td className="py-4 px-6">
-                       <div className="flex items-center gap-2">
-                          <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none ${
-                             incident.data.type === 'Merit' ? 'bg-green-100 text-green-700' :
-                             incident.data.type === 'Accident' ? 'bg-red-100 text-red-700' :
-                             incident.data.type === 'Infraction' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {incident.data.type}
-                          </span>
-                          {incident.data.type !== 'Merit' && (
-                            <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none ${
-                               incident.data.severity === 'High' ? 'bg-red-100 text-red-700' :
-                               incident.data.severity === 'Medium' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                              {incident.data.severity}
-                            </span>
-                          )}
-                       </div>
-                     </td>
-                     <td className="py-4 px-6 text-[15px] text-[#1a1a1a] max-w-[250px] truncate" title={incident.data.title}>
-                       {incident.data.title}
-                     </td>
-                     <td className="py-4 px-6">
-                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium leading-none ${
-                         incident.data.acknowledged ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-                       }`}>
-                         {incident.data.acknowledged ? <Check size={12} /> : <AlertTriangle size={12} />}
-                         {incident.data.acknowledged ? 'Acknowledged' : 'Pending'}
-                       </span>
-                     </td>
-                   </tr>
-                 ))
-               ) : (
-                 <tr>
-                   <td colSpan={5} className="py-12 text-center text-text-secondary">
-                     No incident reports found
-                   </td>
-                 </tr>
-               )}
-             </tbody>
-           </table>
-         </div>
+      <div className="flex-1 bg-white border border-border rounded-2xl flex flex-col h-[500px]">
+         <DataTable
+           columns={[
+             {
+               header: "Date",
+               accessor: (incident: any) => (
+                 <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
+                   {new Date(incident.data.date).toLocaleDateString()}
+                 </span>
+               )
+             },
+             {
+               header: "Employee",
+               accessor: (incident: any) => getEmployeeName(incident.data.employeeId)
+             },
+             {
+               header: "Type / Severity",
+               accessor: (incident: any) => (
+                 <div className="flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
+                       incident.data.type === 'Merit' ? 'bg-green-100 text-green-700' :
+                       incident.data.type === 'Accident' ? 'bg-red-100 text-red-700' :
+                       incident.data.type === 'Infraction' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {incident.data.type}
+                    </span>
+                    {incident.data.type !== 'Merit' && (
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
+                         incident.data.severity === 'High' ? 'bg-red-100 text-red-700' :
+                         incident.data.severity === 'Medium' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {incident.data.severity}
+                      </span>
+                    )}
+                 </div>
+               )
+             },
+             {
+               header: "Title",
+               accessor: (incident: any) => (
+                 <span className="max-w-[200px] truncate block" title={incident.data.title}>
+                   {incident.data.title}
+                 </span>
+               )
+             },
+             {
+               header: "Status",
+               accessor: (incident: any) => (
+                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap ${
+                   incident.data.acknowledged ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                 }`}>
+                   {incident.data.acknowledged ? <Check size={12} /> : <AlertTriangle size={12} />}
+                   {incident.data.acknowledged ? 'Acknowledged' : 'Pending'}
+                 </span>
+               )
+             }
+           ]}
+           data={filteredIncidents}
+           emptyMessage="No incident reports found."
+           className="border-0 rounded-none h-full shadow-none"
+           minHeight="400px"
+         />
       </div>
 
       {/* Modal */}
@@ -188,9 +187,13 @@ export function IncidentsView() {
                         {employees.map(e => <option key={e.id} value={e.id}>{e.data.name}</option>)}
                      </select>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 relative z-50">
                      <label className="text-label">Date <span className="text-red-500">*</span></label>
-                     <input type="date" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="control-field" />
+                     <DatePicker
+                       value={formData.date}
+                       onChange={val => setFormData({ ...formData, date: val })}
+                       className="w-full"
+                     />
                   </div>
                </div>
                

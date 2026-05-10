@@ -224,7 +224,7 @@ export function SettingsView() {
                </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-label">
                   Daily Allowance (₱)
@@ -295,7 +295,7 @@ export function SettingsView() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-label">
                   Shift Start Time
@@ -344,44 +344,64 @@ export function SettingsView() {
               <label className="text-label">Custom Shift Templates</label>
               <div className="flex flex-col gap-3">
                 {settings.shiftTemplates?.map(t => (
-                  <div key={t.id} className="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-border/80">
-                     <input type="text" value={t.name} onChange={e => {
-                        const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, name: e.target.value } : x);
-                        handleUpdate("shiftTemplates", newT);
-                     }} className="control-field flex-1 max-w-[150px] bg-white h-9" />
-                     <div className="flex items-center gap-2">
-                        <TimePicker value={t.startTime} onChange={v => {
-                           const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, startTime: v } : x);
-                           handleUpdate("shiftTemplates", newT);
-                        }} />
-                        <span className="text-text-secondary">-</span>
-                        <TimePicker value={t.endTime} onChange={v => {
-                           const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, endTime: v } : x);
-                           handleUpdate("shiftTemplates", newT);
-                        }} />
-                     </div>
-                     <label className="flex items-center gap-2 text-[14px] text-text-secondary whitespace-nowrap ml-2">
-                        <input type="checkbox" checked={t.isNightShift} onChange={e => {
-                           const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, isNightShift: e.target.checked } : x);
-                           handleUpdate("shiftTemplates", newT);
-                        }} className="rounded text-[#0B7A4B] focus:ring-[#0B7A4B] border-slate-300" />
-                        Night Shift
-                     </label>
-                     {t.isNightShift && (
+                  <div key={t.id} className="flex flex-col gap-4 bg-slate-50 p-4 rounded-xl border border-border/80">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex flex-col gap-1 min-w-[150px]">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase">Shift Name</label>
+                        <input type="text" value={t.name} onChange={e => {
+                          const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, name: e.target.value } : x);
+                          handleUpdate("shiftTemplates", newT);
+                        }} className="control-field bg-white h-9" placeholder="Shift Name" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase">Schedule</label>
                         <div className="flex items-center gap-2">
-                           <span className="text-[12px] text-text-secondary whitespace-nowrap">ND%</span>
-                           <input type="number" step="0.05" value={t.nightDifferentialRate || 0} onChange={e => {
-                              const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, nightDifferentialRate: parseFloat(e.target.value) || 0 } : x);
-                              handleUpdate("shiftTemplates", newT);
-                           }} className="control-field w-16 h-9 bg-white text-center" />
+                          <TimePicker value={t.startTime} onChange={v => {
+                            const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, startTime: v } : x);
+                            handleUpdate("shiftTemplates", newT);
+                          }} />
+                          <span className="text-text-secondary">-</span>
+                          <TimePicker value={t.endTime} onChange={v => {
+                            const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, endTime: v } : x);
+                            handleUpdate("shiftTemplates", newT);
+                          }} />
                         </div>
-                     )}
-                     <div className="flex-1" />
-                     <button onClick={() => {
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase">Grace (Mins)</label>
+                        <input type="number" value={t.gracePeriodMins || 0} onChange={e => {
+                          const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, gracePeriodMins: parseInt(e.target.value) || 0 } : x);
+                          handleUpdate("shiftTemplates", newT);
+                        }} className="control-field w-20 h-9 bg-white text-center" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-text-secondary uppercase">Type</label>
+                        <label className="flex items-center gap-2 text-[14px] text-text-secondary h-9 px-2 bg-white border border-border rounded-lg cursor-pointer">
+                          <input type="checkbox" checked={t.isNightShift} onChange={e => {
+                            const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, isNightShift: e.target.checked } : x);
+                            handleUpdate("shiftTemplates", newT);
+                          }} className="rounded text-[#0B7A4B] focus:ring-[#0B7A4B] border-slate-300" />
+                          Night Shift
+                        </label>
+                      </div>
+                      {t.isNightShift && (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-semibold text-text-secondary uppercase">Differential %</label>
+                          <input type="number" step="0.05" value={t.nightDifferentialRate || 0} onChange={e => {
+                            const newT = settings.shiftTemplates?.map(x => x.id === t.id ? { ...x, nightDifferentialRate: parseFloat(e.target.value) || 0 } : x);
+                            handleUpdate("shiftTemplates", newT);
+                          }} className="control-field w-16 h-9 bg-white text-center" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-[20px]" />
+                      
+                      <button onClick={() => {
                         handleUpdate("shiftTemplates", settings.shiftTemplates?.filter(x => x.id !== t.id));
-                     }} className="text-red-500 hover:text-red-600 p-2">
-                        <XIcon size={16} />
-                     </button>
+                      }} className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-center">
+                        <XIcon size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -471,7 +491,7 @@ export function SettingsView() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Sender Name
               </label>
@@ -483,7 +503,7 @@ export function SettingsView() {
               />
             </div>
 
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Admin / Manager Mobile Number
               </label>
@@ -495,7 +515,7 @@ export function SettingsView() {
               />
             </div>
 
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Notification Group (Optional)
               </label>
@@ -579,7 +599,7 @@ export function SettingsView() {
           </div>
 
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Chat ID
               </label>
@@ -624,7 +644,7 @@ export function SettingsView() {
           </div>
 
           <div className="flex flex-col gap-5 mt-2">
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Cloud Record Retention (Days)
               </label>
@@ -636,7 +656,7 @@ export function SettingsView() {
                 min={1}
               />
             </div>
-            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
               <label className="text-label">
                 Photo Retention (Days)
               </label>

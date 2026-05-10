@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, Download, Search, Calendar, ChevronRight, Lock, Printer } from 'lucide-react';
 import { DatePicker } from '../common/DatePicker';
+import { DataTable } from '../common/DataTable';
 import { employeeService } from '../../services/EmployeeService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -83,14 +84,18 @@ export function PayrollView() {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="relative">
-               <input type="text" className="control-field pl-4 pr-10" placeholder="Start Date" value={dateRange.start} onChange={e => setDateRange({...dateRange, start: e.target.value})} />
-               <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            </div>
-            <div className="relative">
-               <input type="text" className="control-field pl-4 pr-10" placeholder="End Date" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})} />
-               <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted" />
-            </div>
+            <DatePicker 
+              value={dateRange.start} 
+              onChange={val => setDateRange({...dateRange, start: val})}
+              placeholder="Start Date"
+              className="w-full"
+            />
+            <DatePicker 
+              value={dateRange.end} 
+              onChange={val => setDateRange({...dateRange, end: val})}
+              placeholder="End Date"
+              className="w-full"
+            />
           </div>
         </div>
       </div>
@@ -112,39 +117,47 @@ export function PayrollView() {
                </div>
             </div>
          </div>
-         <div className="w-full overflow-x-auto min-h-[400px]">
-            <table className="w-full min-w-[800px]">
-               <thead>
-                  <tr className="border-b border-border bg-[#F8FAFC]">
-                     <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Employee</th>
-                     <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Department</th>
-                     <th className="text-left py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Daily Rate</th>
-                     <th className="text-right py-3 px-6 text-[14px] font-semibold text-text-secondary whitespace-nowrap">Actions</th>
-                  </tr>
-               </thead>
-               <tbody>
-                  {filteredEmployees.map((emp) => (
-                    <tr key={emp.data.id} className="border-b border-border/50 hover:bg-slate-50 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <img src={emp.data.avatar || undefined} alt={emp.data.name} className="w-9 h-9 rounded-full object-cover border border-border" />
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-medium text-[#1a1a1a] truncate">{emp.data.name}</span>
-                            <span className="text-[14px] text-text-secondary truncate">{emp.data.position}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-[15px] text-[#1a1a1a]">{emp.data.department}</td>
-                      <td className="py-4 px-6 text-[15px] text-[#1a1a1a]">₱ {emp.data.dailyRate || '750.00'}</td>
-                      <td className="py-4 px-6 text-right">
-                         <button onClick={() => generatePayslip(emp)} className="btn-secondary btn-sm inline-flex items-center gap-2">
-                           <Printer size={16} /> Generate PDF
-                         </button>
-                      </td>
-                    </tr>
-                  ))}
-               </tbody>
-            </table>
+         <div className="w-full flex-1">
+            <DataTable 
+              columns={[
+                {
+                  header: "Employee",
+                  accessor: (emp: any) => (
+                    <div className="flex items-center gap-3">
+                      <img src={emp.data.avatar || undefined} alt={emp.data.name} className="w-9 h-9 shrink-0 rounded-full object-cover border border-border" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-[#1a1a1a] truncate">{emp.data.name}</span>
+                        <span className="text-[14px] text-text-secondary truncate">{emp.data.position}</span>
+                      </div>
+                    </div>
+                  )
+                },
+                {
+                  header: "Department",
+                  accessor: (emp: any) => <span className="text-[15px]">{emp.data.department}</span>
+                },
+                {
+                  header: "Daily Rate",
+                  accessor: (emp: any) => <span className="text-[15px]">₱ {emp.data.dailyRate || '750.00'}</span>
+                },
+                {
+                  header: "Actions",
+                  className: "text-right",
+                  headerClassName: "text-right",
+                  accessor: (emp: any) => (
+                     <div className="flex justify-end">
+                       <button onClick={() => generatePayslip(emp)} className="btn-secondary btn-sm inline-flex items-center gap-2">
+                         <Printer size={16} /> Generate PDF
+                       </button>
+                     </div>
+                  )
+                }
+              ]}
+              data={filteredEmployees}
+              emptyMessage="No employees found for payroll."
+              className="border-0 rounded-none h-full shadow-none"
+              minHeight="400px"
+            />
          </div>
       </div>
     </div>

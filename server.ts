@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import * as fs from "fs/promises";
@@ -8,7 +9,7 @@ import cron from "node-cron";
 import adminPkg from "firebase-admin";
 import bcrypt from "bcrypt";
 
-const admin = adminPkg.default || adminPkg;
+const admin = adminPkg;
 
 dotenv.config({ path: ".env.local" });
 
@@ -161,6 +162,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(cors());
   app.use(express.json());
 
   app.post("/api/login-employee", async (req, res) => {
@@ -205,6 +207,44 @@ async function startServer() {
       
       const token = await admin.auth().createCustomToken(foundEmp.id, { role: "employee" });
       res.json({ success: true, token, employee: foundEmp });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  app.post("/api/login-admin", async (req, res) => {
+    try {
+      const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+      const isAllowed = handleRateLimit(clientIp, false); 
+      if (!isAllowed) {
+        return res.status(429).json({ success: false, error: "Too many failed attempts." });
+      }
+
+      const { email, password } = req.body;
+      const db = admin.firestore();
+      const adminSnap = await db.collection("adminAccounts").where("email", "==", email).get();
+
+      if (adminSnap.empty) {
+         // Also check by loginId to be flexible
+         const adminByIdSnap = await db.collection("adminAccounts").where("loginId", "==", email).get();
+         if (adminByIdSnap.empty) {
+            return res.status(401).json({ success: false, error: "Invalid admin credentials." });
+         }
+         var adminDoc = adminByIdSnap.docs[0];
+      } else {
+         var adminDoc = adminSnap.docs[0];
+      }
+
+      const adminData = adminDoc.data();
+
+      // Check password (comparing plaintext for now, based on mock data seeding logic)
+      if (adminData.password !== password) {
+        return res.status(401).json({ success: false, error: "Invalid admin credentials." });
+      }
+
+      handleRateLimit(clientIp, true);
+      const token = await admin.auth().createCustomToken(adminDoc.id, { role: adminData.role || "admin", email: adminData.email });
+      res.json({ success: true, token, user: adminData });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -342,7 +382,7 @@ async function startServer() {
     try {
       const { text } = req.body;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contents: `You are an automated backend processor for the RSR Engineering Attendance System. Your job is to extract leave filing requests from employee text. You must analyze the text and extract the exact dates, the type of leave (Sick Leave, Vacation Leave, Emergency Leave, or Unpaid), and the reason. Assume the current location is Cauayan, Philippines, and calculate relative dates ('tomorrow', 'next Monday') based on today's exact date (${new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })}). You must output ONLY valid JSON.\n\nEmployee text:\n${text}`,
         config: {
           responseMimeType: "application/json",
@@ -409,7 +449,7 @@ async function startServer() {
       });
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash",
         contents: mappedMessages,
         config: {
           systemInstruction: `You are the RSR Engineering AI HR Assistant. Your job is to help employees with their HR-related queries, such as leave balances, company policies, and daily schedules. Be polite, concise, and helpful. Do not output markdown code blocks if you can avoid it, just use regular text. Use the following context to answer questions accurately:\n\n${context}`,
@@ -492,10 +532,40 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
+
+    // Add custom middleware to force correct MIME types for face-api models in dev
+    app.use((req, res, next) => {
+      if (req.url.includes('/models/')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.setHeader('Surrogate-Control', 'no-store');
+        
+        if (req.url.endsWith('.json')) {
+          res.setHeader('Content-Type', 'application/json');
+        } else if (req.url.includes('shard')) {
+          res.setHeader('Content-Type', 'application/octet-stream');
+          // Prevent any automatic compression that might corrupt binary data
+          res.setHeader('Content-Encoding', 'identity');
+        }
+      }
+      next();
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, path) => {
+        if (path.includes('/models/')) {
+          if (path.endsWith('.json')) {
+            res.setHeader('Content-Type', 'application/json');
+          } else if (path.includes('shard')) {
+            res.setHeader('Content-Type', 'application/octet-stream');
+          }
+        }
+      }
+    }));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

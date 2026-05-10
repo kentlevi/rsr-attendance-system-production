@@ -144,7 +144,9 @@ export class AttendanceService {
       ];
       this.notifyListeners();
     } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, `${this.collectionPath}/date-refresh`);
+      // If unauthenticated or restricted, we might get a permission error during background sync
+      // We log it but don't crash the sync process
+      console.warn('AttendanceService: Could not refresh logs by dates (likely permission restriction)', e);
     }
 
     return this.getAllLogs();

@@ -184,7 +184,7 @@ export function DataTable<T>({
                         )}
                     >
                     {columns.map((col, colIdx) => (
-                        <td key={colIdx} className={cn("px-5 py-4", col.className)}>
+                        <td key={colIdx} className={cn("px-5 py-4 whitespace-nowrap", col.className)}>
                         {typeof col.accessor === "function" 
                             ? col.accessor(item) 
                             : (item[col.accessor] as React.ReactNode)}

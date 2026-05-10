@@ -55,7 +55,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
           <img 
             src={log.data.imageIn || emp?.avatar || `https://i.pravatar.cc/150?u=${log.id}`} 
             alt={emp?.name} 
-            className="w-10 h-10 rounded-full object-cover border border-border" 
+            className="w-10 h-10 shrink-0 rounded-full object-cover border border-border" 
           />
         );
       },
@@ -232,8 +232,8 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
       "Flat OT Allowance",
       "Away-site Allowance",
       "Gross Adjustment",
-      "Payroll Review Status",
-      "Payroll Notes",
+      // "Payroll Review Status",
+      // "Payroll Notes",
     ];
     const escapeCSV = (value: string) => `"${String(value || "").replace(/"/g, '""')}"`;
     const rows = filteredLogs.map((log) => {
@@ -262,8 +262,8 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
         log.data.flatOtAllowance || "",
         log.data.awaySiteAllowance || "",
         log.data.grossAdjustment || "",
-        getPayrollReviewExportStatus(log.data),
-        (log.data.payrollNotes || []).join("; "),
+        // getPayrollReviewExportStatus(log.data),
+        // (log.data.payrollNotes || []).join("; "),
       ]
         .map(escapeCSV)
         .join(",");

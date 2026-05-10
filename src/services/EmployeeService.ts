@@ -3,6 +3,7 @@ import {
   doc, 
   getDocs, 
   getDoc, 
+  setDoc,
   addDoc, 
   updateDoc, 
   deleteDoc,
@@ -94,16 +95,25 @@ class EmployeeService {
   }
 
   getEmployeeByIdSync(id: string): EmployeeModel | null {
-    const emp = this.employees.find((e) => e.id === id);
+    const emp = this.employees.find((e) => e.id === id || e.employeeId === id);
     return emp ? new EmployeeModel(emp) : null;
   }
 
   async getEmployeeById(id: string): Promise<EmployeeModel | null> {
     try {
+      // 1. Try fetching by document ID
       const docRef = doc(db, this.collectionPath, id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         return new EmployeeModel({ ...docSnap.data(), id: docSnap.id } as Employee);
+      }
+
+      // 2. Try fetching by human-readable employeeId field
+      const q = query(collection(db, this.collectionPath), where("employeeId", "==", id));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const firstDoc = querySnapshot.docs[0];
+        return new EmployeeModel({ ...firstDoc.data(), id: firstDoc.id } as Employee);
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.GET, `${this.collectionPath}/${id}`);
@@ -111,14 +121,18 @@ class EmployeeService {
     return null;
   }
 
-  async addEmployee(employee: Omit<Employee, "id">): Promise<void> {
+  async addEmployee(employee: Employee): Promise<void> {
     try {
-      const response = await fetch('/api/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` },
-        body: JSON.stringify(employee)
-      });
-      if (!response.ok) throw new Error("Failed to add employee");
+      if (employee.id) {
+        await setDoc(doc(db, this.collectionPath, employee.id), employee);
+      } else {
+        const docRef = await addDoc(collection(db, this.collectionPath), employee);
+        employee.id = docRef.id;
+      }
+      
+      // Update local cache manually just in case subscription is slow
+      this.employees = [...this.employees.filter(e => e.id !== employee.id), employee];
+      this.notifyListeners();
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
     }
@@ -126,12 +140,14 @@ class EmployeeService {
 
   async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
     try {
-      const response = await fetch(`/api/employees/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` },
-        body: JSON.stringify(data)
-      });
-      if (!response.ok) throw new Error("Failed to update employee");
+      await updateDoc(doc(db, this.collectionPath, id), data);
+      
+      // Update local cache manually
+      const index = this.employees.findIndex(e => e.id === id);
+      if (index !== -1) {
+        this.employees[index] = { ...this.employees[index], ...data };
+        this.notifyListeners();
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `${this.collectionPath}/${id}`);
     }
@@ -139,11 +155,7 @@ class EmployeeService {
 
   async deleteEmployee(id: string): Promise<void> {
     try {
-      const response = await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${await auth.currentUser?.getIdToken()}` }
-      });
-      if (!response.ok) throw new Error("Failed to delete employee");
+      await deleteDoc(doc(db, this.collectionPath, id));
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `${this.collectionPath}/${id}`);
     }

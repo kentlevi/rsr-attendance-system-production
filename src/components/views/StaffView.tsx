@@ -289,7 +289,7 @@ export function StaffView() {
           <img
             src={row.avatar || undefined}
             alt={row.name}
-            className="w-9 h-9 rounded-full object-cover border border-border"
+            className="w-9 h-9 shrink-0 rounded-full object-cover border border-border"
           />
           <div className="flex flex-col">
             <span className="text-[15px] font-semibold text-[#1a1a1a] leading-tight mb-0.5 group-hover:text-[#0B7A4B] transition-colors">
@@ -303,8 +303,17 @@ export function StaffView() {
       )
     },
     {
-      header: "ID",
-      accessor: (row: any) => <span className="text-[14px] font-medium text-[#1a1a1a]">{row.employeeId || row.id}</span>
+      header: "Employee ID",
+      accessor: (row: any) => (
+        <div className="flex flex-col">
+          <span className="text-[14px] font-bold text-[#1a1a1a]">
+            {row.employeeId || "NO ID SET"}
+          </span>
+          <span className="text-[11px] text-text-muted font-mono">
+            REF: {row.id.slice(-6)}
+          </span>
+        </div>
+      )
     },
     {
       header: "Department",

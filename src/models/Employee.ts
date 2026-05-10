@@ -9,6 +9,8 @@ export interface Employee {
   lastLogin?: string;
   avatar: string;
   facialRecognitionProfileId?: string;
+  employeeId?: string; // Company / Login ID
+  facialDataImage?: string; // Reference image for registration
   phone?: string;
   dob?: string;
   gender?: string;
