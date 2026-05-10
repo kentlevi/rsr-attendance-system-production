@@ -1,7 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import fs from "fs/promises";
+import * as fs from "fs/promises";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import cron from "node-cron";
@@ -22,7 +22,6 @@ const DB_FILE = path.join(process.cwd(), "employees-db.json");
 const SETTINGS_FILE = path.join(process.cwd(), "settings-db.json");
 const SMS_LOGS_FILE = path.join(process.cwd(), "sms-logs-db.json");
 
-// Middleware to verify Firebase Auth token
 const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -36,6 +35,14 @@ const verifyAuth = async (req: express.Request, res: express.Response, next: exp
   } catch (error) {
     return res.status(401).json({ error: "Unauthorized" });
   }
+};
+
+const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user;
+  if (!user || user.role !== 'admin') {
+    return res.status(403).json({ error: "Forbidden: Admin access required" });
+  }
+  next();
 };
 
 
@@ -178,7 +185,7 @@ async function startServer() {
   });
 
   // Employees REST API
-  app.get("/api/employees", verifyAuth, async (req, res) => {
+  app.get("/api/employees", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const db = admin.firestore();
       const snapshot = await db.collection("employees").get();
@@ -189,7 +196,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/employees", verifyAuth, async (req, res) => {
+  app.post("/api/employees", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const db = admin.firestore();
       const employeeData = { ...req.body };
@@ -204,7 +211,7 @@ async function startServer() {
     }
   });
 
-  app.put("/api/employees/:id", verifyAuth, async (req, res) => {
+  app.put("/api/employees/:id", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const db = admin.firestore();
       const employeeData = { ...req.body };
@@ -219,7 +226,7 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/employees/:id", verifyAuth, async (req, res) => {
+  app.delete("/api/employees/:id", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const db = admin.firestore();
       await db.collection("employees").doc(req.params.id).delete();
@@ -230,7 +237,7 @@ async function startServer() {
   });
 
   // Settings API
-  app.get("/api/settings", verifyAuth, async (req, res) => {
+  app.get("/api/settings", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const settings = await getSettingsFile();
       res.json({ success: true, settings });
@@ -239,7 +246,7 @@ async function startServer() {
     }
   });
 
-  app.put("/api/settings", verifyAuth, async (req, res) => {
+  app.put("/api/settings", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const existingSettings = await getSettingsFile();
       const updatedSettings = { ...existingSettings, ...req.body };
@@ -251,7 +258,7 @@ async function startServer() {
   });
 
   // API Route for Semaphore SMS
-  app.get("/api/sms-logs", verifyAuth, async (req, res) => {
+  app.get("/api/sms-logs", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const logs = await getSmsLogsFile();
       res.json({ success: true, logs });
@@ -260,7 +267,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/send-sms", verifyAuth, async (req, res) => {
+  app.post("/api/send-sms", verifyAuth, requireAdmin, async (req, res) => {
     try {
       const { phone, message, sendername, apikey, employeeName } = req.body;
       const params = new URLSearchParams({
@@ -420,7 +427,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/sync/employees", verifyAuth, async (req, res) => {
+  app.post("/api/sync/employees", verifyAuth, requireAdmin, async (req, res) => {
     const employee = req.body;
     if (!employee?.empCode) {
       res.status(400).json({ success: false, error: "empCode is required" });
@@ -442,7 +449,7 @@ async function startServer() {
     });
   });
 
-  app.post("/api/sync/punches", verifyAuth, async (req, res) => {
+  app.post("/api/sync/punches", verifyAuth, requireAdmin, async (req, res) => {
     const punches = Array.isArray(req.body?.punches) ? req.body.punches : [];
     res.json({
       success: true,

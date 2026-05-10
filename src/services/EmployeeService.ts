@@ -85,19 +85,14 @@ class EmployeeService {
     return null;
   }
 
-  private async hashPin(pin: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(pin);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
   async addEmployee(employee: Omit<Employee, "id">): Promise<void> {
     try {
-      if (employee.pin && employee.pin.length < 64) {
-        employee.pin = await this.hashPin(employee.pin);
-      }
-      await addDoc(collection(db, this.collectionPath), employee);
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` },
+        body: JSON.stringify(employee)
+      });
+      if (!response.ok) throw new Error("Failed to add employee");
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
     }
@@ -105,12 +100,12 @@ class EmployeeService {
 
   async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
     try {
-      const docRef = doc(db, this.collectionPath, id);
-      const updateData = { ...data };
-      if (updateData.pin && updateData.pin.length < 64) {
-        updateData.pin = await this.hashPin(updateData.pin);
-      }
-      await updateDoc(docRef, updateData);
+      const response = await fetch(`/api/employees/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` },
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error("Failed to update employee");
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `${this.collectionPath}/${id}`);
     }
@@ -118,8 +113,11 @@ class EmployeeService {
 
   async deleteEmployee(id: string): Promise<void> {
     try {
-      const docRef = doc(db, this.collectionPath, id);
-      await deleteDoc(docRef);
+      const response = await fetch(`/api/employees/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${await (await import('../lib/firebase')).auth.currentUser?.getIdToken()}` }
+      });
+      if (!response.ok) throw new Error("Failed to delete employee");
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `${this.collectionPath}/${id}`);
     }

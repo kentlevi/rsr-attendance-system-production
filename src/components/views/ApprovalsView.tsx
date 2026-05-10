@@ -69,7 +69,6 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
       const employee = employeeService.getEmployeeByIdSync(log.data.employeeId)?.data;
       return (
         employee?.name.toLowerCase().includes(query) ||
-        employee?.pin.toLowerCase().includes(query) ||
         log.data.date.toLowerCase().includes(query) ||
         getApprovalReason(log).toLowerCase().includes(query)
       );
@@ -86,7 +85,6 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
       const employee = employeeService.getEmployeeByIdSync(request.data.employeeId)?.data;
       return (
         employee?.name.toLowerCase().includes(query) ||
-        employee?.pin.toLowerCase().includes(query) ||
         request.data.type.toLowerCase().includes(query) ||
         request.data.startDate.toLowerCase().includes(query) ||
         request.data.endDate.toLowerCase().includes(query)
@@ -174,7 +172,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
           <div className="flex items-center gap-3">
             <img
               src={employee?.avatar || `https://i.pravatar.cc/150?u=${log.data.employeeId}`}
-              alt={employee?.name || log.data.employeeId}
+              alt={employee?.name }
               className="h-10 w-10 rounded-full border border-border object-cover"
             />
             <div className="flex flex-col gap-1">
@@ -182,7 +180,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
                 {employee?.name || 'Unknown Employee'}
               </span>
               <span className="text-[12px] font-medium text-text-secondary">
-                {employee?.pin || log.data.employeeId}
+                {employee?.department || 'Unknown Dept'}
               </span>
             </div>
           </div>
@@ -290,7 +288,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
                 {employee?.name || 'Unknown Employee'}
               </span>
               <span className="text-[12px] font-medium text-text-secondary">
-                {employee?.pin || request.data.employeeId}
+                {employee?.department || request.data.employeeId}
               </span>
             </div>
           </div>

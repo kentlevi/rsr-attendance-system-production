@@ -5,7 +5,7 @@ import { employeeService } from '../../services/EmployeeService';
 import { cn } from '../../lib/utils';
 import { Select } from '../common/Select';
 import { DatePicker } from '../common/DatePicker';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../context/ToastContext';
 
 interface PhotoItem {

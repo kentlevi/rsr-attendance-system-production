@@ -30,12 +30,13 @@ export const useAuthStore = create<AuthState>((set) => ({
             } else if (idTokenResult.claims.role === 'employee') {
                 isEmployee = true;
             } else {
-                // If checking by email or standard login, default to admin if not specified
-                isAdmin = true;
+                // If checking by email or standard login, default to standard user if not specified
+                isAdmin = false;
+                isEmployee = false;
             }
         } catch(e) {
             console.error("Failed to read token claims", e);
-            isAdmin = true;
+            isAdmin = false;
         }
       }
       

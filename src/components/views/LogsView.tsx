@@ -66,7 +66,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
       header: "PIN",
       accessor: (log: any) => {
         const emp = employeeService.getEmployeeByIdSync(log.data.employeeId)?.data;
-        return <span className="font-medium text-[#1a1a1a]">{emp?.pin || log.data.employeeId}</span>;
+        return <span className="font-medium text-[#1a1a1a]">{emp?.pin }</span>;
       },
       className: "w-[100px]"
     },

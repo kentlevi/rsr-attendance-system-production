@@ -15,7 +15,7 @@ service cloud.firestore {
     }
 
     match /settings/{document=**} {
-      allow read: if true; // Public configuration for Kiosk is usually needed
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
     
