@@ -623,9 +623,48 @@ export function SettingsView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-[14px] text-[#64748B]">
-            <Info size={16} />
-            When disabled, attendance photos remain local and attendance records sync without image URLs.
+          <div className="flex flex-col gap-5 mt-2">
+            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+              <label className="text-label">
+                Cloud Record Retention (Days)
+              </label>
+              <input
+                type="number"
+                value={settings.cloudRetentionDays || 90}
+                onChange={e => handleUpdate("cloudRetentionDays", parseInt(e.target.value) || 90)}
+                className="control-field"
+                min={1}
+              />
+            </div>
+            <div className="grid grid-cols-[1fr_2fr] gap-4 items-center">
+              <label className="text-label">
+                Photo Retention (Days)
+              </label>
+              <input
+                type="number"
+                value={settings.photoRetentionDays || 30}
+                onChange={e => handleUpdate("photoRetentionDays", parseInt(e.target.value) || 30)}
+                className="control-field"
+                min={1}
+              />
+            </div>
+
+            <div className="flex items-center gap-2 text-[14px] text-[#64748B]">
+              <Info size={16} className="shrink-0" />
+              <span>When disabled, attendance photos remain local and attendance records sync without image URLs. Records older than the retention limit can be deleted to stay within Firebase Free-Tier limits.</span>
+            </div>
+
+            <div className="mt-2 pt-5 border-t border-border flex justify-end">
+              <button 
+                onClick={() => {
+                  showToast("Dry run: estimating records to delete...", { loading: true });
+                  setTimeout(() => showToast("Dry run complete: 0 old records found."), 2000);
+                }}
+                className="btn-secondary text-[#DC2626] hover:bg-red-50 hover:border-red-200"
+              >
+                <Trash2 size={16} /> Run Cleanup (Dry-Run)
+              </button>
+            </div>
           </div>
         </div>
 

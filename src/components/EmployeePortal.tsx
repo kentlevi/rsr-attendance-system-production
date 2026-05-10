@@ -502,29 +502,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
   useEffect(() => {
     if (!identifiedEmp) return;
 
-    const unsubLogs = attendanceService.subscribe(() => {
+    const updateLogs = () => {
       const allLogs = attendanceService.getAllLogs();
       setLogs(allLogs.filter(log => log.data.employeeId === identifiedEmp.id));
-    });
+    };
+    const unsubLogs = attendanceService.subscribe(updateLogs);
 
-    const unsubLeaves = leaveService.subscribe(() => {
+    const updateLeaves = () => {
       const allLeaves = leaveService.getAllRequests();
       setLeaves(allLeaves.filter(req => req.data.employeeId === identifiedEmp.id));
-    });
+    };
+    const unsubLeaves = leaveService.subscribe(updateLeaves);
 
-    const unsubUndertimes = undertimeService.subscribe(() => {
+    const updateUndertimes = () => {
       const allUndertimes = undertimeService.getAllRequests();
       setUndertimes(allUndertimes.filter(req => req.data.employeeId === identifiedEmp.id));
-    });
+    };
+    const unsubUndertimes = undertimeService.subscribe(updateUndertimes);
 
-    const unsubNotifications = notificationService.subscribeForEmployee(identifiedEmp.id, (nots) => {
-      setNotifications(nots);
-    });
+    const updateNotifications = () => {
+      setNotifications(notificationService.getEmployeeNotifications(identifiedEmp.id));
+    };
+    const unsubNotifications = notificationService.subscribe(updateNotifications);
 
     // Initial load
-    setLogs(attendanceService.getAllLogs().filter(log => log.data.employeeId === identifiedEmp.id));
-    setLeaves(leaveService.getAllRequests().filter(req => req.data.employeeId === identifiedEmp.id));
-    setUndertimes(undertimeService.getAllRequests().filter(req => req.data.employeeId === identifiedEmp.id));
+    updateLogs();
+    updateLeaves();
+    updateUndertimes();
+    updateNotifications();
 
     return () => {
       unsubLogs();

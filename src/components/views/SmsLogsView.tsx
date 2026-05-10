@@ -40,17 +40,19 @@ export function SmsLogsView() {
 
   React.useEffect(() => {
     setLoading(true);
-    const unsubscribe = smsService.subscribe((newLogs) => {
-      setLogs(newLogs);
+    const update = () => {
+      setLogs(smsService.getAllLogsSync());
       setLoading(false);
-    });
+    };
+    update();
+    const unsubscribe = smsService.subscribe(update);
     return () => unsubscribe();
   }, []);
 
   const fetchLogs = async () => {
     setLoading(true);
-    const newLogs = await smsService.getAllLogs();
-    setLogs(newLogs);
+    // Subscription handles it, but we can refresh local cache if needed
+    setLogs(smsService.getAllLogsSync());
     setLoading(false);
   };
 

@@ -3,7 +3,11 @@ import {
   onSnapshot, 
   addDoc,
   updateDoc,
-  doc
+  doc,
+  query,
+  where,
+  type QueryConstraint,
+  Unsubscribe
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { AllowanceRecord, AllowanceRecordModel } from '../models/AllowanceRecord';
@@ -11,14 +15,31 @@ import { AllowanceRecord, AllowanceRecordModel } from '../models/AllowanceRecord
 export class AllowanceService {
   private records: AllowanceRecord[] = [];
   private collectionPath = "allowances";
+  private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
 
   constructor() {
-    this.subscribeToRecords();
+    // Eager subscription removed. Must call initializeForUser manually.
   }
 
-  private subscribeToRecords() {
-    onSnapshot(collection(db, this.collectionPath), (snapshot) => {
+  public initializeForUser(isAdmin: boolean, employeeId?: string) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin && !employeeId) {
+      return;
+    }
+
+    const constraints: QueryConstraint[] = [];
+    if (!isAdmin && employeeId) {
+       constraints.push(where('employeeId', '==', employeeId));
+    }
+
+    const logsQuery = query(collection(db, this.collectionPath), ...constraints);
+
+    this.unsubscribe = onSnapshot(logsQuery, (snapshot) => {
       this.records = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -27,6 +48,13 @@ export class AllowanceService {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
   }
 
   subscribe(listener: () => void): () => void {

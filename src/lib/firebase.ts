@@ -1,11 +1,15 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer, initializeFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true }, (firebaseConfig as any).firestoreDatabaseId);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+}, (firebaseConfig as any).firestoreDatabaseId);
+
 export const auth = getAuth();
 export const storage = getStorage(app);
 
@@ -22,7 +26,12 @@ async function testConnection() {
     }
   }
 }
-testConnection();
+
+/*
+if (typeof window !== 'undefined') {
+  testConnection();
+}
+*/
 
 export enum OperationType {
   CREATE = 'create',
@@ -50,9 +59,16 @@ export interface FirestoreErrorInfo {
   }
 }
 
+
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  // Check if quota exceeded
+  const errMessage = error instanceof Error ? error.message : String(error);
+  if (errMessage.toLowerCase().includes('quota') || errMessage.toLowerCase().includes('exceeded')) {
+     console.error("FIREBASE QUOTA EXCEEDED! Please check Spark plan limits.");
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -70,3 +86,9 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+export function trackFirestoreUsage(operationType: OperationType, count = 1) {
+    // Temporarily disabled for debugging
+    console.log("Usage tracked:", operationType, count);
+}
+

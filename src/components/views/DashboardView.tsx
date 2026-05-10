@@ -37,12 +37,16 @@ import { LeaveBalanceModal } from "../dashboard/LeaveBalanceModal";
 import { UndertimeRequestsModal } from "../dashboard/UndertimeRequestsModal";
 import { useToast } from "../../context/ToastContext";
 
+// import { quotaService } from "../../services/QuotaService";
+
 export function DashboardView() {
   const { showToast } = useToast();
   const [employees, setEmployees] = useState(employeeService.getAllEmployeesSync());
   const [attendanceLogs, setAttendanceLogs] = useState(attendanceService.getAllLogs());
   const [undertimeRequests, setUndertimeRequests] = useState(undertimeService.getAllRequests());
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [quotaUsage, setQuotaUsage] = useState({ reads: 0, writes: 0, deletes: 0 });
+
 
   // Modal states
   const [isPendingModalOpen, setIsPendingModalOpen] = useState(false);
@@ -63,13 +67,23 @@ export function DashboardView() {
     const unsubUndertime = undertimeService.subscribe(() => {
       setUndertimeRequests(undertimeService.getAllRequests());
     });
-    const unsubNotifications = notificationService.subscribeForAdmin(setNotifications);
+    /*
+    const unsubQuota = quotaService.subscribe(() => {
+      setQuotaUsage(quotaService.getUsage());
+    });
+    */
+    const updateNotifications = () => {
+      setNotifications(notificationService.getAdminNotifications());
+    };
+    const unsubNotifications = notificationService.subscribe(updateNotifications);
+    updateNotifications();
 
     return () => {
       unsubEmployees();
       unsubAttendance();
       unsubUndertime();
       unsubNotifications();
+      // unsubQuota();
     };
   }, []);
 
@@ -260,6 +274,13 @@ export function DashboardView() {
           iconColor="text-red-600"
         />
       </div>
+
+      {/* Firebase Health / Quota Summary - TEMPORARILY DISABLED 
+      <div className="bg-white rounded-2xl p-4 border border-border flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm overflow-hidden">
+         ... (omitted for brevity)
+      </div>
+      */}
+
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 border border-border flex flex-col gap-8">

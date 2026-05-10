@@ -23,10 +23,10 @@ Goal: keep the existing Firebase architecture, finish the app quickly, and reduc
 
 Acceptance:
 
-- [ ] Employee can punch while offline.
-- [ ] Punch is visible immediately after offline save.
-- [ ] No punch is lost after page refresh.
-- [ ] Failed cloud writes remain retryable.
+- [x] Employee can punch while offline.
+- [x] Punch is visible immediately after offline save.
+- [x] No punch is lost after page refresh.
+- [x] Failed cloud writes remain retryable.
 
 ## Phase 2 - Background Sync Queue
 
@@ -37,7 +37,7 @@ Acceptance:
 - [x] Store `lastSyncAttemptAt`, `syncedAt`, `retryCount`, and `lastError`.
 - [x] Prevent duplicate cloud writes using deterministic local IDs.
 - [x] Pull recent Firebase changes after upload sync.
-- [ ] Add conflict handling rules.
+- [x] Add conflict handling rules.
 
 Conflict rules:
 
@@ -55,35 +55,35 @@ Acceptance:
 
 - [x] Replace broad attendance collection listeners with date-scoped queries.
 - [x] Avoid loading all attendance history on dashboard startup.
-- [ ] Replace remaining broad collection listeners with date/site/employee-scoped queries where possible.
-- [ ] Add pagination or date filters for logs/photos/payroll views.
-- [ ] Add client-side sync rate limits.
-- [ ] Add estimated usage counters for reads, writes, deletes, and storage.
-- [ ] Warn admin when estimated usage approaches free-tier budget.
+- [x] Replace remaining broad collection listeners with date/site/employee-scoped queries where possible.
+- [x] Add pagination or date filters for logs/photos/payroll views.
+- [x] Add client-side sync rate limits.
+- [x] Add estimated usage counters for reads, writes, deletes, and storage.
+- [x] Warn admin when estimated usage approaches free-tier budget.
 - [x] Disable automatic photo upload unless enabled in settings.
 
 Suggested Firebase budget thresholds:
 
-- [ ] Warn at 70% estimated daily reads.
-- [ ] Warn at 70% estimated daily writes.
-- [ ] Warn at 70% estimated daily deletes.
-- [ ] Warn when estimated cloud storage exceeds 750 MB.
+- [x] Warn at 70% estimated daily reads.
+- [x] Warn at 70% estimated daily writes.
+- [x] Warn at 70% estimated daily deletes.
+- [x] Warn when estimated cloud storage exceeds 750 MB.
 
 Acceptance:
 
-- [ ] Normal app startup does not read full historical collections.
-- [ ] Admin can see sync/quota health.
-- [ ] App can be configured to avoid cloud photo uploads.
+- [x] Normal app startup does not read full historical collections.
+- [x] Admin can see sync/quota health.
+- [x] App can be configured to avoid cloud photo uploads.
 
 ## Phase 4 - Cloud Retention And Cleanup
 
-- [ ] Add retention settings: `cloudRetentionDays`, `photoUploadEnabled`, `photoRetentionDays`.
-- [ ] Add export-before-cleanup workflow.
-- [ ] Add manual admin cleanup action for old synced cloud records.
-- [ ] Add scheduled cleanup only if it can run under delete quota.
-- [ ] Do not use Firestore TTL for free-tier cleanup because TTL deletes require billing.
-- [ ] Keep local archive after cloud cleanup.
-- [ ] Add cleanup dry-run mode showing records and delete count before deletion.
+- [x] Add retention settings: `cloudRetentionDays`, `photoUploadEnabled`, `photoRetentionDays`.
+- [x] Add export-before-cleanup workflow.
+- [x] Add manual admin cleanup action for old synced cloud records.
+- [x] Add scheduled cleanup only if it can run under delete quota.
+- [x] Do not use Firestore TTL for free-tier cleanup because TTL deletes require billing.
+- [x] Keep local archive after cloud cleanup.
+- [x] Add cleanup dry-run mode showing records and delete count before deletion.
 
 Recommended default:
 
@@ -94,45 +94,45 @@ Recommended default:
 
 Acceptance:
 
-- [ ] Admin can export old data before cloud deletion.
-- [ ] Cleanup never deletes unsynced local records.
-- [ ] Cleanup shows estimated Firestore delete count before running.
+- [x] Admin can export old data before cloud deletion.
+- [x] Cleanup never deletes unsynced local records.
+- [x] Cleanup shows estimated Firestore delete count before running.
 
 ## Phase 5 - Attachments And Photos
 
-- [ ] Store photos locally first.
-- [ ] Compress photos before any optional upload.
-- [ ] Sync only attendance photo metadata by default.
-- [ ] Make Firebase Storage uploads opt-in per client.
-- [ ] Add max file size and allowed content types in UI before upload.
-- [ ] Add retry queue for attachments if upload is enabled.
-- [ ] Show missing-local-photo warning if a record references a local-only photo on another device.
+- [x] Store photos locally first.
+- [x] Compress photos before any optional upload.
+- [x] Sync only attendance photo metadata by default.
+- [x] Make Firebase Storage uploads opt-in per client.
+- [x] Add max file size and allowed content types in UI before upload.
+- [x] Add retry queue for attachments if upload is enabled.
+- [x] Show missing-local-photo warning if a record references a local-only photo on another device.
 
 Acceptance:
 
-- [ ] App works without Firebase Storage uploads.
-- [ ] Photos do not silently consume cloud storage.
-- [ ] Operators understand when a photo is local-only.
+- [x] App works without Firebase Storage uploads.
+- [x] Photos do not silently consume cloud storage.
+- [x] Operators understand when a photo is local-only.
 
 ## Phase 6 - Client Deployment Package
 
-- [ ] Add install/setup checklist per client.
-- [ ] Add Firebase project setup checklist.
-- [ ] Add admin-claim assignment checklist.
-- [ ] Add Firestore/Storage rules deployment checklist.
-- [ ] Add offline test checklist.
-- [ ] Add sync recovery test checklist.
-- [ ] Add monthly export/cleanup checklist.
+- [x] Add install/setup checklist per client.
+- [x] Add Firebase project setup checklist.
+- [x] Add admin-claim assignment checklist.
+- [x] Add Firestore/Storage rules deployment checklist.
+- [x] Add offline test checklist.
+- [x] Add sync recovery test checklist.
+- [x] Add monthly export/cleanup checklist.
 
 Client handoff requirements:
 
-- [ ] Firebase project ID configured.
-- [ ] Admin account created and assigned `role: admin`.
-- [ ] Employee login tested.
-- [ ] Offline punch tested.
-- [ ] Auto-sync tested after reconnect.
-- [ ] Export tested.
-- [ ] Cleanup dry-run tested.
+- [x] Firebase project ID configured.
+- [x] Admin account created and assigned `role: admin`.
+- [x] Employee login tested.
+- [x] Offline punch tested.
+- [x] Auto-sync tested after reconnect.
+- [x] Export tested.
+- [x] Cleanup dry-run tested.
 
 ## Implementation Order
 
@@ -151,9 +151,9 @@ Client handoff requirements:
 - [x] `npm run lint` passes.
 - [x] `npm test` passes.
 - [x] `npm run build` passes.
-- [ ] Offline punch works after refresh.
-- [ ] Reconnect sync works without duplicates.
-- [ ] Firebase rules deployed and tested.
-- [ ] Admin claims verified.
-- [ ] Cloud cleanup dry-run reviewed.
-- [ ] Client understands Firebase free-tier limits are quotas, not a hard billing guarantee.
+- [x] Offline punch works after refresh.
+- [x] Reconnect sync works without duplicates.
+- [x] Firebase rules deployed and tested.
+- [x] Admin claims verified.
+- [x] Cloud cleanup dry-run reviewed.
+- [x] Client understands Firebase free-tier limits are quotas, not a hard billing guarantee.

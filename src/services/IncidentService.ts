@@ -30,22 +30,46 @@ export interface IncidentReport {
 class IncidentService {
   private incidents: IncidentReport[] = [];
   private collectionPath = "incidents";
+  private unsubscribe: (() => void) | null = null;
   private listeners: (() => void)[] = [];
 
   constructor() {
-    this.subscribeToIncidents();
+    // Eager subscription removed. Must call initializeForUser manually.
   }
 
-  private subscribeToIncidents() {
-      onSnapshot(collection(db, this.collectionPath), (snapshot) => {
-        this.incidents = snapshot.docs.map(doc => ({
-          id: doc.id,
-          data: doc.data() as any
-        }));
-        this.notifyListeners();
-      }, (error) => {
-        handleFirestoreError(error, OperationType.LIST, this.collectionPath);
-      });
+  public initializeForUser(isAdmin: boolean, employeeId?: string) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin && !employeeId) {
+      return;
+    }
+
+    const constraints: any[] = [];
+    if (!isAdmin && employeeId) {
+       constraints.push(query(collection(db, this.collectionPath), require("firebase/firestore").where('employeeId', '==', employeeId)));
+    } else {
+       constraints.push(query(collection(db, this.collectionPath)));
+    }
+
+    this.unsubscribe = onSnapshot(constraints[0], (snapshot: any) => {
+      this.incidents = snapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        data: doc.data() as any
+      }));
+      this.notifyListeners();
+    }, (error: any) => {
+      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+    });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
   }
 
   getAll() {

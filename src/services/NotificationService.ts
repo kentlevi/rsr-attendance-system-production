@@ -8,15 +8,72 @@ import {
   query, 
   orderBy,
   getDocs,
-  writeBatch
+  writeBatch,
+  where,
+  type QueryConstraint,
+  Unsubscribe
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { AppNotification } from "../components/common/NotificationModal";
 import { settingsService } from "./SettingsService";
 
 export class NotificationService {
+  private notifications: AppNotification[] = [];
   private collectionPath = "notifications";
-  private listeners: ((notifications: AppNotification[]) => void)[] = [];
+  private unsubscribe: Unsubscribe | null = null;
+  private listeners: (() => void)[] = [];
+
+  constructor() {
+    // Eager subscription removed. Must call initializeForUser manually.
+  }
+
+  public initializeForUser(isAdmin: boolean, employeeId?: string) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin && !employeeId) {
+      return;
+    }
+
+    const constraints: QueryConstraint[] = [orderBy("createdAt", "desc")];
+    
+    // Security/Optimization: Only fetch relevant notifications
+    if (!isAdmin && employeeId) {
+      // Employees get notifications specifically for them OR for all employees OR for everyone
+       constraints.push(where('targetRole', 'in', ['employee', 'all']));
+    }
+
+    const q = query(collection(db, this.collectionPath), ...constraints);
+
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      this.notifications = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+      } as AppNotification));
+      
+      // Further client-side filtering if needed (e.g. specific employeeId)
+      if (!isAdmin && employeeId) {
+        this.notifications = this.notifications.filter(n => !n.employeeId || n.employeeId === employeeId);
+      }
+
+      this.notifyListeners();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+    });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(l => l());
+  }
 
   async sendTelegramNotification(message: string) {
     const settings = settingsService.getSettings();
@@ -30,46 +87,26 @@ export class NotificationService {
     }
   }
 
-  private subscribeFiltered(
-    callback: (notifications: AppNotification[]) => void,
-    filter: (notification: AppNotification) => boolean,
-  ) {
-    return this.subscribe((notifications) => {
-      callback(notifications.filter(filter));
+  subscribe(callback: () => void): () => void {
+    this.listeners.push(callback);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
+  }
+
+  getAllNotifications() {
+    return this.notifications;
+  }
+
+  getAdminNotifications() {
+    return this.notifications.filter(n => !n.targetRole || n.targetRole === "admin" || n.targetRole === "all");
+  }
+
+  getEmployeeNotifications(employeeId: string) {
+    return this.notifications.filter(n => {
+      if (n.employeeId) return n.employeeId === employeeId;
+      return n.targetRole === "employee" || n.targetRole === "all";
     });
-  }
-
-  private isAdminNotification(notification: AppNotification) {
-    return !notification.targetRole || notification.targetRole === "admin" || notification.targetRole === "all";
-  }
-
-  private isEmployeeNotification(notification: AppNotification, employeeId: string) {
-    if (notification.employeeId) {
-      return notification.employeeId === employeeId;
-    }
-
-    return notification.targetRole === "employee" || notification.targetRole === "all";
-  }
-
-  subscribe(callback: (notifications: AppNotification[]) => void) {
-    const q = query(collection(db, this.collectionPath), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (snapshot) => {
-      const notifications = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      } as AppNotification));
-      callback(notifications);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
-    });
-  }
-
-  subscribeForAdmin(callback: (notifications: AppNotification[]) => void) {
-    return this.subscribeFiltered(callback, (notification) => this.isAdminNotification(notification));
-  }
-
-  subscribeForEmployee(employeeId: string, callback: (notifications: AppNotification[]) => void) {
-    return this.subscribeFiltered(callback, (notification) => this.isEmployeeNotification(notification, employeeId));
   }
 
   async addNotification(notification: Omit<AppNotification, "id">) {

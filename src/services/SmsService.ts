@@ -4,7 +4,8 @@ import {
   addDoc, 
   query, 
   orderBy,
-  getDocs
+  getDocs,
+  Unsubscribe
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 
@@ -19,19 +20,57 @@ export interface SmsLog {
 }
 
 class SmsService {
+  private logs: SmsLog[] = [];
   private collectionPath = "sms_logs";
+  private unsubscribe: Unsubscribe | null = null;
+  private listeners: (() => void)[] = [];
 
-  subscribe(callback: (logs: SmsLog[]) => void) {
+  constructor() {
+    // Eager subscription removed. Must call initializeForUser manually.
+  }
+
+  public initializeForUser(isAdmin: boolean) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin) {
+      return; // SMS logs are admin-only
+    }
+
     const q = query(collection(db, this.collectionPath), orderBy("sentAt", "desc"));
-    return onSnapshot(q, (snapshot) => {
-      const logs = snapshot.docs.map(doc => ({
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      this.logs = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
       } as SmsLog));
-      callback(logs);
+      this.notifyListeners();
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(l => l());
+  }
+
+  subscribe(callback: () => void): () => void {
+    this.listeners.push(callback);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
+  }
+
+  getAllLogsSync() {
+    return this.logs;
   }
 
   async addLog(log: Omit<SmsLog, "id">) {

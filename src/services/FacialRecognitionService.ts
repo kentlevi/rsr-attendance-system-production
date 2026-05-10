@@ -5,6 +5,7 @@ import {
   getDocs,
   onSnapshot,
   setDoc,
+  Unsubscribe
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import * as faceapi from '@vladmandic/face-api';
@@ -13,10 +14,32 @@ export class FacialRecognitionService {
   private profiles: FacialRecognitionProfile[] = [];
   private collectionPath = 'facialRecognitionProfiles';
   private modelsLoaded = false;
+  private unsubscribe: Unsubscribe | null = null;
 
   constructor() {
-    this.subscribeToProfiles();
     this.initModels();
+  }
+
+  public initializeForAdmin() {
+    if (this.unsubscribe) {
+       this.unsubscribe();
+       this.unsubscribe = null;
+    }
+    this.unsubscribe = onSnapshot(collection(db, this.collectionPath), (snapshot) => {
+      this.profiles = snapshot.docs.map((snapshotDoc) => ({
+        ...snapshotDoc.data(),
+        id: snapshotDoc.id,
+      } as FacialRecognitionProfile));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+    });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+        this.unsubscribe();
+        this.unsubscribe = null;
+     }
   }
 
   async initModels() {
@@ -29,17 +52,6 @@ export class FacialRecognitionService {
     } catch (e) {
       console.error("Failed to load face-api models", e);
     }
-  }
-
-  private subscribeToProfiles() {
-    onSnapshot(collection(db, this.collectionPath), (snapshot) => {
-      this.profiles = snapshot.docs.map((snapshotDoc) => ({
-        ...snapshotDoc.data(),
-        id: snapshotDoc.id,
-      } as FacialRecognitionProfile));
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
-    });
   }
 
   async loadProfiles(): Promise<FacialRecognitionProfile[]> {

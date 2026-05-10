@@ -7,7 +7,10 @@ import {
   updateDoc, 
   deleteDoc,
   query,
-  onSnapshot
+  where,
+  type QueryConstraint,
+  onSnapshot,
+  Unsubscribe
 } from "firebase/firestore";
 import { auth, db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { Employee, EmployeeModel } from "../models/Employee";
@@ -17,15 +20,31 @@ class EmployeeService {
   private employees: Employee[] = [];
   private collectionPath = "employees";
   private replenishmentTimer: number | null = null;
-
+  private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
 
   constructor() {
-    this.subscribeToEmployees();
+    // Eager subscription removed. Must call initializeForUser manually.
   }
 
-  private subscribeToEmployees() {
-    onSnapshot(collection(db, this.collectionPath), (snapshot) => {
+  public initializeForUser(isAdmin: boolean, employeeId?: string) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin && !employeeId) {
+      return;
+    }
+
+    const constraints: QueryConstraint[] = [];
+    if (!isAdmin && employeeId) {
+       constraints.push(where('id', '==', employeeId));
+    }
+
+    const logsQuery = query(collection(db, this.collectionPath), ...constraints);
+
+    this.unsubscribe = onSnapshot(logsQuery, (snapshot) => {
       this.employees = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -35,6 +54,13 @@ class EmployeeService {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
   }
 
   subscribe(listener: () => void): () => void {

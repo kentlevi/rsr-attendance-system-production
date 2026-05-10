@@ -145,7 +145,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
-    const unsubscribe = notificationService.subscribeForAdmin(setNotifications);
+    const update = () => setNotifications(notificationService.getAdminNotifications());
+    update();
+    const unsubscribe = notificationService.subscribe(update);
     return () => unsubscribe();
   }, []);
 

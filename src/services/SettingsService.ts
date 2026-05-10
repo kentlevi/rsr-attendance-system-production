@@ -2,7 +2,8 @@ import {
   doc, 
   getDoc, 
   setDoc, 
-  onSnapshot 
+  onSnapshot,
+  Unsubscribe
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 
@@ -46,6 +47,8 @@ export interface SystemSettings {
   telegramEnabled: boolean;
   telegramChatId: string;
   attendancePhotoUploadEnabled?: boolean;
+  cloudRetentionDays?: number;
+  photoRetentionDays?: number;
   logoDataUrl?: string;
 }
 
@@ -72,16 +75,47 @@ const defaultSettings: SystemSettings = {
   telegramEnabled: false,
   telegramChatId: "",
   attendancePhotoUploadEnabled: false,
+  cloudRetentionDays: 90,
+  photoRetentionDays: 30,
 };
 
 export class SettingsService {
   private settings: SystemSettings;
   private listeners: ((settings: SystemSettings) => void)[] = [];
   private docPath = "settings/config";
+  private unsubscribe: Unsubscribe | null = null;
 
   constructor() {
     this.settings = this.loadLocalSettings();
-    this.subscribeToSettings();
+    // Eager subscription removed. Must call initializeForUser manually.
+  }
+
+  public initializeForUser(isAdmin: boolean, employeeId?: string) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    if (!isAdmin && !employeeId) {
+      return;
+    }
+
+    this.unsubscribe = onSnapshot(doc(db, this.docPath), (snapshot) => {
+      if (snapshot.exists()) {
+        this.settings = { ...defaultSettings, ...snapshot.data() as SystemSettings };
+        localStorage.setItem('rsr_settings', JSON.stringify(this.settings));
+        this.notifyListeners();
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, this.docPath);
+    });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
   }
 
   private loadLocalSettings(): SystemSettings {
@@ -95,18 +129,6 @@ export class SettingsService {
       }
     }
     return { ...defaultSettings };
-  }
-
-  private subscribeToSettings() {
-    onSnapshot(doc(db, this.docPath), (snapshot) => {
-      if (snapshot.exists()) {
-        this.settings = { ...defaultSettings, ...snapshot.data() as SystemSettings };
-        localStorage.setItem('rsr_settings', JSON.stringify(this.settings));
-        this.notifyListeners();
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, this.docPath);
-    });
   }
 
   async fetchSettings(): Promise<SystemSettings> {

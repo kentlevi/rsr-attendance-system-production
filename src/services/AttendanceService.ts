@@ -8,9 +8,10 @@ import {
   query, 
   where,
   onSnapshot,
-  type QueryConstraint
+  type QueryConstraint,
+  Unsubscribe
 } from 'firebase/firestore';
-import { db, OperationType, handleFirestoreError } from '../lib/firebase';
+import { db, OperationType, handleFirestoreError, trackFirestoreUsage } from '../lib/firebase';
 import { AttendanceLog, AttendanceLogModel } from '../models/AttendanceLog';
 
 const LIVE_ATTENDANCE_WINDOW_DAYS = 31;
@@ -26,21 +27,35 @@ const getISODateDaysAgo = (days: number): string => {
 export class AttendanceService {
   private logs: AttendanceLog[] = [];
   private collectionPath = "attendance";
-
+  private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
 
   constructor() {
-    this.subscribeToRecentLogs();
+    // Eager subscription removed. Must call initializeForUser manually.
   }
 
-  private subscribeToRecentLogs(days = LIVE_ATTENDANCE_WINDOW_DAYS) {
-    const startDate = getISODateDaysAgo(days);
-    const recentLogsQuery = query(
-      collection(db, this.collectionPath),
-      where('date', '>=', startDate),
-    );
+  public initializeForUser(isAdmin: boolean, employeeId?: string, days = LIVE_ATTENDANCE_WINDOW_DAYS) {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
 
-    onSnapshot(recentLogsQuery, (snapshot) => {
+    if (!isAdmin && !employeeId) {
+      return; // Not authenticated or invalid role setup
+    }
+
+    const startDate = getISODateDaysAgo(days);
+    const constraints: QueryConstraint[] = [where('date', '>=', startDate)];
+    
+    // Normal employees can only read to their own logs
+    if (!isAdmin && employeeId) {
+       constraints.push(where('employeeId', '==', employeeId));
+    }
+
+    const recentLogsQuery = query(collection(db, this.collectionPath), ...constraints);
+
+    this.unsubscribe = onSnapshot(recentLogsQuery, (snapshot) => {
+      trackFirestoreUsage(OperationType.LIST, snapshot.docChanges().length || 1);
       this.logs = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -49,6 +64,13 @@ export class AttendanceService {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
+  }
+
+  public stopSubscription() {
+     if (this.unsubscribe) {
+         this.unsubscribe();
+         this.unsubscribe = null;
+     }
   }
 
   subscribe(listener: () => void): () => void {
@@ -66,19 +88,23 @@ export class AttendanceService {
     return this.loadRecentLogs();
   }
 
-  async loadRecentLogs(days = LIVE_ATTENDANCE_WINDOW_DAYS): Promise<AttendanceLogModel[]> {
+  async loadRecentLogs(days = LIVE_ATTENDANCE_WINDOW_DAYS, isAdmin = true, employeeId?: string): Promise<AttendanceLogModel[]> {
     const startDate = getISODateDaysAgo(days);
-
-    return this.loadLogsByDateRange(startDate);
+    return this.loadLogsByDateRange(startDate, undefined, isAdmin, employeeId);
   }
 
-  async loadLogsByDateRange(fromDate: string, toDate?: string): Promise<AttendanceLogModel[]> {
+  async loadLogsByDateRange(fromDate: string, toDate?: string, isAdmin = true, employeeId?: string): Promise<AttendanceLogModel[]> {
     try {
       const constraints: QueryConstraint[] = [where('date', '>=', fromDate)];
       if (toDate) constraints.push(where('date', '<=', toDate));
+      
+      if (!isAdmin && employeeId) {
+        constraints.push(where('employeeId', '==', employeeId));
+      }
 
       const logsQuery = query(collection(db, this.collectionPath), ...constraints);
       const querySnapshot = await getDocs(logsQuery);
+      trackFirestoreUsage(OperationType.LIST, querySnapshot.size);
       this.logs = querySnapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id
@@ -90,7 +116,7 @@ export class AttendanceService {
     return this.getAllLogs();
   }
 
-  async refreshLogsByDates(dates: string[]): Promise<AttendanceLogModel[]> {
+  async refreshLogsByDates(dates: string[], isAdmin = true, employeeId?: string): Promise<AttendanceLogModel[]> {
     const uniqueDates = Array.from(new Set(dates.filter(Boolean)));
     if (uniqueDates.length === 0) return this.getAllLogs();
 
@@ -98,7 +124,10 @@ export class AttendanceService {
       const refreshedLogs: AttendanceLog[] = [];
 
       for (const date of uniqueDates) {
-        const q = query(collection(db, this.collectionPath), where('date', '==', date));
+        const constraints: QueryConstraint[] = [where('date', '==', date)];
+        if (!isAdmin && employeeId) constraints.push(where('employeeId', '==', employeeId));
+
+        const q = query(collection(db, this.collectionPath), ...constraints);
         const querySnapshot = await getDocs(q);
         refreshedLogs.push(...querySnapshot.docs.map(doc => ({
           ...doc.data(),
@@ -131,6 +160,7 @@ export class AttendanceService {
   async addLog(log: Omit<AttendanceLog, 'id'>): Promise<void> {
     try {
       await addDoc(collection(db, this.collectionPath), log);
+      trackFirestoreUsage(OperationType.CREATE);
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
     }
@@ -140,6 +170,7 @@ export class AttendanceService {
     try {
       const docRef = doc(db, this.collectionPath, id);
       await updateDoc(docRef, data);
+      trackFirestoreUsage(OperationType.UPDATE);
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `${this.collectionPath}/${id}`);
     }
@@ -164,3 +195,4 @@ export class AttendanceService {
 
 // Singleton export
 export const attendanceService = new AttendanceService();
+

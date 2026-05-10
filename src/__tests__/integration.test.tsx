@@ -26,6 +26,8 @@ vi.mock('firebase/firestore', () => {
     updateDoc: vi.fn(),
     deleteDoc: vi.fn(),
     doc: vi.fn(),
+    persistentLocalCache: vi.fn(() => ({})),
+    persistentMultipleTabManager: vi.fn(() => ({})),
     onSnapshot: vi.fn((ref, callback) => {
       callback({ 
         docs: [],
