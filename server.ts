@@ -130,6 +130,30 @@ async function getEmployeesFile() {
   }
 }
 
+// Rate limiting for login endpoints
+const loginAttempts = new Map<string, { count: number, lockUntil: number }>();
+
+function handleRateLimit(ip: string, success: boolean): boolean {
+  const now = Date.now();
+  const attempt = loginAttempts.get(ip) || { count: 0, lockUntil: 0 };
+  
+  if (attempt.lockUntil > now) {
+    return false; // locked out
+  }
+  
+  if (success) {
+    loginAttempts.delete(ip);
+    return true;
+  }
+  
+  attempt.count++;
+  if (attempt.count >= 5) {
+    attempt.lockUntil = now + 15 * 60 * 1000; // 15 mins block
+  }
+  loginAttempts.set(ip, attempt);
+  return true;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -138,6 +162,13 @@ async function startServer() {
 
   app.post("/api/login-employee", async (req, res) => {
     try {
+      const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+      const isAllowed = handleRateLimit(clientIp, false); // initial check, we'll delete on success
+      
+      if (!isAllowed) {
+        return res.status(429).json({ success: false, error: "Too many failed attempts. Please try again in 15 minutes." });
+      }
+
       const { loginId, pin } = req.body;
       const db = admin.firestore();
       const empsSnap = await db.collection("employees").get();
@@ -166,6 +197,8 @@ async function startServer() {
       if (!foundEmp) {
           return res.status(401).json({ success: false, error: "Invalid employee credentials." });
       }
+      
+      handleRateLimit(clientIp, true); // Reset attempts on success
       
       const token = await admin.auth().createCustomToken(foundEmp.id, { role: "employee" });
       res.json({ success: true, token, employee: foundEmp });

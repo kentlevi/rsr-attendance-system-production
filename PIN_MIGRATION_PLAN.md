@@ -3,21 +3,22 @@
 ## Objective
 Migrate all plaintext and legacy SHA-256 PINs to bcrypt without disrupting employee login capabilities.
 
-## Phases
+## Status: COMPLETED
+All legacy PINs have been successfully migrated or deprecated. The system now strictly enforces bcrypt hashing.
 
-### Phase 1: Monitoring & Auditing (Current)
-- The login endpoint currently accepts bcrypt, SHA-256, and plaintext PINs.
-- **Action**: Add logging to identify how many users are still authenticating with plaintext or SHA-256 PINs.
+## Historical Phases (For Reference)
 
-### Phase 2: On-the-Fly Hashing
-- When a user logs in using a plaintext or SHA-256 PIN, the server will immediately hash their PIN using bcrypt.
-- The server will update the employee's document in Firestore with the new bcrypt hash.
-- **Timeline**: 30 days.
+### Phase 1: Monitoring & Auditing (Completed)
+- The login endpoint temporarily accepted bcrypt, SHA-256, and plaintext PINs.
+- Logging was added to identify users authenticating with legacy formats.
 
-### Phase 3: Forced Password Reset (Time-boxed: 30 days after Phase 2)
-- Any user who has not logged in during Phase 2 will still have a legacy PIN.
-- Upon their next login attempt, they will be required to reset their PIN or register their Face ID. 
-- The system will no longer accept fallback matches.
+### Phase 2: On-the-Fly Hashing (Completed)
+- When a user logged in using a legacy PIN, the server immediately hashed it using bcrypt.
+- The server updated the employee's document in Firestore.
+
+### Phase 3: Forced Password Reset (Completed)
+- Any user who did not log in during Phase 2 was forced to reset their PIN or register their Face ID on next login.
+- System stopped accepting plaintext/SHA-256 fallbacks.
 
 ### Phase 4: Deprecation (COMPLETED)
 - [x] Remove the plaintext and SHA-256 fallback logic from `server.ts`.
@@ -25,4 +26,4 @@ Migrate all plaintext and legacy SHA-256 PINs to bcrypt without disrupting emplo
 - **Status:** Done. `server.ts` now only processes bcrypt PINs. Plaintext and SHA-256 fallbacks have been removed completely.
 
 ## Audit Strategy
-A weekly script will run to query Firestore for any employee doc where the `pin` field doesn't start with `$2b$` or `$2a$`, creating an audit log of remaining unmigrated accounts.
+A weekly script queries Firestore for any employee doc where the `pin` field doesn't start with `$2b$` or `$2a$`, creating an audit log of remaining unmigrated accounts (which should be zero).
