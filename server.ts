@@ -149,21 +149,11 @@ async function startServer() {
           const emailMatches = data.email?.toLowerCase() === loginId;
           
           if (empIdMatches || emailMatches) {
-              // Now check PIN
+              // Only allow bcrypt hashes for PIN verification.
+              // All legacy SHA-256 and plaintext PINs have been migrated or reset.
               let pinMatches = false;
-              if (data.pin === pin) {
-                  pinMatches = true; // Plaintext fallback
-              } else if (data.pin?.startsWith("$2b$") || data.pin?.startsWith("$2a$")) {
+              if (data.pin?.startsWith("$2b$") || data.pin?.startsWith("$2a$")) {
                   pinMatches = await bcrypt.compare(pin, data.pin);
-              } else {
-                  // Legacy SHA-256 fallback
-                  const msgUint8 = new TextEncoder().encode(pin);
-                  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  const hashedPin = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-                  if (data.pin === hashedPin) {
-                      pinMatches = true;
-                  }
               }
 
               if (pinMatches) {

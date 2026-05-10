@@ -96,7 +96,7 @@ export function StaffView() {
   const filteredEmployees = employees.filter((e) => {
     const data = e.data;
 
-    // Search filter (Name, PIN/ID, Email)
+    // Search filter (Name, ID, Email)
     const matchesSearch =
       searchQuery === "" ||
       data.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -161,7 +161,6 @@ export function StaffView() {
       Gender: e.data.gender || "",
       "Civil Status": e.data.civilStatus || "",
       Address: e.data.address || "",
-      PIN: e.data.pin || "",
       "RFID/Card ID": e.data.rfid || "",
       "Employment Type": e.data.employmentType || "",
       "Work Location": e.data.workLocation || "",
@@ -197,7 +196,6 @@ export function StaffView() {
         "Employee ID": "",
         Department: "",
         Position: "",
-        PIN: "",
         "RFID/Card ID": "",
         "Employment Type": "",
         "Work Location": "",
@@ -232,7 +230,7 @@ export function StaffView() {
           await handleAddEmployee({
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
             avatar: "https://i.pravatar.cc/150?u=" + Date.now(),
-            pin: row["PIN"] || "1234",
+            pin: "",
             name:
               `${row["First Name"] || ""} ${row["Last Name"] || ""}`.trim() ||
               "New Employee",
@@ -464,7 +462,7 @@ export function StaffView() {
               />
               <input
                 type="text"
-                placeholder="Search name, PIN or email"
+                placeholder="Search name, ID or email"
                 className="control-field pl-10 pr-4 placeholder:text-text-muted"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -640,7 +638,7 @@ export function StaffView() {
           if (
             selectedEmployeeId &&
             window.confirm(
-              "Reset access for this employee? This will generate a new PIN and require face re-enrollment.",
+              "Reset access for this employee? This will require face re-enrollment.",
             )
           ) {
             handleResetEmployeeAccess(selectedEmployeeId);

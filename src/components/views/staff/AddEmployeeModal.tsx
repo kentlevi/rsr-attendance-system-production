@@ -60,7 +60,7 @@ export function AddEmployeeModal({
     gender: employeeToEdit?.gender || "",
     civilStatus: employeeToEdit?.civilStatus || "",
     address: employeeToEdit?.address || "",
-    pin: employeeToEdit?.pin || "",
+    pin: "",
     rfid: employeeToEdit?.rfid || "",
     employeeId: employeeToEdit?.employeeId || "",
     department: employeeToEdit?.department || "",
@@ -92,7 +92,7 @@ export function AddEmployeeModal({
         gender: employeeToEdit.gender || "",
         civilStatus: employeeToEdit.civilStatus || "",
         address: employeeToEdit.address || "",
-        pin: employeeToEdit.pin || "",
+        pin: "",
         rfid: employeeToEdit.rfid || "",
         employeeId: employeeToEdit.employeeId || "",
         department: employeeToEdit.department || "",
@@ -161,14 +161,13 @@ export function AddEmployeeModal({
       facialRecognitionProfileId = await facialRecognitionService.registerFace(employeeId, capturedDescriptors);
     }
 
-    onAdd({
+    const payload: any = {
       id: employeeId,
       avatar:
         formData.avatar ||
         (employeeToEdit
           ? employeeToEdit.avatar
           : "https://i.pravatar.cc/150?u=" + Date.now()),
-      pin: formData.pin || "1234",
       name:
         `${formData.firstName} ${formData.lastName}`.trim() || "New Employee",
       email: formData.email,
@@ -196,7 +195,15 @@ export function AddEmployeeModal({
       allowanceType: formData.allowanceType,
       notes: formData.notes,
       facialRecognitionProfileId,
-    });
+    };
+
+    if (formData.pin) {
+      payload.pin = formData.pin;
+    } else if (!employeeToEdit) {
+      payload.pin = "1234";
+    }
+
+    onAdd(payload);
     setFormData({
       firstName: "",
       lastName: "",

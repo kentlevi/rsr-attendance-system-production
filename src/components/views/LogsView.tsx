@@ -62,12 +62,12 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
       className: "w-[80px]"
     },
     {
-      header: "PIN",
+      header: "Dept / ID",
       accessor: (log: any) => {
         const emp = employeeService.getEmployeeByIdSync(log.data.employeeId)?.data;
         return <span className="font-medium text-[#1a1a1a]">{emp?.department || log.data.employeeId}</span>;
       },
-      className: "w-[100px]"
+      className: "w-[120px]"
     },
     {
       header: "Name",
@@ -211,7 +211,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
     const headers = [
       "Log ID",
       "Employee ID",
-      "PIN",
+      "Dept / ID",
       "Name",
       "Department",
       "Date",
@@ -293,7 +293,7 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
                 <input 
                   type="text" 
-                  placeholder="Search by name, PIN, or date" 
+                  placeholder="Search by name, ID, or date" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="control-field pl-11 pr-4"

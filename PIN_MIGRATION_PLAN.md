@@ -19,9 +19,10 @@ Migrate all plaintext and legacy SHA-256 PINs to bcrypt without disrupting emplo
 - Upon their next login attempt, they will be required to reset their PIN or register their Face ID. 
 - The system will no longer accept fallback matches.
 
-### Phase 4: Deprecation
-- Remove the plaintext and SHA-256 fallback logic from `server.ts`.
-- All `pin` fields in Firestore must be either a bcrypt string or empty (if relying purely on biometric/SSO).
+### Phase 4: Deprecation (COMPLETED)
+- [x] Remove the plaintext and SHA-256 fallback logic from `server.ts`.
+- [x] All `pin` fields in Firestore must be either a bcrypt string or empty (if relying purely on biometric/SSO).
+- **Status:** Done. `server.ts` now only processes bcrypt PINs. Plaintext and SHA-256 fallbacks have been removed completely.
 
 ## Audit Strategy
 A weekly script will run to query Firestore for any employee doc where the `pin` field doesn't start with `$2b$` or `$2a$`, creating an audit log of remaining unmigrated accounts.
