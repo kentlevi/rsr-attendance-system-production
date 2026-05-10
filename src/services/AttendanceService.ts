@@ -55,7 +55,8 @@ export class AttendanceService {
     const recentLogsQuery = query(collection(db, this.collectionPath), ...constraints);
 
     this.unsubscribe = onSnapshot(recentLogsQuery, (snapshot) => {
-      trackFirestoreUsage(OperationType.LIST, snapshot.docChanges().length || 1);
+      const count = typeof snapshot.docChanges === 'function' ? snapshot.docChanges().length : (snapshot.docs?.length || 1);
+      trackFirestoreUsage(OperationType.LIST, count);
       this.logs = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id

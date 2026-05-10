@@ -5,8 +5,10 @@ import * as fs from "fs/promises";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import cron from "node-cron";
-import * as admin from "firebase-admin";
+import adminPkg from "firebase-admin";
 import bcrypt from "bcrypt";
+
+const admin = adminPkg.default || adminPkg;
 
 dotenv.config({ path: ".env.local" });
 
