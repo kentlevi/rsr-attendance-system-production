@@ -30,5 +30,5 @@ The facial recognition models have been tested on a farm of physical Android end
 
 ## Raw Logs & Artifacts
 The raw Firebase Test Lab execution logs are archived locally for security audit visibility:
-- **Local Device Logs (Logcat Snippet):** [ftl_logcat_snippet.log](./ftl_logcat_snippet.log)
+- **Local Device Logs (Logcat Snippet):** [ftl_logcat_snippet.md](./ftl_logcat_snippet.md)
 - *Note: Full logs and video recordings are preserved in external storage due to repository size limits.*

@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             } else if (idTokenResult.claims.role === 'employee') {
                 isEmployee = true;
             } else {
-                isAdmin = true;
+                isAdmin = false;
                 isEmployee = false;
             }
         } catch(e) {
