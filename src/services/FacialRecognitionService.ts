@@ -94,9 +94,7 @@ export class FacialRecognitionService {
         return {
           ...data,
           id: snapshotDoc.id,
-          faceDataEncodings: typeof data.faceDataEncodings === 'string' 
-            ? JSON.parse(data.faceDataEncodings) 
-            : data.faceDataEncodings,
+          faceDataEncodings: this.parseFaceEncodings(data.faceDataEncodings),
         } as FacialRecognitionProfile;
       });
       console.log(`Loaded ${this.profiles.length} profiles.`);
@@ -191,10 +189,7 @@ export class FacialRecognitionService {
     let minDistance = 0.6; // Increased threshold for better recognition (default face-api.js threshold is 0.6)
 
     for (const profile of this.profiles) {
-      const encodingsString = profile.faceDataEncodings;
-      const encodings = typeof encodingsString === 'string' 
-        ? JSON.parse(encodingsString) 
-        : encodingsString;
+      const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
         
       if (!encodings || !Array.isArray(encodings) || encodings.length === 0) continue;
 
@@ -212,6 +207,23 @@ export class FacialRecognitionService {
     }
 
     return bestMatchEmployeeId;
+  }
+
+  private parseFaceEncodings(value: unknown): number[][] | null {
+    if (!value) return null;
+    if (Array.isArray(value)) return value as number[][];
+
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed as number[][] : null;
+      } catch (error) {
+        console.warn('Skipping malformed facial recognition profile encoding.', error);
+        return null;
+      }
+    }
+
+    return null;
   }
 }
 

@@ -26,7 +26,11 @@ class AdminAccountService {
       await this.updateAccount(loginId, fallback);
       return fallback;
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `${this.collectionPath}/${loginId}`);
+      try {
+        handleFirestoreError(error, OperationType.GET, `${this.collectionPath}/${loginId}`);
+      } catch {
+        // Preserve the fallback contract for admin login recovery flows.
+      }
       return fallback;
     }
   }

@@ -70,9 +70,7 @@ describe('AddEmployeeModal form validation', () => {
 
     render(<AddEmployeeModal isOpen onClose={vi.fn()} onAdd={onAdd} />);
 
-    await user.click(screen.getByRole('button', { name: 'Next' }));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Facial Data' }));
     await user.click(screen.getByRole('button', { name: 'Save Employee' }));
 
     expect(onAdd).not.toHaveBeenCalled();
@@ -87,15 +85,15 @@ describe('AddEmployeeModal form validation', () => {
 
     render(<AddEmployeeModal isOpen onClose={onClose} onAdd={onAdd} />);
 
+    await user.click(screen.getByRole('button', { name: 'Personal' }));
     await user.type(screen.getByPlaceholderText('Enter first name'), 'Juan');
     await user.type(screen.getByPlaceholderText('Enter last name'), 'Dela Cruz');
     await user.type(screen.getByPlaceholderText('Enter email address'), ' juan@example.com ');
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Employment' }));
     await user.click(screen.getByRole('button', { name: 'Select department' }));
     await user.click(screen.getByRole('button', { name: 'Engineering' }));
     await user.type(screen.getByPlaceholderText('Enter position or job title'), 'Site Engineer');
-    await user.click(screen.getByRole('button', { name: 'Next' }));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Facial Data' }));
     await user.click(screen.getByRole('button', { name: 'Save Employee' }));
 
     await waitFor(() => expect(onAdd).toHaveBeenCalledTimes(1));
