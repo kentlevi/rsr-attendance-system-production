@@ -197,7 +197,7 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.65; // Relaxed threshold for bad lighting conditions
+    let minDistance = 0.85; // Very relaxed threshold for varied lighting
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -207,11 +207,16 @@ export class FacialRecognitionService {
       for (const savedDescriptorArray of encodings) {
          if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
           
-          const distance = this.human.match.distance(descriptor, savedDescriptorArray);
+          let distance = this.human.match.distance(descriptor, savedDescriptorArray);
           
-          if (isNaN(distance)) {
-            console.warn(`Distance calculation resulted in NaN for profile ${profile.id}. Check descriptor data.`);
-            continue;
+          if (isNaN(distance) || distance == null) {
+            // Fallback manual euclidean distance
+            let sum = 0;
+            for (let i = 0; i < descriptor.length; i++) {
+              const diff = (descriptor[i] || 0) - (savedDescriptorArray[i] || 0);
+              sum += diff * diff;
+            }
+            distance = Math.sqrt(sum);
           }
           
           console.log(`Face match distance for ${profile.employeeId}: ${distance.toFixed(4)} (Threshold: ${minDistance})`);

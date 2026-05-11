@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
-import * as fs from "fs/promises";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import adminPkg from "firebase-admin";
@@ -14,9 +13,6 @@ if (admin.apps.length === 0) {
   });
 }
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-path.join(process.cwd(), "employees-db.json");
-const SETTINGS_FILE = path.join(process.cwd(), "settings-db.json");
-const SMS_LOGS_FILE = path.join(process.cwd(), "sms-logs-db.json");
 const verifyAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!(authHeader == null ? void 0 : authHeader.startsWith("Bearer "))) {
@@ -40,19 +36,19 @@ const requireAdmin = async (req, res, next) => {
 };
 async function getSmsLogsFile() {
   try {
-    const data = await fs.readFile(SMS_LOGS_FILE, "utf-8");
-    return JSON.parse(data);
+    const db = admin.firestore();
+    const snapshot = await db.collection("smsLogs").orderBy("sentAt", "desc").get();
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (e) {
-    await fs.writeFile(SMS_LOGS_FILE, JSON.stringify([], null, 2));
+    console.error("Error fetching SMS logs:", e);
     return [];
   }
 }
 async function addSmsLog(logEntry) {
-  const logs = await getSmsLogsFile();
-  const newLog = { ...logEntry, id: Date.now().toString(), sentAt: (/* @__PURE__ */ new Date()).toISOString() };
-  logs.unshift(newLog);
-  await fs.writeFile(SMS_LOGS_FILE, JSON.stringify(logs, null, 2));
-  return newLog;
+  const db = admin.firestore();
+  const newLog = { ...logEntry, sentAt: (/* @__PURE__ */ new Date()).toISOString() };
+  const docRef = await db.collection("smsLogs").add(newLog);
+  return { ...newLog, id: docRef.id };
 }
 const defaultSettings = {
   activeSite: "Head Office",
@@ -78,10 +74,15 @@ const defaultSettings = {
 };
 async function getSettingsFile() {
   try {
-    const data = await fs.readFile(SETTINGS_FILE, "utf-8");
-    return { ...defaultSettings, ...JSON.parse(data) };
+    const db = admin.firestore();
+    const doc = await db.collection("settings").doc("global").get();
+    if (doc.exists) {
+      return { ...defaultSettings, ...doc.data() };
+    }
+    await db.collection("settings").doc("global").set(defaultSettings);
+    return defaultSettings;
   } catch (e) {
-    await fs.writeFile(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+    console.error("Error fetching settings:", e);
     return defaultSettings;
   }
 }
@@ -232,9 +233,10 @@ async function createApp(options = {}) {
   });
   app.put("/api/settings", verifyAuth, requireAdmin, async (req, res) => {
     try {
+      const db = admin.firestore();
       const existingSettings = await getSettingsFile();
       const updatedSettings = { ...existingSettings, ...req.body };
-      await fs.writeFile(SETTINGS_FILE, JSON.stringify(updatedSettings, null, 2));
+      await db.collection("settings").doc("global").set(updatedSettings);
       res.json({ success: true, settings: updatedSettings });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -471,7 +473,7 @@ ${context}`,
   return app;
 }
 async function startServer() {
-  const PORT = 3e3;
+  const PORT = process.env.PORT || 3e3;
   const app = await createApp();
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
