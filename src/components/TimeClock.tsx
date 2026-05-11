@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Menu, UserCircle, LogIn, Coffee, Utensils, LogOut, ChevronDown, Check, MapPin } from 'lucide-react';
+import { Menu, UserCircle, LogIn, Coffee, Utensils, LogOut, ChevronDown, Check, MapPin, LockKeyhole, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Select } from './common/Select';
+import { Modal } from './common/Modal';
 import Webcam from 'react-webcam';
 import { useToast } from '../context/ToastContext';
 import { attendanceService } from '../services/AttendanceService';
@@ -35,6 +36,14 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     retryReady: 0,
     totalOpen: 0,
   });
+  
+  // PIN Override State
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [pinEmpId, setPinEmpId] = useState('');
+  const [pinCode, setPinCode] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [pendingAction, setPendingAction] = useState<TimeClockAction | null>(null);
+
   const webcamRef = useRef<Webcam>(null);
 
   useEffect(() => {
@@ -88,7 +97,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
   type TimeClockAction = 'Time In' | 'Time Out' | BreakPunchAction;
 
-  const handleTimeAction = async (action: TimeClockAction) => {
+  const handleTimeAction = async (action: TimeClockAction, overrideEmpId?: string) => {
     if (!auth.currentUser) {
       console.warn("System is not authenticated. Using public kiosk mode.");
     }
@@ -105,33 +114,36 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       return;
     }
 
-    let empId: string | null = null;
+    let empId: string | null = overrideEmpId || null;
     let timeoutId: any;
-    try {
-      const { facialRecognitionService } = await import('../services/FacialRecognitionService');
-      
-      const timeoutPromise = new Promise<null>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
-      });
-      
-      empId = await Promise.race([
-        facialRecognitionService.verifyFace(photo),
-        timeoutPromise
-      ]);
+    
+    if (!empId) {
+      try {
+        const { facialRecognitionService } = await import('../services/FacialRecognitionService');
+        
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
+        });
+        
+        empId = await Promise.race([
+          facialRecognitionService.verifyFace(photo),
+          timeoutPromise
+        ]);
 
-      if (timeoutId) clearTimeout(timeoutId);
+        if (timeoutId) clearTimeout(timeoutId);
 
-      if (!empId) {
-         showToast("Face not recognized. Please enroll first.", "error");
+        if (!empId) {
+           showToast("Face not recognized. Please enroll first or use PIN Override.", "error");
+           setIsProcessing(false);
+           return;
+        }
+      } catch (error: any) {
+         if (timeoutId) clearTimeout(timeoutId);
+         console.error("Facial recognition error:", error);
+         showToast(error.message || "An error occurred during facial recognition. Please try again.", "error");
          setIsProcessing(false);
          return;
       }
-    } catch (error: any) {
-       if (timeoutId) clearTimeout(timeoutId);
-       console.error("Facial recognition error:", error);
-       showToast(error.message || "An error occurred during facial recognition. Please try again.", "error");
-       setIsProcessing(false);
-       return;
     }
     
     const empModel = employeeService.getEmployeeByIdSync(empId);
@@ -384,6 +396,28 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     }
   };
 
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinEmpId || !pinCode) {
+      showToast("Please enter both Employee ID and PIN", "warning");
+      return;
+    }
+
+    const employee = employees.find(
+      (emp) => emp.employeeId.toLowerCase() === pinEmpId.toLowerCase() && emp.pin === pinCode
+    );
+
+    if (employee && pendingAction) {
+      setIsPinModalOpen(false);
+      setPinEmpId('');
+      setPinCode('');
+      handleTimeAction(pendingAction, employee.id);
+      setPendingAction(null);
+    } else {
+      showToast("Invalid Employee ID or PIN", "error");
+    }
+  };
+
   return (
     <PageLayout 
       onNavigate={onNavigate as any}
@@ -491,6 +525,16 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                  </span>
                </div>
              </div>
+             
+             {!identifiedEmpName && !isProcessing && (
+               <button
+                 onClick={() => setIsPinModalOpen(true)}
+                 className="mt-1 flex items-center justify-center gap-2 text-primary font-medium text-[13px] sm:text-[14px] py-2 px-4 rounded-xl hover:bg-surface-muted transition-colors"
+               >
+                 <LockKeyhole size={16} />
+                 Face Not Working? Use PIN Override
+               </button>
+             )}
             </div>
           </div>
         </div>
@@ -564,6 +608,96 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           </button>
         </div>
       </div>
+
+      {/* PIN Override Modal */}
+      <Modal
+        isOpen={isPinModalOpen}
+        onClose={() => {
+          setIsPinModalOpen(false);
+          setPendingAction(null);
+          setPinEmpId('');
+          setPinCode('');
+        }}
+        title={pendingAction ? `Manual Entry: ${pendingAction}` : "Manual Entry Override"}
+      >
+        <div className="p-6">
+          {!pendingAction ? (
+            <div className="flex flex-col gap-4 items-center justify-center py-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+                <LockKeyhole size={32} />
+              </div>
+              <h3 className="text-lg font-semibold text-[#1a1a1a] text-center">Select Action First</h3>
+              <p className="text-[#64748B] text-center text-[14px]">
+                Please select an action below to proceed with manual PIN entry.
+              </p>
+              <div className="grid grid-cols-2 gap-3 w-full mt-4">
+                <button onClick={() => setPendingAction("Time In")} className="h-12 bg-[#0E8A54] text-white rounded-[14px] font-medium transition-all active:scale-95">Time In</button>
+                <button onClick={() => setPendingAction("Time Out")} className="h-12 bg-[#E03A2E] text-white rounded-[14px] font-medium transition-all active:scale-95">Time Out</button>
+                <button onClick={() => setPendingAction("Lunch Out")} className="h-12 bg-white border border-border rounded-[14px] font-medium transition-all active:scale-95 text-text-primary hover:bg-surface-muted">Lunch Out</button>
+                <button onClick={() => setPendingAction("Lunch In")} className="h-12 bg-white border border-border rounded-[14px] font-medium transition-all active:scale-95 text-text-primary hover:bg-surface-muted">Lunch In</button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handlePinSubmit} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <p className="text-[14px] text-[#64748B]">
+                  Your photo will still be taken during a manual punch to ensure accuracy.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[14px] font-medium text-[#1a1a1a] mb-2">Employee ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. EMP-001"
+                    className="w-full h-12 px-4 rounded-[14px] border border-[#E2E8F0] bg-[#F8FAFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1a1a1a] uppercase"
+                    value={pinEmpId}
+                    onChange={(e) => setPinEmpId(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[14px] font-medium text-[#1a1a1a] mb-2">6-Digit PIN</label>
+                  <div className="relative">
+                    <input
+                      type={showPin ? "text" : "password"}
+                      required
+                      placeholder="Enter PIN"
+                      maxLength={6}
+                      className="w-full h-12 pl-4 pr-12 rounded-[14px] border border-[#E2E8F0] bg-[#F8FAFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1a1a1a] tracking-[0.2em] font-medium"
+                      value={pinCode}
+                      onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors p-1"
+                    >
+                      {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPendingAction(null)}
+                  className="flex-1 h-12 bg-white border border-[#E2E8F0] text-[#64748B] font-medium rounded-[14px] hover:bg-[#F8FAFC] hover:text-[#1a1a1a] transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={!pinEmpId || pinCode.length !== 6}
+                  className="flex-1 h-12 bg-primary text-white font-medium rounded-[14px] hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  Confirm {pendingAction}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </Modal>
     </PageLayout>
   );
 }
