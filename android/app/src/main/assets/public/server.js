@@ -1,12 +1,12 @@
 import express from "express";
-import { createServer } from "vite";
+import cors from "cors";
 import path from "path";
 import * as fs from "fs/promises";
 import dotenv from "dotenv";
 import { GoogleGenAI, Type } from "@google/genai";
 import adminPkg from "firebase-admin";
 import bcrypt from "bcrypt";
-const admin = adminPkg.default || adminPkg;
+const admin = adminPkg;
 dotenv.config({ path: ".env.local" });
 if (admin.apps.length === 0) {
   admin.initializeApp({
@@ -103,9 +103,10 @@ function handleRateLimit(ip, success) {
   loginAttempts.set(ip, attempt);
   return true;
 }
-async function startServer() {
+async function createApp(options = {}) {
   const app = express();
-  const PORT = 3e3;
+  const useVite = options.useVite ?? process.env.NODE_ENV !== "production";
+  app.use(cors());
   app.use(express.json());
   app.post("/api/login-employee", async (req, res) => {
     var _a, _b, _c, _d;
@@ -428,21 +429,57 @@ ${context}`,
       synced: punches.length
     });
   });
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createServer({
+  if (useVite) {
+    const { createServer: createViteServer } = await import("vite");
+    const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa"
+    });
+    app.use((req, res, next) => {
+      if (req.url.includes("/models/")) {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("Surrogate-Control", "no-store");
+        if (req.url.endsWith(".json")) {
+          res.setHeader("Content-Type", "application/json");
+        } else if (req.url.includes("shard")) {
+          res.setHeader("Content-Type", "application/octet-stream");
+          res.setHeader("Content-Encoding", "identity");
+        }
+      }
+      next();
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (res, path2) => {
+        if (path2.includes("/models/")) {
+          if (path2.endsWith(".json")) {
+            res.setHeader("Content-Type", "application/json");
+          } else if (path2.includes("shard")) {
+            res.setHeader("Content-Type", "application/octet-stream");
+          }
+        }
+      }
+    }));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+  return app;
+}
+async function startServer() {
+  const PORT = 3e3;
+  const app = await createApp();
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
-startServer();
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}
+export {
+  createApp
+};

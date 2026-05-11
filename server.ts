@@ -20,9 +20,7 @@ if (admin.apps.length === 0) {
 }
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const DB_FILE = path.join(process.cwd(), "employees-db.json");
-const SETTINGS_FILE = path.join(process.cwd(), "settings-db.json");
-const SMS_LOGS_FILE = path.join(process.cwd(), "sms-logs-db.json");
+// No local JSON DB files used anymore
 
 const verifyAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
@@ -50,20 +48,20 @@ const requireAdmin = async (req: express.Request, res: express.Response, next: e
 
 async function getSmsLogsFile() {
   try {
-    const data = await fs.readFile(SMS_LOGS_FILE, "utf-8");
-    return JSON.parse(data);
+    const db = admin.firestore();
+    const snapshot = await db.collection("smsLogs").orderBy("sentAt", "desc").get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (e) {
-    await fs.writeFile(SMS_LOGS_FILE, JSON.stringify([], null, 2));
+    console.error("Error fetching SMS logs:", e);
     return [];
   }
 }
 
 async function addSmsLog(logEntry: any) {
-  const logs = await getSmsLogsFile();
-  const newLog = { ...logEntry, id: Date.now().toString(), sentAt: new Date().toISOString() };
-  logs.unshift(newLog); // Add to beginning
-  await fs.writeFile(SMS_LOGS_FILE, JSON.stringify(logs, null, 2));
-  return newLog;
+  const db = admin.firestore();
+  const newLog = { ...logEntry, sentAt: new Date().toISOString() };
+  const docRef = await db.collection("smsLogs").add(newLog);
+  return { ...newLog, id: docRef.id };
 }
 
 const defaultSettings = {
@@ -91,45 +89,16 @@ const defaultSettings = {
 
 async function getSettingsFile() {
   try {
-    const data = await fs.readFile(SETTINGS_FILE, "utf-8");
-    return { ...defaultSettings, ...JSON.parse(data) };
-  } catch (e) {
-    await fs.writeFile(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2));
+    const db = admin.firestore();
+    const doc = await db.collection("settings").doc("global").get();
+    if (doc.exists) {
+      return { ...defaultSettings, ...doc.data() };
+    }
+    await db.collection("settings").doc("global").set(defaultSettings);
     return defaultSettings;
-  }
-}
-
-async function getEmployeesFile() {
-  try {
-    const data = await fs.readFile(DB_FILE, "utf-8");
-    return JSON.parse(data);
   } catch (e) {
-    const defaultData = [
-      {
-        id: "1",
-        avatar: "https://i.pravatar.cc/150?u=12",
-        pin: "32201",
-        name: "John Doe",
-        email: "john.doe@rsr.com",
-        department: "Engineering",
-        position: "Project Engineer",
-        status: "Active",
-        lastLogin: "May 20, 2024\\n08:34 AM",
-      },
-      {
-        id: "2",
-        avatar: "https://i.pravatar.cc/150?u=13",
-        pin: "34319",
-        name: "Jane Smith",
-        email: "jane.smith@rsr.com",
-        department: "HR Department",
-        position: "HR Manager",
-        status: "Active",
-        lastLogin: "May 20, 2024\\n08:48 AM",
-      },
-    ];
-    await fs.writeFile(DB_FILE, JSON.stringify(defaultData, null, 2));
-    return defaultData;
+    console.error("Error fetching settings:", e);
+    return defaultSettings;
   }
 }
 
@@ -313,9 +282,10 @@ export async function createApp(options: { useVite?: boolean } = {}) {
 
   app.put("/api/settings", verifyAuth, requireAdmin, async (req, res) => {
     try {
+      const db = admin.firestore();
       const existingSettings = await getSettingsFile();
       const updatedSettings = { ...existingSettings, ...req.body };
-      await fs.writeFile(SETTINGS_FILE, JSON.stringify(updatedSettings, null, 2));
+      await db.collection("settings").doc("global").set(updatedSettings);
       res.json({ success: true, settings: updatedSettings });
     } catch (e: any) {
       res.status(500).json({ success: false, error: e.message });
@@ -575,10 +545,10 @@ export async function createApp(options: { useVite?: boolean } = {}) {
 }
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
   const app = await createApp();
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT as number, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
