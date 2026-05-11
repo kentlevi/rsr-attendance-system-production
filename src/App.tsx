@@ -60,10 +60,15 @@ export default function App() {
     });
   }, [currentView]);
 
-  // If user is admin but wants to go to admin view, but is logged out at Firebase level
-  if (currentView === 'admin' && !isLoading && !isAdmin) {
+  // Automatically navigate when auth state changes
+  useEffect(() => {
+    if (currentView === 'admin' && !isLoading && !isAdmin) {
       setCurrentView('adminLogin');
-  }
+    }
+    if (currentView === 'adminLogin' && !isLoading && isAdmin) {
+      setCurrentView('admin');
+    }
+  }, [currentView, isLoading, isAdmin]);
 
   if (isLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
