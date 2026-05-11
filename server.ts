@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import * as fs from "fs/promises";
 import dotenv from "dotenv";
@@ -158,9 +157,9 @@ function handleRateLimit(ip: string, success: boolean): boolean {
   return true;
 }
 
-async function startServer() {
+export async function createApp(options: { useVite?: boolean } = {}) {
   const app = express();
-  const PORT = 3000;
+  const useVite = options.useVite ?? process.env.NODE_ENV !== "production";
 
   app.use(cors());
   app.use(express.json());
@@ -527,7 +526,8 @@ async function startServer() {
     });
   });
 
-  if (process.env.NODE_ENV !== "production") {
+  if (useVite) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -571,9 +571,18 @@ async function startServer() {
     });
   }
 
+  return app;
+}
+
+async function startServer() {
+  const PORT = 3000;
+  const app = await createApp();
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
-startServer();
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}

@@ -30,3 +30,6 @@ jobs:
 
     - name: Build Application
       run: npm run build
+
+    - name: Generate Coverage Report
+      run: npm run coverage
