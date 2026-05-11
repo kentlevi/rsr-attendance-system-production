@@ -197,7 +197,7 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.5; // Human uses similarity or distance, typically 0.5 is a good default for embedding distance
+    let minDistance = 0.65; // Relaxed threshold for bad lighting conditions
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
