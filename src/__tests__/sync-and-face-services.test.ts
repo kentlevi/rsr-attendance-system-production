@@ -33,7 +33,6 @@ const setDoc = vi.fn();
 const handleFirestoreError = vi.fn((error: unknown) => {
   throw error;
 });
-const euclideanDistance = vi.fn();
 const detectSingleFace = vi.fn();
 const tinyLoad = vi.fn();
 const landLoad = vi.fn();
@@ -75,19 +74,19 @@ vi.mock('../lib/firebase', () => ({
   },
   handleFirestoreError,
 }));
-vi.mock('@vladmandic/face-api', () => ({
-  nets: {
-    tinyFaceDetector: { loadFromUri: tinyLoad },
-    faceLandmark68Net: { loadFromUri: landLoad },
-    faceRecognitionNet: { loadFromUri: recLoad },
-  },
-  tf: { ready: vi.fn().mockResolvedValue(undefined) },
-  TinyFaceDetectorOptions: vi.fn(function TinyFaceDetectorOptions(options) {
-    return options;
-  }),
-  detectSingleFace,
-  euclideanDistance,
-}));
+vi.mock('@vladmandic/human', () => {
+  class MockHuman {
+    load = vi.fn().mockResolvedValue(undefined);
+    detect = vi.fn().mockResolvedValue({ face: [] });
+    match = {
+      similarity: vi.fn().mockImplementation(() => { throw new Error('Mock error to trigger fallback'); }),
+      distance: vi.fn()
+    };
+  }
+  return {
+    Human: MockHuman
+  };
+});
 
 describe('SyncService', () => {
   beforeEach(() => {
@@ -95,6 +94,7 @@ describe('SyncService', () => {
     Object.defineProperty(global.navigator, 'onLine', { value: true, configurable: true });
     attendanceServiceMock.getAllLogs.mockReturnValue([]);
     attendanceServiceMock.refreshLogsByDates.mockResolvedValue(undefined);
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([]);
     settingsServiceMock.getSettings.mockReturnValue({
       attendancePhotoUploadEnabled: false,
       shiftStartTime: '08:00',
@@ -243,18 +243,15 @@ describe('FacialRecognitionService', () => {
       {
         id: 'p2',
         employeeId: 'EMP-001',
-        faceDataEncodings: [[0.1, 0.1]],
+        faceDataEncodings: [[0.2, 0.2]], // Cosine similarity will be 1.0
       },
       {
         id: 'p3',
         employeeId: 'EMP-002',
-        faceDataEncodings: [[0.8, 0.8]],
+        faceDataEncodings: [[-0.2, 0.2]], // Cosine similarity will be 0.0
       },
     ];
     vi.spyOn(service, 'extractFaceDescriptor').mockResolvedValue([0.2, 0.2]);
-    euclideanDistance
-      .mockImplementationOnce(() => 0.2)
-      .mockImplementationOnce(() => 0.7);
 
     const match = await service.verifyFace('data:image/jpeg;base64,abc');
 

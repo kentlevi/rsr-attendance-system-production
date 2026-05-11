@@ -61,24 +61,17 @@ vi.mock('firebase/auth', () => ({
   GoogleAuthProvider: vi.fn(),
 }));
 
-vi.mock('@vladmandic/face-api', () => {
-  const mockFaceApi = {
-    nets: {
-      ssdMobilenetv1: { loadFromUri: vi.fn().mockResolvedValue(undefined) },
-      faceLandmark68Net: { loadFromUri: vi.fn().mockResolvedValue(undefined) },
-      faceRecognitionNet: { loadFromUri: vi.fn().mockResolvedValue(undefined) },
-    },
-    detectSingleFace: vi.fn(),
-    detectAllFaces: vi.fn(),
-    LabeledFaceDescriptors: vi.fn(),
-    FaceMatcher: vi.fn(),
-    SsdMobilenetv1Options: vi.fn(),
-  };
-
+vi.mock('@vladmandic/human', () => {
+  class MockHuman {
+    load = vi.fn().mockResolvedValue(undefined);
+    detect = vi.fn().mockResolvedValue({ face: [] });
+    match = {
+      similarity: vi.fn(),
+      distance: vi.fn()
+    };
+  }
   return {
-    __esModule: true,
-    default: mockFaceApi,
-    ...mockFaceApi
+    Human: MockHuman
   };
 });
 
