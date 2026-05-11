@@ -105,14 +105,13 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       return;
     }
 
-    // Identify Face
     let empId: string | null = null;
+    let timeoutId: any;
     try {
       const { facialRecognitionService } = await import('../services/FacialRecognitionService');
       
-      // Use Promise.race to add a timeout to verifyFace just in case it hangs
       const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
+        timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
       });
       
       empId = await Promise.race([
@@ -120,12 +119,15 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         timeoutPromise
       ]);
 
+      if (timeoutId) clearTimeout(timeoutId);
+
       if (!empId) {
          showToast("Face not recognized. Please enroll first.", "error");
          setIsProcessing(false);
          return;
       }
     } catch (error: any) {
+       if (timeoutId) clearTimeout(timeoutId);
        console.error("Facial recognition error:", error);
        showToast(error.message || "An error occurred during facial recognition. Please try again.", "error");
        setIsProcessing(false);

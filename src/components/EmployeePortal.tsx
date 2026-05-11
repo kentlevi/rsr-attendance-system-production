@@ -159,26 +159,29 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       const maxAttempts = 3;
 
       while (attempts < maxAttempts && !employeeId) {
-        // Use Promise.race to add a timeout to verifyFace just in case it hangs
+        let timeoutId: any;
         const timeoutPromise = new Promise<null>((_, reject) => {
-          setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
+          timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
         });
 
-        if (attempts > 0) {
-          // Wait a bit between attempts to get a different frame
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const retryPhoto = webcamRef.current?.getScreenshot();
-          if (retryPhoto) {
+        try {
+          if (attempts > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const retryPhoto = webcamRef.current?.getScreenshot();
+            if (retryPhoto) {
+              employeeId = await Promise.race([
+                facialRecognitionService.verifyFace(retryPhoto),
+                timeoutPromise
+              ]);
+            }
+          } else {
             employeeId = await Promise.race([
-              facialRecognitionService.verifyFace(retryPhoto),
+              facialRecognitionService.verifyFace(photo),
               timeoutPromise
             ]);
           }
-        } else {
-          employeeId = await Promise.race([
-            facialRecognitionService.verifyFace(photo),
-            timeoutPromise
-          ]);
+        } finally {
+          if (timeoutId) clearTimeout(timeoutId);
         }
         attempts++;
       }
