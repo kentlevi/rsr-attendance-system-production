@@ -116,11 +116,15 @@ export class FacialRecognitionService {
       const img = new Image();
       img.onload = async () => {
         try {
+          if (!img.width || !img.height || img.width === 0 || img.height === 0) {
+             return resolve(null);
+          }
+
           // Use a larger input size for better detection accuracy if possible
           const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
           const detections = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
           
-          if (detections) {
+          if (detections && detections.descriptor) {
             resolve(Array.from(detections.descriptor));
           } else {
             resolve(null);
