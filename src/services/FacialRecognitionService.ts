@@ -119,13 +119,19 @@ export class FacialRecognitionService {
           if (!img.naturalWidth || !img.naturalHeight || img.naturalWidth === 0 || img.naturalHeight === 0) {
              return resolve(null);
           }
-          // Set explicit width and height so face-api.js doesn't fail with 'Box.constructor'
-          img.width = img.naturalWidth;
-          img.height = img.naturalHeight;
+          
+          // Draw image to a canvas to bypass HTMLImageElement layout quirks in face-api.js
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+          }
 
           // Use a larger input size for better detection accuracy if possible
           const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
-          const detections = await faceapi.detectSingleFace(img, options).withFaceLandmarks().withFaceDescriptor();
+          const detections = await faceapi.detectSingleFace(canvas, options).withFaceLandmarks().withFaceDescriptor();
           
           if (detections && detections.descriptor) {
             resolve(Array.from(detections.descriptor));
