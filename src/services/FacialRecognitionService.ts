@@ -8,15 +8,35 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import * as faceapi from '@vladmandic/face-api';
+import { Human, Config } from '@vladmandic/human';
+
+const humanConfig: Partial<Config> = {
+  modelBasePath: '/models',
+  filter: { enabled: false },
+  face: {
+    enabled: true,
+    detector: { return: true, rotation: true },
+    mesh: { enabled: true },
+    attention: { enabled: false },
+    iris: { enabled: false },
+    description: { enabled: true },
+    emotion: { enabled: false },
+  },
+  body: { enabled: false },
+  hand: { enabled: false },
+  object: { enabled: false },
+  gesture: { enabled: false },
+};
 
 export class FacialRecognitionService {
   private profiles: FacialRecognitionProfile[] = [];
   private collectionPath = 'facialRecognitionProfiles';
   private modelsLoaded = false;
   private unsubscribe: Unsubscribe | null = null;
+  private human: Human;
 
   constructor() {
+    this.human = new Human(humanConfig);
     this.initModels();
   }
 
@@ -51,41 +71,15 @@ export class FacialRecognitionService {
   async initModels() {
     if (this.modelsLoaded || typeof window === 'undefined' || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST))) return;
     
-    // Attempt to load models with retries
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts && !this.modelsLoaded) {
-      try {
-        console.log(`Loading face-api models (attempt ${attempts + 1})...`);
-        
-        // Wait for tf to be ready and available
-        if ((faceapi as any).tf) {
-          await (faceapi as any).tf.ready();
-        }
-
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
-        ]);
-        
-        this.modelsLoaded = true;
-        console.log("Face-api models loaded successfully:", {
-          ssdMobilenetv1: faceapi.nets.ssdMobilenetv1.isLoaded,
-          faceLandmark68Net: faceapi.nets.faceLandmark68Net.isLoaded,
-          faceRecognitionNet: faceapi.nets.faceRecognitionNet.isLoaded
-        });
-      } catch (e) {
-        attempts++;
-        console.error(`Attempt ${attempts} failed to load face-api models:`, e);
-        if (attempts >= maxAttempts) {
-          console.error("Critical: Failed to load face-api models after multiple attempts.");
-        } else {
-          // Wait a bit before retry
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
+    try {
+      console.log('Loading Human models...');
+      await this.human.load();
+      // Optional: run a warmup to compile webgl shaders
+      // await this.human.warmup();
+      this.modelsLoaded = true;
+      console.log('Human models loaded successfully');
+    } catch (e) {
+      console.error('Failed to load Human models:', e);
     }
   }
 
@@ -110,7 +104,6 @@ export class FacialRecognitionService {
     return this.profiles;
   }
 
-  // Returns array of 128 numbers (Float32Array converted to Array)
   async extractFaceDescriptor(base64Image: string): Promise<number[] | null> {
     await this.initModels();
     
@@ -122,8 +115,6 @@ export class FacialRecognitionService {
              return resolve(null);
           }
           
-          // Draw image to a canvas to bypass HTMLImageElement layout quirks in face-api.js
-          // Limit canvas size for better performance and detection stability
           const maxDim = 600;
           let width = img.naturalWidth;
           let height = img.naturalHeight;
@@ -141,27 +132,19 @@ export class FacialRecognitionService {
             ctx.drawImage(img, 0, 0, width, height);
           }
 
-          // SSD MobileNet V1 is more accurate than TinyFaceDetector
-          // Lowering minConfidence even further to 0.2 for difficult lighting
-          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.2 });
-          console.log("Detecting face with SSD MobileNet V1 (minConfidence: 0.2)...");
-          const detections = await faceapi.detectSingleFace(canvas, options).withFaceLandmarks().withFaceDescriptor();
+          console.log("Detecting face with @vladmandic/human...");
+          const res = await this.human.detect(canvas);
           
-          if (detections) {
+          if (res && res.face && res.face.length > 0) {
             console.log("Face detected successfully!");
+            const desc = Array.from(res.face[0].embedding || []);
+            if (desc.length > 0) {
+              resolve(desc);
+            } else {
+               resolve(null);
+            }
           } else {
             console.warn("No face detected in the image.");
-          }
-          
-          if (detections && detections.descriptor) {
-            const desc = Array.from(detections.descriptor);
-            const hasNaN = desc.some(v => isNaN(v));
-            console.log(`Live descriptor generated. Length: ${desc.length}, Has NaN: ${hasNaN}`);
-            if (hasNaN) {
-              console.warn("Live descriptor contains NaN values!");
-            }
-            resolve(desc);
-          } else {
             resolve(null);
           }
         } catch (e) {
@@ -214,7 +197,7 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.70; // Increased threshold to 0.70 for maximum leniency in difficult lighting
+    let minDistance = 0.5; // Human uses similarity or distance, typically 0.5 is a good default for embedding distance
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -223,15 +206,11 @@ export class FacialRecognitionService {
 
       for (const savedDescriptorArray of encodings) {
          if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
-          const savedDescriptor = new Float32Array(savedDescriptorArray);
-          const currentDescriptor = new Float32Array(descriptor);
           
-          const distance = faceapi.euclideanDistance(savedDescriptor, currentDescriptor);
+          const distance = this.human.match.distance(descriptor, savedDescriptorArray);
           
           if (isNaN(distance)) {
             console.warn(`Distance calculation resulted in NaN for profile ${profile.id}. Check descriptor data.`);
-            console.log(`Saved descriptor (first 5): ${Array.from(savedDescriptor.slice(0, 5))}`);
-            console.log(`Current descriptor (first 5): ${Array.from(currentDescriptor.slice(0, 5))}`);
             continue;
           }
           
@@ -266,3 +245,4 @@ export class FacialRecognitionService {
 }
 
 export const facialRecognitionService = new FacialRecognitionService();
+

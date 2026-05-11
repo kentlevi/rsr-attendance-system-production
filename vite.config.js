@@ -36,7 +36,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('firebase')) return 'vendor-firebase';
-          if (id.includes('@vladmandic') || id.includes('face-api')) return 'vendor-face';
+          if (id.includes('@vladmandic') || id.includes('human')) return 'vendor-human';
           if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('dompurify')) return 'vendor-pdf';
           if (id.includes('framer-motion') || id.includes('motion')) return 'vendor-motion';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
