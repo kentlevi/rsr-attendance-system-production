@@ -69,7 +69,14 @@ export function AddEmployeeModal({
         setIsProcessingCapture(true);
         try {
           const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
-          const descriptor = await facialRecognitionService.extractFaceDescriptor(imageSrc);
+          const timeoutPromise = new Promise<null>((_, reject) => {
+            setTimeout(() => reject(new Error("Facial capture timed out. Please try again.")), 15000);
+          });
+          
+          const descriptor = await Promise.race([
+            facialRecognitionService.extractFaceDescriptor(imageSrc),
+            timeoutPromise
+          ]);
           if (descriptor) {
              setCapturedDescriptors(prev => [...prev, descriptor]);
              setCapturedImages((prev) => [...prev, imageSrc]);
