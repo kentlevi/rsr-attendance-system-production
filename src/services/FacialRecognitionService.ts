@@ -214,7 +214,7 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.65; // Slightly increased from 0.6 for more leniency in matching
+    let minDistance = 0.70; // Increased threshold to 0.70 for maximum leniency in difficult lighting
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
