@@ -670,7 +670,11 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     ref={webcamRef}
                     screenshotFormat="image/jpeg"
                     mirrored={true}
-                    videoConstraints={{ facingMode: "user" }}
+                    videoConstraints={{ 
+                      width: { ideal: 1280 },
+                      height: { ideal: 720 },
+                      facingMode: "user" 
+                    }}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-success/5 pointer-events-none"></div>

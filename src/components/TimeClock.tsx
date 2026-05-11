@@ -437,7 +437,11 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                   ref={webcamRef}
                   screenshotFormat="image/jpeg"
                   mirrored={true}
-                  videoConstraints={{ facingMode: "user" }}
+                  videoConstraints={{ 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: "user" 
+                  }}
                   className="w-full h-full object-cover absolute inset-0 z-0"
                 />
                 
