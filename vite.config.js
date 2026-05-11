@@ -4,12 +4,31 @@ import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+import { VitePWA } from 'vite-plugin-pwa';
+
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: repoRoot,
   envDir: repoRoot,
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(), 
+    tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg', 'models/*'],
+      manifest: {
+        name: 'RSR Attendance System',
+        short_name: 'RSR Attendance',
+        description: 'RSR Engineering Attendance and Facial Recognition',
+        theme_color: '#ffffff'
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,bin}'],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 // 10MB to accommodate heavy ML models
+      }
+    })
+  ],
   build: {
     chunkSizeWarningLimit: 1400,
     rollupOptions: {
