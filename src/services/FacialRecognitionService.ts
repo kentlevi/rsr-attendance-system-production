@@ -198,6 +198,9 @@ export class FacialRecognitionService {
 
     let bestMatchEmployeeId: string | null = null;
     let minDistance = 0.85; // Very relaxed threshold for varied lighting
+    
+    // DEBUG: We will collect all calculated distances to show the user
+    let debugDistances: string[] = [];
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -219,6 +222,7 @@ export class FacialRecognitionService {
             distance = Math.sqrt(sum);
           }
           
+          debugDistances.push(distance.toFixed(4));
           console.log(`Face match distance for ${profile.employeeId}: ${distance.toFixed(4)} (Threshold: ${minDistance})`);
           
           if (distance < minDistance) {
@@ -226,6 +230,10 @@ export class FacialRecognitionService {
             bestMatchEmployeeId = profile.employeeId;
           }
       }
+    }
+
+    if (!bestMatchEmployeeId && debugDistances.length > 0) {
+       throw new Error(`DEBUG INFO: No match. Distances calculated: ${debugDistances.join(', ')}. Threshold is 0.85`);
     }
 
     return bestMatchEmployeeId;
