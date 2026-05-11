@@ -116,9 +116,12 @@ export class FacialRecognitionService {
       const img = new Image();
       img.onload = async () => {
         try {
-          if (!img.width || !img.height || img.width === 0 || img.height === 0) {
+          if (!img.naturalWidth || !img.naturalHeight || img.naturalWidth === 0 || img.naturalHeight === 0) {
              return resolve(null);
           }
+          // Set explicit width and height so face-api.js doesn't fail with 'Box.constructor'
+          img.width = img.naturalWidth;
+          img.height = img.naturalHeight;
 
           // Use a larger input size for better detection accuracy if possible
           const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
