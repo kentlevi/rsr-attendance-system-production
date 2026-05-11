@@ -197,10 +197,10 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.85; // Very relaxed threshold for varied lighting
+    let minSimilarity = 0.5; // Threshold for cosine similarity (1.0 is perfect match)
     
-    // DEBUG: We will collect all calculated distances to show the user
-    let debugDistances: string[] = [];
+    // DEBUG: We will collect all calculated similarities to show the user
+    let debugSimilarities: string[] = [];
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -210,30 +210,50 @@ export class FacialRecognitionService {
       for (const savedDescriptorArray of encodings) {
          if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
           
-          let distance = this.human.match.distance(descriptor, savedDescriptorArray);
-          
-          if (isNaN(distance) || distance == null) {
-            // Fallback manual euclidean distance
-            let sum = 0;
-            for (let i = 0; i < descriptor.length; i++) {
-              const diff = (descriptor[i] || 0) - (savedDescriptorArray[i] || 0);
-              sum += diff * diff;
+          let similarity = 0;
+          try {
+            // First try built-in similarity if it exists in this version
+            if (this.human.match && this.human.match.similarity) {
+              similarity = this.human.match.similarity(descriptor, savedDescriptorArray);
+            } else {
+               throw new Error("Fallback");
             }
-            distance = Math.sqrt(sum);
+          } catch (e) {
+            // Fallback manual Cosine Similarity
+            let dotProduct = 0;
+            let normA = 0;
+            let normB = 0;
+            for (let i = 0; i < descriptor.length; i++) {
+              const a = descriptor[i] || 0;
+              const b = savedDescriptorArray[i] || 0;
+              dotProduct += a * b;
+              normA += a * a;
+              normB += b * b;
+            }
+            if (normA === 0 || normB === 0) {
+              similarity = 0;
+            } else {
+              similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+            }
           }
           
-          debugDistances.push(distance.toFixed(4));
-          console.log(`Face match distance for ${profile.employeeId}: ${distance.toFixed(4)} (Threshold: ${minDistance})`);
+          if (isNaN(similarity) || similarity == null) {
+            similarity = 0;
+          }
           
-          if (distance < minDistance) {
-            minDistance = distance;
+          debugSimilarities.push(similarity.toFixed(4));
+          console.log(`Face match similarity for ${profile.employeeId}: ${similarity.toFixed(4)} (Threshold: ${minSimilarity})`);
+          
+          if (similarity > minSimilarity) {
+            // We want the HIGHEST similarity
+            minSimilarity = similarity;
             bestMatchEmployeeId = profile.employeeId;
           }
       }
     }
 
-    if (!bestMatchEmployeeId && debugDistances.length > 0) {
-       throw new Error(`DEBUG INFO: No match. Distances calculated: ${debugDistances.join(', ')}. Threshold is 0.85`);
+    if (!bestMatchEmployeeId && debugSimilarities.length > 0) {
+       throw new Error(`DEBUG INFO: No match. Similarities calculated: ${debugSimilarities.join(', ')}. Threshold is > 0.50`);
     }
 
     return bestMatchEmployeeId;
