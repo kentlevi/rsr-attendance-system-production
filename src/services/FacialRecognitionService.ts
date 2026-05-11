@@ -49,7 +49,7 @@ export class FacialRecognitionService {
   }
 
   async initModels() {
-    if (this.modelsLoaded || typeof window === 'undefined' || process.env.NODE_ENV === 'test' || process.env.VITEST) return;
+    if (this.modelsLoaded || typeof window === 'undefined' || (typeof process !== 'undefined' && (process.env.NODE_ENV === 'test' || process.env.VITEST))) return;
     
     // Attempt to load models with retries
     let attempts = 0;
@@ -65,13 +65,17 @@ export class FacialRecognitionService {
         }
 
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
           faceapi.nets.faceRecognitionNet.loadFromUri('/models')
         ]);
         
         this.modelsLoaded = true;
-        console.log("Face-api models loaded successfully");
+        console.log("Face-api models loaded successfully:", {
+          ssdMobilenetv1: faceapi.nets.ssdMobilenetv1.isLoaded,
+          faceLandmark68Net: faceapi.nets.faceLandmark68Net.isLoaded,
+          faceRecognitionNet: faceapi.nets.faceRecognitionNet.isLoaded
+        });
       } catch (e) {
         attempts++;
         console.error(`Attempt ${attempts} failed to load face-api models:`, e);
@@ -119,20 +123,44 @@ export class FacialRecognitionService {
           }
           
           // Draw image to a canvas to bypass HTMLImageElement layout quirks in face-api.js
+          // Limit canvas size for better performance and detection stability
+          const maxDim = 600;
+          let width = img.naturalWidth;
+          let height = img.naturalHeight;
+          if (width > maxDim || height > maxDim) {
+            const ratio = Math.min(maxDim / width, maxDim / height);
+            width *= ratio;
+            height *= ratio;
+          }
+          
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
+          canvas.width = width;
+          canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, width, height);
           }
 
-          // Use a larger input size for better detection accuracy if possible
-          const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
+          // SSD MobileNet V1 is more accurate than TinyFaceDetector
+          // Lowering minConfidence even further to 0.2 for difficult lighting
+          const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.2 });
+          console.log("Detecting face with SSD MobileNet V1 (minConfidence: 0.2)...");
           const detections = await faceapi.detectSingleFace(canvas, options).withFaceLandmarks().withFaceDescriptor();
           
+          if (detections) {
+            console.log("Face detected successfully!");
+          } else {
+            console.warn("No face detected in the image.");
+          }
+          
           if (detections && detections.descriptor) {
-            resolve(Array.from(detections.descriptor));
+            const desc = Array.from(detections.descriptor);
+            const hasNaN = desc.some(v => isNaN(v));
+            console.log(`Live descriptor generated. Length: ${desc.length}, Has NaN: ${hasNaN}`);
+            if (hasNaN) {
+              console.warn("Live descriptor contains NaN values!");
+            }
+            resolve(desc);
           } else {
             resolve(null);
           }
@@ -186,7 +214,7 @@ export class FacialRecognitionService {
     if (!descriptor) return null;
 
     let bestMatchEmployeeId: string | null = null;
-    let minDistance = 0.6; // Increased threshold for better recognition (default face-api.js threshold is 0.6)
+    let minDistance = 0.65; // Slightly increased from 0.6 for more leniency in matching
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -195,14 +223,24 @@ export class FacialRecognitionService {
 
       for (const savedDescriptorArray of encodings) {
          if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
-         const savedDescriptor = new Float32Array(savedDescriptorArray);
-         const currentDescriptor = new Float32Array(descriptor);
-         
-         const distance = faceapi.euclideanDistance(savedDescriptor, currentDescriptor);
-         if (distance < minDistance) {
-           minDistance = distance;
-           bestMatchEmployeeId = profile.employeeId;
-         }
+          const savedDescriptor = new Float32Array(savedDescriptorArray);
+          const currentDescriptor = new Float32Array(descriptor);
+          
+          const distance = faceapi.euclideanDistance(savedDescriptor, currentDescriptor);
+          
+          if (isNaN(distance)) {
+            console.warn(`Distance calculation resulted in NaN for profile ${profile.id}. Check descriptor data.`);
+            console.log(`Saved descriptor (first 5): ${Array.from(savedDescriptor.slice(0, 5))}`);
+            console.log(`Current descriptor (first 5): ${Array.from(currentDescriptor.slice(0, 5))}`);
+            continue;
+          }
+          
+          console.log(`Face match distance for ${profile.employeeId}: ${distance.toFixed(4)} (Threshold: ${minDistance})`);
+          
+          if (distance < minDistance) {
+            minDistance = distance;
+            bestMatchEmployeeId = profile.employeeId;
+          }
       }
     }
 
