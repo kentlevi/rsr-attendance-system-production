@@ -17,6 +17,9 @@ describe('Payroll Aggregation Logic', () => {
       date: '2026-05-01',
       timeIn: '08:00 AM',
       timeOut: '05:00 PM',
+      workHours: '9.00',
+      overtime: '1.00',
+      location: 'Main Office',
       status: 'Present',
       overtimePay: '₱100.00', // 1 hour OT
       lateDeduction: '₱50.00', // Late
@@ -28,6 +31,9 @@ describe('Payroll Aggregation Logic', () => {
       date: '2026-05-02',
       timeIn: '08:00 AM',
       timeOut: '05:00 PM',
+      workHours: '9.00',
+      overtime: '1.00',
+      location: 'Main Office',
       status: 'Present',
       overtimePay: '₱0.00',
       lateDeduction: '₱0.00',

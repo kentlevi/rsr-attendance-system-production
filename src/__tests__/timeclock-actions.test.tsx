@@ -25,6 +25,7 @@ vi.mock('../context/ToastContext', () => ({
 }));
 
 // Mock Services
+import { EmployeeModel } from '../models/Employee';
 import { employeeService } from '../services/EmployeeService';
 import { attendanceService } from '../services/AttendanceService';
 import { localAttendanceService } from '../services/LocalAttendanceService';
@@ -126,7 +127,12 @@ const mockGeolocation = {
   watchPosition: vi.fn(),
   clearWatch: vi.fn(),
 };
-global.navigator.geolocation = mockGeolocation as any;
+
+Object.defineProperty(global.navigator, 'geolocation', {
+  value: mockGeolocation,
+  writable: true,
+  configurable: true,
+});
 
 describe('TimeClock Actions', () => {
   beforeEach(() => {
@@ -135,28 +141,34 @@ describe('TimeClock Actions', () => {
     // Default Employee Mock
     vi.mocked(employeeService.getEmployeeByIdSync).mockImplementation((id) => {
        if (id === 'EMP-001' || id === 'emp-1') {
-         return { 
-           data: { 
-             id: 'emp-1', 
-             name: 'John Doe', 
-             employeeId: 'EMP-001',
-             pin: '123456',
-             status: 'Active'
-           } 
-         };
+         return new EmployeeModel({ 
+           id: 'emp-1', 
+           name: 'John Doe', 
+           employeeId: 'EMP-001',
+           pin: '123456',
+           status: 'Active',
+           email: 'john@example.com',
+           department: 'Eng',
+           position: 'Dev',
+           avatar: ''
+         });
        }
        return null;
     });
 
-    vi.mocked(employeeService.getAllEmployeesSync).mockReturnValue([{
-      data: {
+    vi.mocked(employeeService.getAllEmployeesSync).mockReturnValue([
+      new EmployeeModel({
         id: 'emp-1',
         name: 'John Doe',
         employeeId: 'EMP-001',
         pin: '123456',
-        status: 'Active'
-      }
-    }]);
+        status: 'Active',
+        email: 'john@example.com',
+        department: 'Eng',
+        position: 'Dev',
+        avatar: ''
+      })
+    ]);
 
     // Default Settings Mock
     vi.mocked(settingsService.getSettings).mockReturnValue({
@@ -164,8 +176,9 @@ describe('TimeClock Actions', () => {
       shiftStartTime: '08:00',
       shiftEndTime: '17:00',
       attendancePhotoUploadEnabled: false,
+      // @ts-ignore
       geofencingEnabled: false,
-    });
+    } as any);
 
     // Default Attendance Mock
     vi.mocked(attendanceService.refreshLogsByDates).mockResolvedValue([]);
@@ -249,6 +262,7 @@ describe('TimeClock Actions', () => {
       shiftStartTime: '08:00',
       shiftEndTime: '17:00',
       attendancePhotoUploadEnabled: false,
+      // @ts-ignore
       geofencingEnabled: true,
       siteCoordinates: {
         'Head Office': { lat: 10.0, lng: 10.0, radius: 100 }

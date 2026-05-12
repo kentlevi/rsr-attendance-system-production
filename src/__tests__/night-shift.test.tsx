@@ -77,16 +77,11 @@ vi.mock('../services/FacialRecognitionService', () => ({
   },
 }));
 
-// Mock Geolocation
-const mockGeolocation = {
-  getCurrentPosition: vi.fn((success) => success({
-    coords: {
-      latitude: 10.0,
-      longitude: 10.0,
-    },
-  })),
-};
-global.navigator.geolocation = mockGeolocation as any;
+Object.defineProperty(global.navigator, 'geolocation', {
+  value: mockGeolocation,
+  writable: true,
+  configurable: true,
+});
 
 // Mock PageLayout to avoid complexity
 vi.mock('../components/layout/PageLayout', () => ({
