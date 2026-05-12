@@ -605,7 +605,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           <Button 
             onClick={() => handleTimeAction("Time Out")}
             disabled={isProcessing}
-            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >
              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
                <LogOut size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -641,7 +641,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                   <LogIn size={18} />
                   <span>Time In</span>
                 </Button>
-                <Button onClick={() => setPendingAction("Time Out")} className="h-14 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px] flex items-center gap-2">
+                <Button onClick={() => setPendingAction("Time Out")} className="h-14 bg-[#E03A2E] hover:bg-danger rounded-[14px] flex items-center gap-2 text-white">
                   <LogOut size={18} />
                   <span>Time Out</span>
                 </Button>
