@@ -188,10 +188,7 @@ describe('TimeClock Actions', () => {
 
     // Default Local Attendance Mock
     vi.mocked(localAttendanceService.savePunch).mockResolvedValue({ id: 'local-1' } as any);
-    vi.mocked(localAttendanceService.getSyncSummary).mockReturnValue({ totalOpen: 0, failed: 0 } as any);
-
-    // Default Sync Mock
-    vi.mocked(syncService.getSummary).mockReturnValue({ totalOpen: 0, failed: 0, lastSync: null } as any);
+    vi.mocked(localAttendanceService.getSyncSummary).mockResolvedValue({ totalOpen: 0, failed: 0 } as any);
 
     // Default Photo Mock
     vi.mocked(attendancePhotoService.uploadPhoto).mockResolvedValue('https://mock-photo-url.com');

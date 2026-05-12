@@ -740,7 +740,7 @@ export function WorkforceInsightsView() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
-          getRowKey={(r) => r.id}
+          getRowKey={(r: any) => r.id}
           emptyMessage="No attendance records found for the selected criteria."
           className="rounded-none border-none shadow-none"
           minHeight="500px"

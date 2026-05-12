@@ -77,8 +77,8 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
     
     const leaveValidation = validateLeaveRequest({
       ...leaveForm,
-      vlBalance: emp.vlBalance,
-      slBalance: emp.slBalance,
+      vlBalance: emp.data.vlBalance,
+      slBalance: emp.data.slBalance,
       today: new Date().toISOString().slice(0, 10)
     });
 

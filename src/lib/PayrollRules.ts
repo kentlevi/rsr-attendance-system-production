@@ -18,6 +18,7 @@ export interface PayrollFields {
   lateMinutes?: number;
   undertimeMinutes?: number;
   overtimeMinutes?: number;
+  pmBreakMinutes?: number;
   lateDeduction?: string;
   undertimeDeduction?: string;
   overtimePay?: string;
@@ -149,6 +150,7 @@ export function calculatePayrollForTimeIn({
     lateMinutes,
     undertimeMinutes: 0,
     overtimeMinutes: 0,
+    pmBreakMinutes: 0,
     lateDeduction: formatPeso(lateDeductionAmount),
     undertimeDeduction: formatPeso(0),
     overtimePay: formatPeso(0),
