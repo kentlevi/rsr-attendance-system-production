@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 import { Select } from '../common/Select';
 import { DatePicker } from '../common/DatePicker';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
 
 interface PhotoItem {

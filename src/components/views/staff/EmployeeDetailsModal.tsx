@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X as XIcon, CheckCircle2, Clock, Briefcase, Wallet, User, Calendar, Building, Mail, Phone, Home, Edit, Lock, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { Modal } from '../../common/Modal';
 import { settingsService } from '../../../services/SettingsService';
-import { formatISOToDisplay, formatTimeTo12h } from '../../../lib/utils';
+import { cn, formatISOToDisplay, formatTimeTo12h } from '../../../lib/utils';
 import { Button } from '../../common/Button';
 
 export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onResetPin, onToggleStatus, onDelete }: any) {
