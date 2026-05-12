@@ -354,7 +354,7 @@ export function AddEmployeeModal({
     >
       <div className="flex flex-col">
         {/* Tabs */}
-        <div className="flex items-center border-b border-border/60 px-5 sm:px-6 sticky top-0 bg-white z-10 overflow-x-auto whitespace-nowrap hide-scrollbar -mx-5 sm:mx-0">
+        <div className="flex items-center border-b border-border/60 px-5 sm:px-6 sticky top-0 bg-white z-10 overflow-x-auto whitespace-nowrap hide-scrollbar">
           <Button
             variant="ghost"
             onClick={() => setActiveTab("personal")}

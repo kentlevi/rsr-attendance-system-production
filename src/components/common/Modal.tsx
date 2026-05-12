@@ -55,7 +55,7 @@ export function Modal({
             className={`relative w-full h-fit flex flex-col min-h-[100dvh] sm:min-h-0 sm:h-auto sm:max-h-[85vh] ${maxWidth} bg-white rounded-none sm:rounded-3xl shadow-2xl`}
           >
             {/* Header */}
-            <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 sticky top-0 bg-white z-[12] sm:static sm:z-auto sm:rounded-t-3xl">
+            <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 bg-white sm:rounded-t-3xl">
               <h3 className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
                 {title}
               </h3>
@@ -77,7 +77,7 @@ export function Modal({
 
             {/* Footer */}
             {footer && (
-              <div className="px-5 py-4 sm:px-8 sm:py-6 bg-white sm:bg-slate-50/50 border-t border-border shrink-0 mt-auto sticky bottom-0 z-[12] sm:static sm:z-auto sm:rounded-b-3xl">
+              <div className="px-5 py-4 sm:px-8 sm:py-6 bg-white sm:bg-slate-50/50 border-t border-border shrink-0 mt-auto sm:rounded-b-3xl">
                 {footer}
               </div>
             )}

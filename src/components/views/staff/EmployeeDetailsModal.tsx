@@ -131,7 +131,7 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
           </div>
         </div>
 
-        <div className="flex items-center border-b border-border/60 mb-6 space-x-6 sm:space-x-8 overflow-x-auto whitespace-nowrap hide-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+        <div className="flex items-center border-b border-border/60 mb-6 space-x-6 sm:space-x-8 overflow-x-auto whitespace-nowrap hide-scrollbar px-1">
            <Button 
              variant="ghost"
              onClick={() => setActiveTab('overview')}
