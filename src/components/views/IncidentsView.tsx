@@ -4,6 +4,7 @@ import { incidentService, IncidentReport } from '../../services/IncidentService'
 import { employeeService } from '../../services/EmployeeService';
 import { useToast } from '../../context/ToastContext';
 import { DatePicker } from '../common/DatePicker';
+import { Select } from '../common/Select';
 import { DataTable } from '../common/DataTable';
 
 export function IncidentsView() {
@@ -182,10 +183,13 @@ export function IncidentsView() {
                <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                      <label className="text-label">Employee <span className="text-red-500">*</span></label>
-                     <select className="control-field" required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})}>
+                     <Select 
+                        value={formData.employeeId} 
+                        onChange={e => setFormData({...formData, employeeId: e.target.value})}
+                     >
                         <option value="">Select Employee</option>
                         {employees.map(e => <option key={e.id} value={e.id}>{e.data.name}</option>)}
-                     </select>
+                     </Select>
                   </div>
                   <div className="flex flex-col gap-2 relative z-50">
                      <label className="text-label">Date <span className="text-red-500">*</span></label>
@@ -200,21 +204,21 @@ export function IncidentsView() {
                <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                      <label className="text-label">Type <span className="text-red-500">*</span></label>
-                     <select className="control-field" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})}>
+                     <Select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})}>
                         <option value="Infraction">Infraction</option>
                         <option value="Accident">Accident</option>
                         <option value="Merit">Performance Merit</option>
                         <option value="Other">Other</option>
-                     </select>
+                     </Select>
                   </div>
                   {formData.type !== 'Merit' && (
                      <div className="flex flex-col gap-2">
                         <label className="text-label">Severity <span className="text-red-500">*</span></label>
-                        <select className="control-field" value={formData.severity} onChange={e => setFormData({...formData, severity: e.target.value as any})}>
+                        <Select value={formData.severity} onChange={e => setFormData({...formData, severity: e.target.value as any})}>
                            <option value="Low">Low</option>
                            <option value="Medium">Medium</option>
                            <option value="High">High</option>
-                        </select>
+                        </Select>
                      </div>
                   )}
                </div>

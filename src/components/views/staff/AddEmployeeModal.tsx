@@ -744,13 +744,10 @@ export function AddEmployeeModal({
                     Date Hired <span className="text-[#DC2626]">*</span>
                   </label>
                   <div className="relative">
-                    <input
-                      type="date"
-                      name="dateHired"
+                    <DatePicker
                       value={formData.dateHired}
-                      onChange={handleChange}
-                      className="control-field px-4"
-                      placeholder="Select date"
+                      onChange={(val) => handleChange({ target: { name: 'dateHired', value: val } } as any)}
+                      className="w-full"
                     />
                   </div>
                 </div>
