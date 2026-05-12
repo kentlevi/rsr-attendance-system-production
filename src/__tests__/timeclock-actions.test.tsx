@@ -72,7 +72,6 @@ vi.mock('../services/SettingsService', () => ({
 
 vi.mock('../services/SyncService', () => ({
   syncService: {
-    getSummary: vi.fn(),
     subscribe: vi.fn(() => vi.fn()),
   }
 }));
@@ -166,18 +165,38 @@ describe('TimeClock Actions', () => {
         email: 'john@example.com',
         department: 'Eng',
         position: 'Dev',
-        avatar: ''
+        avatar: '',
+        slBalance: 10,
+        vlBalance: 10,
       })
     ]);
 
     // Default Settings Mock
     vi.mocked(settingsService.getSettings).mockReturnValue({
-      sites: ['Main Office'],
+      activeSite: 'Main Office',
+      sites: ['Main Office', 'Head Office'],
       shiftStartTime: '08:00',
       shiftEndTime: '17:00',
       attendancePhotoUploadEnabled: false,
-      // @ts-ignore
-      geofencingEnabled: false,
+      dailyAllowance: 0,
+      otAllowance: 0,
+      awaySiteAllowance: 0,
+      awaySiteAllowanceRule: '',
+      gracePeriodMins: 10,
+      lunchBreakStart: '12:00',
+      lunchBreakEnd: '13:00',
+      pmBreakStart: '15:00',
+      pmBreakEnd: '15:15',
+      autoTimeoutRule: '',
+      smsEnabled: false,
+      senderName: '',
+      adminMobile: '',
+      notificationGroup: '',
+      telegramEnabled: false,
+      telegramChatId: '',
+      siteCoordinates: {
+        'Head Office': { lat: 14.5995, lng: 120.9842, radius: 100 }
+      }
     } as any);
 
     // Default Attendance Mock
@@ -188,7 +207,13 @@ describe('TimeClock Actions', () => {
 
     // Default Local Attendance Mock
     vi.mocked(localAttendanceService.savePunch).mockResolvedValue({ id: 'local-1' } as any);
-    vi.mocked(localAttendanceService.getSyncSummary).mockResolvedValue({ totalOpen: 0, failed: 0 } as any);
+    vi.mocked(localAttendanceService.getSyncSummary).mockResolvedValue({ 
+      pending: 0, 
+      syncing: 0, 
+      failed: 0, 
+      retryReady: 0, 
+      totalOpen: 0 
+    });
 
     // Default Photo Mock
     vi.mocked(attendancePhotoService.uploadPhoto).mockResolvedValue('https://mock-photo-url.com');

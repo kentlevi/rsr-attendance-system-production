@@ -1,1 +1,137 @@
-cleared
+
+> react-example@0.0.0 test
+> node node_modules/tsx/dist/cli.mjs src/lib/AbsenceRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/RequestApprovalRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/LeaveRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/LeaveReplenishmentRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/EmployeeStatusRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/PayrollRules.test.ts && node node_modules/vitest/vitest.mjs run --configLoader runner
+
+AbsenceRules tests passed
+RequestApprovalRules tests passed
+LeaveRules tests passed
+LeaveReplenishmentRules tests passed
+EmployeeStatusRules tests passed
+PayrollRules tests passed
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90mC:/Users/Glophics/Desktop/personal-projects/rsr-attendance-system-production[39m
+
+ [31m❯[39m src/__tests__/night-shift-payroll-calc.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 14[2mms[22m[39m
+[31m     [31m×[31m calculates 10% night differential for a full 8-hour night shift[39m[32m 11[2mms[22m[39m
+[31m     [31m×[31m calculates night differential only for standard hours (not overtime)[39m[32m 1[2mms[22m[39m
+ [31m❯[39m src/__tests__/leave-approval.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 17[2mms[22m[39m
+[31m     [31m×[31m deducts leave credits from employee balance when leave is approved[39m[32m 11[2mms[22m[39m
+[31m     [31m×[31m prevents approval if balance has become insufficient since filing[39m[32m 2[2mms[22m[39m
+ [31m❯[39m src/__tests__/attendance-photos.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 903[2mms[22m[39m
+[31m     [31m×[31m renders photo grid and handles expansion[39m[33m 442[2mms[22m[39m
+[31m     [31m×[31m filters photos by employee[39m[33m 455[2mms[22m[39m
+ [31m❯[39m src/__tests__/incident-reporting.test.tsx [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1212[2mms[22m[39m
+     [32m✓[39m renders existing incidents correctly[32m 188[2mms[22m[39m
+[31m     [31m×[31m successfully logs a new incident via the modal[39m[33m 843[2mms[22m[39m
+     [32m✓[39m filters incidents based on search query[32m 177[2mms[22m[39m
+ [32m✓[39m src/__tests__/leave-validation.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1700[2mms[22m[39m
+     [33m[2m✓[22m[39m prevents filing a leave request that exceeds available credits [33m 1253[2mms[22m[39m
+     [33m[2m✓[22m[39m allows filing a leave request within available credits [33m 440[2mms[22m[39m
+ [31m❯[39m src/__tests__/staff-bulk-operations.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 1684[2mms[22m[39m
+[31m     [31m×[31m successfully imports multiple employees from a CSV file[39m[33m 1243[2mms[22m[39m
+     [33m[2m✓[22m[39m exports the staff list to CSV when clicking the export button [33m 436[2mms[22m[39m
+ [31m❯[39m src/__tests__/payroll-management.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 2166[2mms[22m[39m
+[31m     [31m×[31m renders employee list and calculates payroll on PDF generation[39m[33m 1986[2mms[22m[39m
+     [32m✓[39m filters employee list by name[32m 169[2mms[22m[39m
+ [32m✓[39m src/__tests__/settings-management.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 5691[2mms[22m[39m
+     [33m[2m✓[22m[39m triggers auto-save after changing a setting [33m 2950[2mms[22m[39m
+     [33m[2m✓[22m[39m allows adding a new site to the site list [33m 2006[2mms[22m[39m
+     [33m[2m✓[22m[39m can run a manual AWOL check [33m 513[2mms[22m[39m
+ [32m✓[39m src/__tests__/timeclock-actions.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 6306[2mms[22m[39m
+     [33m[2m✓[22m[39m allows manual punch via PIN override [33m 1498[2mms[22m[39m
+     [33m[2m✓[22m[39m allows manual "Time Out" via PIN override [33m 614[2mms[22m[39m
+     [33m[2m✓[22m[39m blocks punch if user is outside geofence radius [33m 662[2mms[22m[39m
+     [33m[2m✓[22m[39m saves punch locally when offline and shows warning [33m 1031[2mms[22m[39m
+     [33m[2m✓[22m[39m marks punch as failed in local storage if cloud sync throws error [33m 1170[2mms[22m[39m
+     [33m[2m✓[22m[39m rejects invalid credentials in PIN override [33m 1326[2mms[22m[39m
+ [32m✓[39m src/__tests__/portal-and-timeclock.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 4881[2mms[22m[39m
+     [33m[2m✓[22m[39m requires employee credentials for manual portal login [33m 1089[2mms[22m[39m
+     [33m[2m✓[22m[39m auto-fills and submits a leave request from the employee portal [33m 3420[2mms[22m[39m
+ [32m✓[39m src/__tests__/staff-management.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 4354[2mms[22m[39m
+     [33m[2m✓[22m[39m validates required fields when creating a new staff member [33m 773[2mms[22m[39m
+     [33m[2m✓[22m[39m successfully creates a staff member when all fields are valid [33m 3575[2mms[22m[39m
+ [32m✓[39m src/__tests__/ui-form-and-hooks.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 4494[2mms[22m[39m
+     [33m[2m✓[22m[39m prevents saving when required employee fields are missing [33m 1323[2mms[22m[39m
+     [33m[2m✓[22m[39m submits a normalized employee payload when required fields are valid [33m 3114[2mms[22m[39m
+ [32m✓[39m src/__tests__/straight-duty.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 4269[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an assistant to file a straight duty request [33m 2606[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an admin to approve a pending straight duty request [33m 1654[2mms[22m[39m
+ [32m✓[39m src/__tests__/incidents.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 3308[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an admin to log a new incident report [33m 2890[2mms[22m[39m
+     [33m[2m✓[22m[39m validates required fields in incident form [33m 413[2mms[22m[39m
+ [32m✓[39m src/__tests__/chatbot-integration.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 2790[2mms[22m[39m
+     [33m[2m✓[22m[39m opens the chatbot and displays the greeting message [33m 556[2mms[22m[39m
+     [33m[2m✓[22m[39m sends a message and displays the assistant response [33m 758[2mms[22m[39m
+     [33m[2m✓[22m[39m handles tool calls (filing leave) from the AI [33m 999[2mms[22m[39m
+     [33m[2m✓[22m[39m shows an error toast if the API fails [33m 471[2mms[22m[39m
+ [32m✓[39m src/__tests__/admin-login.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 3780[2mms[22m[39m
+     [33m[2m✓[22m[39m logs in an administrator with the entered password and navigates to admin [33m 1562[2mms[22m[39m
+     [33m[2m✓[22m[39m signs in as an assistant when an assistant email is used [33m 615[2mms[22m[39m
+     [33m[2m✓[22m[39m shows a Firebase configuration error when email/password auth is disabled [33m 770[2mms[22m[39m
+     [33m[2m✓[22m[39m falls back to creating the default Firebase user when the default password is used and the auth user does not exist [33m 828[2mms[22m[39m
+ [31m❯[39m src/__tests__/night-shift.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 10098[2mms[22m[39m
+[31m     [31m×[31m calculates cross-day hours and night differential correctly[39m[33m 5054[2mms[22m[39m
+[31m     [31m×[31m handles "Late" clock-in for night shift across midnight[39m[33m 5039[2mms[22m[39m
+ [31m❯[39m src/__tests__/break-logic.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 10125[2mms[22m[39m
+[31m     [31m×[31m automatically deducts 60 minutes for a full day shift (8 AM to 5 PM) without manual break punches[39m[33m 5065[2mms[22m[39m
+[31m     [31m×[31m handles manual lunch punches correctly and uses the actual duration[39m[33m 5055[2mms[22m[39m
+ [32m✓[39m src/__tests__/advanced-staff-controls.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 2220[2mms[22m[39m
+     [33m[2m✓[22m[39m triggers staff list export [33m 1201[2mms[22m[39m
+     [33m[2m✓[22m[39m toggles employee status via action menu [33m 783[2mms[22m[39m
+ [32m✓[39m src/__tests__/workforce-insights.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1955[2mms[22m[39m
+     [33m[2m✓[22m[39m renders stats correctly based on attendance logs [33m 822[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an admin to approve an undertime request [33m 1127[2mms[22m[39m
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mSyncService[2m > [22m[2msyncs retryable local punches and marks failures when upload logic throws
+[22m[39mSyncService: Found 1 browser offline punches.
+
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mSyncService[2m > [22m[2mcreates a pending approval log when an Android time-out arrives without an existing record
+[22m[39mSyncService: Found 1 unsynced offline punches.
+
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mSyncService[2m > [22m[2mcreates a pending approval log when an Android time-out arrives without an existing record
+[22m[39mSyncService: Synced punch 7 for EMP-001
+
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mFacialRecognitionService[2m > [22m[2mloads profile documents and parses stringified face encodings
+[22m[39mFetching facial recognition profiles...
+
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mFacialRecognitionService[2m > [22m[2mloads profile documents and parses stringified face encodings
+[22m[39mLoaded 1 profiles.
+
+ [32m✓[39m src/__tests__/violations-management.test.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 1677[2mms[22m[39m
+     [33m[2m✓[22m[39m renders infractions and applies filters [33m 1673[2mms[22m[39m
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mFacialRecognitionService[2m > [22m[2mreturns null when no image is provided or no descriptor can be extracted
+[22m[39mFetching facial recognition profiles...
+
+[90mstdout[2m | src/__tests__/sync-and-face-services.test.ts[2m > [22m[2mFacialRecognitionService[2m > [22m[2mreturns null when no image is provided or no descriptor can be extracted
+[22m[39mLoaded 1 profiles.
+
+ [32m✓[39m src/__tests__/sync-and-face-services.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+ [32m✓[39m src/__tests__/controllers.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m src/__tests__/approvals-flow.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1228[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an admin to approve a pending attendance log [33m 897[2mms[22m[39m
+     [33m[2m✓[22m[39m allows an admin to approve a leave request [33m 318[2mms[22m[39m
+[90mstdout[2m | src/__tests__/api-endpoints.test.ts[2m > [22m[2mAPI endpoints[2m > [22m[2mauthenticates an employee with a bcrypt PIN and returns a Firebase custom token
+[22m[39m◇ injected env (0) from .env.local // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+ [32m✓[39m src/__tests__/api-endpoints.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 730[2mms[22m[39m
+     [33m[2m✓[22m[39m authenticates an employee with a bcrypt PIN and returns a Firebase custom token [33m 569[2mms[22m[39m
+ [32m✓[39m src/__tests__/services.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 57[2mms[22m[39m
+ [32m✓[39m src/__tests__/state-management.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 91[2mms[22m[39m
+[90mstdout[2m | src/__tests__/integration.test.tsx[2m > [22m[2mRSR Engineering Attendance System - Integration Tests[2m > [22m[2mrenders the initial App View
+[22m[39mUsage tracked: list [33m1[39m
+
+ [32m✓[39m src/__tests__/integration.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+ [32m✓[39m src/__tests__/ui-views.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 610[2mms[22m[39m
+     [33m[2m✓[22m[39m renders AdminDashboard [33m 437[2mms[22m[39m
+ [32m✓[39m src/__tests__/utility-business-rules.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 58[2mms[22m[39m
+ [32m✓[39m src/__tests__/service-failure-branches.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m✓[39m src/lib/AttendanceApprovalRules.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/__tests__/leave-replenishment-logic.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m src/__tests__/employee-status-rules.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/__tests__/payroll-aggregation.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m27 passed[39m[22m[90m (35)[39m
+[2m      Tests [22m [1m[31m13 failed[39m[22m[2m | [22m[1m[32m107 passed[39m[22m[90m (120)[39m
+[2m     Errors [22m [1m[31m5 errors[39m[22m
+[2m   Start at [22m 16:01:54
+[2m   Duration [22m 21.70s[2m (transform 12.82s, setup 10.15s, import 29.18s, tests 76.87s, environment 89.47s)[22m
+

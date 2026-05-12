@@ -354,6 +354,8 @@ export function StaffView() {
           variant="ghost"
           size="sm"
           className="mx-auto h-9 w-9 p-0"
+          aria-label="Actions"
+          data-testid={`action-menu-trigger-${row.id}`}
           onClick={(e) => {
             e.stopPropagation();
             if (actionMenuState?.id === row.id) {
@@ -462,6 +464,7 @@ export function StaffView() {
                 onChange={handleImportCSV}
                 accept=".csv"
                 className="hidden"
+                aria-label="Import CSV"
               />
             </div>
             <Button

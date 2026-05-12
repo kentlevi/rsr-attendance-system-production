@@ -130,10 +130,12 @@ export function Select({
     setIsOpen(false);
   };
 
+  const id = props.id || `select-${label?.replace(/\s+/g, '-').toLowerCase() || Math.random().toString(36).substr(2, 9)}`;
+
   return (
     <div className={cn("flex flex-col gap-1.5 relative", containerClassName)} ref={dropdownRef}>
       {label && (
-        <label className="text-label pl-1 leading-none mb-1">
+        <label htmlFor={id} className="text-label pl-1 leading-none mb-1">
           {label}
         </label>
       )}
@@ -146,6 +148,7 @@ export function Select({
         )}
         <button
           ref={triggerRef}
+          id={id}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={cn(

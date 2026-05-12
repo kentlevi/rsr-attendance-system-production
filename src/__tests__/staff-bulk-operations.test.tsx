@@ -3,13 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Papa from 'papaparse';
+import { ToastProvider } from '../context/ToastContext';
 
-// Mock Services & Controller
-const handleAddEmployee = vi.fn();
-const handleUpdateEmployee = vi.fn();
-const handleDeleteEmployee = vi.fn();
-const handleToggleEmployeeStatus = vi.fn();
-const handleResetEmployeeAccess = vi.fn();
+// Mock Services & Controller - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, handleAddEmployee, handleUpdateEmployee, handleDeleteEmployee, handleToggleEmployeeStatus, handleResetEmployeeAccess } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  handleAddEmployee: vi.fn(),
+  handleUpdateEmployee: vi.fn(),
+  handleDeleteEmployee: vi.fn(),
+  handleToggleEmployeeStatus: vi.fn(),
+  handleResetEmployeeAccess: vi.fn(),
+}));
+
+vi.mock('../context/ToastContext', () => ({
+  useToast: () => ({ showToast }),
+  ToastProvider: ({ children }: any) => <>{children}</>,
+}));
 
 vi.mock('../../controllers/StaffManagementController', () => ({
   useStaffManagementController: () => ({
@@ -35,12 +44,9 @@ vi.mock('../common/StatsCard', () => ({
 }));
 
 // Mock PapaParse to control the CSV parsing
-vi.mock('papaparse', async () => {
-  const actual = await vi.importActual('papaparse');
-  return {
-    ...actual,
-    parse: vi.fn((file, config) => {
-        // Trigger complete immediately with mock data
+vi.mock('papaparse', () => ({
+  default: {
+    parse: vi.fn((file: any, config: any) => {
         config.complete({
             data: [
                 { "First Name": "Bulk", "Last Name": "One", "Email": "one@example.com", "Department": "IT" },
@@ -49,8 +55,26 @@ vi.mock('papaparse', async () => {
         });
     }),
     unparse: vi.fn(() => 'mock,csv,content'),
-  };
-});
+  },
+  parse: vi.fn((file: any, config: any) => {
+      config.complete({
+          data: [
+              { "First Name": "Bulk", "Last Name": "One", "Email": "one@example.com", "Department": "IT" },
+              { "First Name": "Bulk", "Last Name": "Two", "Email": "two@example.com", "Department": "Sales" }
+          ]
+      });
+  }),
+  unparse: vi.fn(() => 'mock,csv,content'),
+}));
+
+// Mock FacialRecognitionService to avoid tensorflow dependency
+vi.mock('../services/FacialRecognitionService', () => ({
+  facialRecognitionService: {
+    verifyFace: vi.fn(),
+    enrollFace: vi.fn(),
+  },
+}));
+
 
 // Mock URL.createObjectURL and other browser APIs
 global.URL.createObjectURL = vi.fn(() => 'mock-url');
@@ -64,7 +88,12 @@ describe('Staff Bulk Operations', () => {
   });
 
   it('successfully imports multiple employees from a CSV file', async () => {
-    render(<StaffView />);
+    render(
+      <ToastProvider>
+        <StaffView />
+      </ToastProvider>
+    );
+
     
     // Find the hidden file input
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -96,7 +125,12 @@ describe('Staff Bulk Operations', () => {
 
   it('exports the staff list to CSV when clicking the export button', async () => {
     const user = userEvent.setup();
-    render(<StaffView />);
+    render(
+      <ToastProvider>
+        <StaffView />
+      </ToastProvider>
+    );
+
     
     // Mock document.createElement and click
     const link = {

@@ -288,7 +288,7 @@ export function calculatePayrollForTimeOut({
     : effectiveTimeOutMinutes;
   const hasSuspiciousPunchSequence = timeOutMinutes < timeInMinutes;
   const standardWorkMinutes = Math.max(0, shiftEnd - shiftStart - getConfiguredBreakMinutes(settings));
-  const manualBreakMins = (existingPayroll?.lunchMinutes || 0) + (existingPayroll?.pmBreakMinutes || 0);
+  const manualBreakMins = ((existingPayroll as any)?.lunchMinutes || 0) + ((existingPayroll as any)?.pmBreakMinutes || 0);
   const breakMinutes = manualBreakMins > 0 ? manualBreakMins : getBreakOverlapMinutes(settings, timeInMinutes, timeOutMinutes);
   const totalWorkedMinutes = Math.max(0, timeOutMinutes - timeInMinutes - breakMinutes);
   const undertimeMinutes = Math.max(0, standardWorkMinutes - totalWorkedMinutes);

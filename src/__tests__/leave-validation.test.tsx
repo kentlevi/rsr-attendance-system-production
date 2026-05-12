@@ -3,17 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock Services
-const showToast = vi.fn();
-const addRequest = vi.fn();
-const getEmployeeByIdSync = vi.fn();
-const getAllEmployeesSync = vi.fn();
+// Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, addRequest, getEmployeeByIdSync, getAllEmployeesSync } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  addRequest: vi.fn(),
+  getEmployeeByIdSync: vi.fn(),
+  getAllEmployeesSync: vi.fn(),
+}));
 
-vi.mock('../../../context/ToastContext', () => ({
+vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
 }));
 
-vi.mock('../../../services/LeaveService', () => ({
+vi.mock('../services/LeaveService', () => ({
   leaveService: {
     addRequest,
     subscribe: vi.fn(() => () => {}),
@@ -28,14 +30,14 @@ const mockEmployee = {
   department: 'QA',
 };
 
-vi.mock('../../../services/EmployeeService', () => ({
+vi.mock('../services/EmployeeService', () => ({
   employeeService: {
     getEmployeeByIdSync,
     getAllEmployeesSync,
   },
 }));
 
-vi.mock('../../common/Modal', () => ({
+vi.mock('../components/common/Modal', () => ({
   Modal: ({ children, isOpen, title, footer }: any) => isOpen ? (
     <div data-testid="modal">
       <h1>{title}</h1>
@@ -46,7 +48,7 @@ vi.mock('../../common/Modal', () => ({
 }));
 
 // Mock DatePicker to simplify input
-vi.mock('../../common/DatePicker', () => ({
+vi.mock('../components/common/DatePicker', () => ({
   DatePicker: ({ value, onChange, placeholder }: any) => (
     <input 
       data-testid="date-picker"
@@ -71,8 +73,10 @@ describe('Leave Credit Validation', () => {
     render(<FileLeaveModal isOpen={true} onClose={vi.fn()} />);
 
     // Select Employee
-    const select = screen.getByLabelText(/Select Employee/i);
-    await user.selectOptions(select, 'emp-leave');
+    const selectTrigger = screen.getByRole('button', { name: /Select Employee/i });
+    await user.click(selectTrigger);
+    const option = screen.getByRole('button', { name: /Leave Tester/i });
+    await user.click(option);
 
     // Select Vacation Leave (Type is vacation by default)
     
@@ -99,8 +103,10 @@ describe('Leave Credit Validation', () => {
     const user = userEvent.setup();
     render(<FileLeaveModal isOpen={true} onClose={vi.fn()} />);
 
-    const select = screen.getByLabelText(/Select Employee/i);
-    await user.selectOptions(select, 'emp-leave');
+    const selectTrigger = screen.getByRole('button', { name: /Select Employee/i });
+    await user.click(selectTrigger);
+    const option = screen.getByRole('button', { name: /Leave Tester/i });
+    await user.click(option);
 
     // Set Dates: 2026-06-01 to 2026-06-02 (2 days, balance is 2)
     const datePickers = screen.getAllByTestId('date-picker');

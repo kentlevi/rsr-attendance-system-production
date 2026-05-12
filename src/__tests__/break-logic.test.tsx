@@ -4,25 +4,30 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock Services
-const showToast = vi.fn();
-const addLog = vi.fn();
-const updateLog = vi.fn();
-const refreshLogsByDates = vi.fn();
-const getAllLogs = vi.fn();
+const mocks = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  addLog: vi.fn(),
+  updateLog: vi.fn(),
+  refreshLogsByDates: vi.fn(),
+  getAllLogs: vi.fn(),
+}));
 
 vi.mock('../context/ToastContext', () => ({
-  useToast: () => ({ showToast }),
+  useToast: () => ({ showToast: mocks.showToast }),
 }));
 
 vi.mock('../services/AttendanceService', () => ({
   attendanceService: {
     subscribe: vi.fn(() => () => {}),
-    getAllLogs,
-    refreshLogsByDates,
-    addLog,
-    updateLog,
+    getAllLogs: mocks.getAllLogs,
+    refreshLogsByDates: mocks.refreshLogsByDates,
+    addLog: mocks.addLog,
+    updateLog: mocks.updateLog,
   },
 }));
+
+// Proxy the hoisted mocks to the original names for convenience in the test
+const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs } = mocks;
 
 const mockEmployee = {
   id: 'emp-break',

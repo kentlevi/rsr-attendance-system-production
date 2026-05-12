@@ -10,14 +10,16 @@ const mockAutoTable = vi.fn();
 
 vi.mock('jspdf', () => {
   return {
-    jsPDF: vi.fn().mockImplementation(() => ({
-      save: mockSave,
-      text: mockText,
-      setFontSize: vi.fn(),
-      setFont: vi.fn(),
-      autoTable: mockAutoTable,
-      previousAutoTable: { finalY: 120 }
-    }))
+    jsPDF: vi.fn().mockImplementation(function() {
+      return {
+        save: mockSave,
+        text: mockText,
+        setFontSize: vi.fn(),
+        setFont: vi.fn(),
+        autoTable: mockAutoTable,
+        previousAutoTable: { finalY: 120 }
+      };
+    })
   };
 });
 

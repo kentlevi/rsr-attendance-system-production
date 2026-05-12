@@ -3,11 +3,15 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock Services
-const showToast = vi.fn();
+// Mock Services - use vi.hoisted() so showToast is available when vi.mock() is hoisted
+const { showToast } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+}));
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
+  ToastProvider: ({ children }: any) => <>{children}</>,
 }));
+
 
 vi.mock('../services/EmployeeService', () => ({
   employeeService: {
@@ -15,16 +19,12 @@ vi.mock('../services/EmployeeService', () => ({
   }
 }));
 
-// Mock framer-motion to avoid animation issues
-vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}));
+// Redundant mocks removed as they are now global in setupTests.ts
+
 
 import { StraightDutyView } from '../components/views/StraightDutyView';
 import { employeeService } from '../services/EmployeeService';
+import { ToastProvider } from '../context/ToastContext';
 
 describe('Straight Duty Flow', () => {
   beforeEach(() => {
@@ -39,16 +39,22 @@ describe('Straight Duty Flow', () => {
 
     const user = userEvent.setup();
     // Render as Assistant
-    render(<StraightDutyView isAssistant={true} />);
+    render(
+      <ToastProvider>
+        <StraightDutyView isAssistant={true} />
+      </ToastProvider>
+    );
+
 
     // Open Modal
     const fileBtn = screen.getByRole('button', { name: /File Straight Duty/i });
     await user.click(fileBtn);
 
     // Select Employee (Custom Select)
-    const selectTrigger = screen.getByRole('button', { name: /Choose/i });
+    const selectTrigger = await screen.findByText(/Choose/i);
     await user.click(selectTrigger);
-    const option = screen.getByRole('button', { name: /John Doe/i });
+
+    const option = await screen.findByRole('button', { name: /John Doe/i });
     await user.click(option);
 
     // Select Date (Custom DatePicker)
@@ -87,8 +93,9 @@ describe('Straight Duty Flow', () => {
 
     // First file a request as assistant
     await user.click(screen.getByRole('button', { name: /File Straight Duty/i }));
-    await user.click(screen.getByRole('button', { name: /Choose/i }));
-    await user.click(screen.getByRole('button', { name: /John Doe/i }));
+    await user.click(await screen.findByText(/Choose/i));
+
+    await user.click(await screen.findByRole('button', { name: /John Doe/i }));
     
     // Pick date
     await user.click(screen.getByRole('button', { name: /Select date/i }));
@@ -100,8 +107,8 @@ describe('Straight Duty Flow', () => {
     // Re-render as Admin (to see the action buttons)
     rerender(<StraightDutyView isAssistant={false} />);
 
-    // Click Approve
-    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    // Wait for the table to refresh and show the request
+    const approveBtn = await screen.findByRole('button', { name: /Approve/i });
     await user.click(approveBtn);
 
     expect(showToast).toHaveBeenCalledWith("Request approved.", "success");

@@ -59,7 +59,7 @@ describe('Advanced Staff Controls Integration', () => {
     render(<StaffView />);
     
     const file = new File(['csv content'], 'staff.csv', { type: 'text/csv' });
-    const input = screen.getByLabelText(/Import CSV/i, { selector: 'input' }) || document.querySelector('input[type="file"]');
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     
     if (!input) throw new Error("File input not found");
 
@@ -105,16 +105,10 @@ describe('Advanced Staff Controls Integration', () => {
     render(<StaffView />);
 
     // Open action menu (MoreVertical icon button)
-    // The button doesn't have an accessible name, so we'll find it by role or within the table row
-    const moreBtn = screen.getAllByRole('button').find(b => b.innerHTML.includes('lucide-more-vertical')) || screen.getByTestId('action-menu-trigger-1');
-    
-    // Actually, let's look at how the action menu is triggered
-    // It's a button in the DataTable row
     const row = screen.getByText('John Doe').closest('tr');
     if (!row) throw new Error("Row not found");
-    const actionsBtn = within(row).getByRole('button', { name: /actions/i }) || within(row).getAllByRole('button').pop();
+    const actionsBtn = within(row).getByRole('button', { name: /Actions/i });
     
-    if (!actionsBtn) throw new Error("Actions button not found");
     await user.click(actionsBtn);
 
     // Click "Deactivate" (since status is Active)

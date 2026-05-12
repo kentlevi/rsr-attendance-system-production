@@ -4,12 +4,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 
-// Mock Services
-const showToast = vi.fn();
-const addLog = vi.fn();
-const updateLog = vi.fn();
-const refreshLogsByDates = vi.fn();
-const getAllLogs = vi.fn();
+// Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  addLog: vi.fn(),
+  updateLog: vi.fn(),
+  refreshLogsByDates: vi.fn(),
+  getAllLogs: vi.fn(),
+}));
 
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
@@ -78,7 +80,7 @@ vi.mock('../services/FacialRecognitionService', () => ({
 }));
 
 // Mock Geolocation
-const mockGeolocation = {
+const customMockGeolocation = {
   getCurrentPosition: vi.fn((success) => success({
     coords: {
       latitude: 10.0,
@@ -87,11 +89,13 @@ const mockGeolocation = {
   })),
 };
 
-Object.defineProperty(global.navigator, 'geolocation', {
-  value: mockGeolocation,
-  writable: true,
-  configurable: true,
-});
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'geolocation', {
+    value: customMockGeolocation,
+    writable: true,
+    configurable: true,
+  });
+}
 
 // Mock PageLayout to avoid complexity
 vi.mock('../components/layout/PageLayout', () => ({

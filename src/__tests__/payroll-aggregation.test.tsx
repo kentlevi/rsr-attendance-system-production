@@ -24,7 +24,7 @@ describe('Payroll Aggregation Logic', () => {
       overtimePay: '₱100.00', // 1 hour OT
       lateDeduction: '₱50.00', // Late
       payrollNotes: ['Night differential added (₱0.00).']
-    }),
+    } as any),
     new AttendanceLogModel({
       id: 'log-2',
       employeeId: 'emp-1',
@@ -38,7 +38,7 @@ describe('Payroll Aggregation Logic', () => {
       overtimePay: '₱0.00',
       lateDeduction: '₱0.00',
       payrollNotes: ['Night differential added (₱80.00).'] // Night shift day
-    })
+    } as any)
   ];
 
   const mockLeaves: LeaveRequestModel[] = [

@@ -3,7 +3,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock Services
+// Mock Services - use vi.hoisted() so showToast is available when vi.mock() is hoisted
+const { showToast } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+}));
+vi.mock('../context/ToastContext', () => ({
+  useToast: () => ({ showToast }),
+}));
+
 vi.mock('../services/AttendanceService', () => ({
   attendanceService: {
     getAllLogs: vi.fn(() => []),
@@ -104,8 +111,8 @@ describe('Attendance Photos Audit Integration', () => {
     const user = userEvent.setup();
     render(<PhotosView />);
 
-    // The Select component uses a button as a trigger
-    const empSelectTrigger = screen.getByRole('button', { name: /All Employees/i });
+    // The Select component uses a native <select> or text trigger
+    const empSelectTrigger = await screen.findByText(/All Employees/i);
     await user.click(empSelectTrigger);
 
     // After clicking, the options are rendered in a portal (body)

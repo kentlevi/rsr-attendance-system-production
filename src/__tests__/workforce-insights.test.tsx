@@ -51,6 +51,11 @@ vi.mock('framer-motion', () => ({
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
   PieChart: ({ children }: any) => <div>{children}</div>,
+  AreaChart: ({ children }: any) => <div>{children}</div>,
+  XAxis: () => null,
+  YAxis: () => null,
+  CartesianGrid: () => null,
+  Area: () => null,
   Pie: () => null,
   Cell: () => null,
   Tooltip: () => null,
@@ -113,11 +118,11 @@ describe('Workforce Insights View', () => {
     render(<WorkforceInsightsView />);
 
     // Scope search to Undertime Summary card
-    const undertimeSection = await screen.findByText(/Undertime Summary/i);
-    const card = undertimeSection.closest('div');
-    if (!card) throw new Error("Card not found");
+    const undertimeHeader = await screen.findByText(/Undertime Summary/i);
+    const card = undertimeHeader.closest('div')?.parentElement;
+    if (!card) throw new Error("Undertime card container not found");
     
-    const viewAllBtn = within(card).getByRole('button', { name: /View all/i });
+    const viewAllBtn = await within(card).findByRole('button', { name: /View all/i });
     await user.click(viewAllBtn);
 
     // Now in Modal

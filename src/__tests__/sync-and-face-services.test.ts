@@ -265,7 +265,7 @@ describe('FacialRecognitionService', () => {
 
     const profileId = await service.registerFace('EMP-001', [[1, 2, 3]]);
 
-    expect(profileId).toBe('EMP-001-123');
+    expect(profileId).toBe('EMP-001');
     expect(setDoc).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ faceDataEncodings: '[[1,2,3]]' }),

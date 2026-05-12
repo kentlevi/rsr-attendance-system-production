@@ -63,14 +63,13 @@ describe('Settings Management', () => {
     await user.clear(graceInput);
     await user.type(graceInput, '30');
 
-    // Wait for auto-save debounce (1500ms)
+    // Wait for auto-save debounce (1500ms) + save timeout (800ms)
     await waitFor(() => {
       expect(settingsService.updateSettings).toHaveBeenCalledWith(expect.objectContaining({
         gracePeriodMins: 30
       }));
-    }, { timeout: 3000 });
-
-    expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/saved successfully/i));
+      expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/saved successfully/i));
+    }, { timeout: 4000 });
   });
 
   it('allows adding a new site to the site list', async () => {

@@ -3,20 +3,24 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock Services
-const showToast = vi.fn();
-const updateLog = vi.fn();
-const updateRequest = vi.fn();
-const updateEmployee = vi.fn();
-const getAllLogs = vi.fn();
-const getAllRequests = vi.fn();
-const getEmployeeByIdSync = vi.fn();
-
-vi.mock('../../context/ToastContext', () => ({
-  useToast: () => ({ showToast }),
+// Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, hideToast, updateLog, updateRequest, updateEmployee, getAllLogs, getAllRequests, getEmployeeByIdSync } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  hideToast: vi.fn(),
+  updateLog: vi.fn(),
+  updateRequest: vi.fn(),
+  updateEmployee: vi.fn(),
+  getAllLogs: vi.fn(),
+  getAllRequests: vi.fn(),
+  getEmployeeByIdSync: vi.fn(),
 }));
 
-vi.mock('../../services/AttendanceService', () => ({
+vi.mock('../context/ToastContext', () => ({
+  useToast: () => ({ showToast, hideToast }),
+  ToastProvider: ({ children }: any) => <>{children}</>,
+}));
+
+vi.mock('../services/AttendanceService', () => ({
   attendanceService: {
     getAllLogs,
     subscribe: vi.fn(() => () => {}),
@@ -24,7 +28,7 @@ vi.mock('../../services/AttendanceService', () => ({
   },
 }));
 
-vi.mock('../../services/LeaveService', () => ({
+vi.mock('../services/LeaveService', () => ({
   leaveService: {
     getAllRequests,
     subscribe: vi.fn(() => () => {}),
@@ -32,19 +36,20 @@ vi.mock('../../services/LeaveService', () => ({
   },
 }));
 
-vi.mock('../../services/EmployeeService', () => ({
+vi.mock('../services/EmployeeService', () => ({
   employeeService: {
     getEmployeeByIdSync,
     updateEmployee,
   },
 }));
 
-// Mock AwolService
-vi.mock('../../services/AwolService', () => ({
+vi.mock('../services/AwolService', () => ({
   awolService: {
     processAwolAlerts: vi.fn(async () => {}),
   },
 }));
+
+
 
 const mockEmployee = {
   id: 'emp-1',
@@ -77,7 +82,12 @@ describe('Leave Approval Deduction Flow', () => {
 
   it('deducts leave credits from employee balance when leave is approved', async () => {
     const user = userEvent.setup();
-    render(<ApprovalsView />);
+    render(
+      <ToastProvider>
+        <ApprovalsView />
+      </ToastProvider>
+    );
+
 
     // Find the Approve button for the leave request
     // Note: ApprovalsView renders multiple tables, one for attendance and one for leaves
@@ -111,7 +121,12 @@ describe('Leave Approval Deduction Flow', () => {
         data: { ...mockEmployee, vlBalance: 1 } 
     });
 
-    render(<ApprovalsView />);
+    render(
+      <ToastProvider>
+        <ApprovalsView />
+      </ToastProvider>
+    );
+
 
     const approveBtn = screen.getByRole('button', { name: /Approve/i });
     await user.click(approveBtn);

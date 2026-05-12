@@ -3,17 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// Mock Services
-const showToast = vi.fn();
-const addIncident = vi.fn();
-const getAllIncidents = vi.fn();
-const getAllEmployeesSync = vi.fn();
+// Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, addIncident, getAllIncidents, getAllEmployeesSync } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+  addIncident: vi.fn(),
+  getAllIncidents: vi.fn(),
+  getAllEmployeesSync: vi.fn(),
+}));
 
-vi.mock('../../context/ToastContext', () => ({
+vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
 }));
 
-vi.mock('../../services/IncidentService', () => ({
+vi.mock('../services/IncidentService', () => ({
   incidentService: {
     add: addIncident,
     getAll: getAllIncidents,
@@ -21,11 +23,12 @@ vi.mock('../../services/IncidentService', () => ({
   },
 }));
 
-vi.mock('../../services/EmployeeService', () => ({
+vi.mock('../services/EmployeeService', () => ({
   employeeService: {
     getAllEmployeesSync,
   },
 }));
+
 
 const mockEmployee = {
   id: 'emp-1',
@@ -72,8 +75,10 @@ describe('Incident Reporting Flow', () => {
     await user.click(logBtn);
 
     // Fill Form
-    const employeeSelect = screen.getByLabelText(/Employee/i);
-    await user.selectOptions(employeeSelect, 'emp-1');
+    const selectTrigger = screen.getByRole('button', { name: /Select Employee/i });
+    await user.click(selectTrigger);
+    const option = screen.getByRole('button', { name: /John Incident/i });
+    await user.click(option);
 
     const titleInput = screen.getByLabelText(/Title\/Subject/i);
     await user.type(titleInput, 'Late arrival');

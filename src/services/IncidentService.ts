@@ -7,7 +7,8 @@ import {
   updateDoc, 
   deleteDoc,
   query,
-  onSnapshot
+  onSnapshot,
+  where
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 import { notificationService } from "./NotificationService";
@@ -51,7 +52,7 @@ class IncidentService {
 
     const constraints: any[] = [];
     if (!isAdmin && employeeId) {
-       constraints.push(query(collection(db, this.collectionPath), require("firebase/firestore").where('employeeId', '==', employeeId)));
+       constraints.push(query(collection(db, this.collectionPath), where('employeeId', '==', employeeId)));
     } else {
        constraints.push(query(collection(db, this.collectionPath)));
     }
