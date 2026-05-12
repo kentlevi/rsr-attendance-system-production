@@ -637,32 +637,32 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
               <p className="text-[#64748B] text-center text-[14px]">
                 Please select an action below to proceed with manual PIN entry.
               </p>
-              <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                <Button onClick={() => setPendingAction("Time In")} className="h-14 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px] flex items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-4">
+                <Button onClick={() => setPendingAction("Time In")} className="h-12 sm:h-14 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px] flex items-center gap-2">
                   <LogIn size={18} />
                   <span>Time In</span>
                 </Button>
                 <Button 
                   onClick={() => setPendingAction("Time Out")} 
                   variant="danger"
-                  className="h-14 bg-[#E03A2E] hover:bg-danger rounded-[14px] flex items-center gap-2 text-white"
+                  className="h-12 sm:h-14 bg-[#E03A2E] hover:bg-danger rounded-[14px] flex items-center gap-2 text-white"
                 >
                   <LogOut size={18} />
                   <span>Time Out</span>
                 </Button>
-                <Button onClick={() => setPendingAction("Lunch Out")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-warning/20 text-warning">
+                <Button onClick={() => setPendingAction("Lunch Out")} variant="secondary" className="h-12 sm:h-14 rounded-[14px] flex items-center gap-2 border-warning/20 text-warning">
                   <Utensils size={18} />
                   <span>Lunch Out</span>
                 </Button>
-                <Button onClick={() => setPendingAction("Lunch In")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-info/20 text-info">
+                <Button onClick={() => setPendingAction("Lunch In")} variant="secondary" className="h-12 sm:h-14 rounded-[14px] flex items-center gap-2 border-info/20 text-info">
                   <Utensils size={18} />
                   <span>Lunch In</span>
                 </Button>
-                <Button onClick={() => setPendingAction("PM Break Out")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
+                <Button onClick={() => setPendingAction("PM Break Out")} variant="secondary" className="h-12 sm:h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
                   <Coffee size={18} />
                   <span>Break Out</span>
                 </Button>
-                <Button onClick={() => setPendingAction("PM Break In")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
+                <Button onClick={() => setPendingAction("PM Break In")} variant="secondary" className="h-12 sm:h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
                   <Coffee size={18} />
                   <span>Break In</span>
                 </Button>

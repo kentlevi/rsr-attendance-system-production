@@ -71,7 +71,7 @@ export function Modal({
             </div>
 
             {/* Body */}
-            <div id="modal-scroll-container" className="flex-1 sm:overflow-y-auto custom-scrollbar">
+            <div id="modal-scroll-container" className="flex-1 overflow-y-auto custom-scrollbar">
               {children}
             </div>
 
