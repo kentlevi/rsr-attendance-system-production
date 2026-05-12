@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileSpreadsheet, Download, Search, Calendar, ChevronRight, Lock, Printer } from 'lucide-react';
 import { DatePicker } from '../common/DatePicker';
 import { DataTable } from '../common/DataTable';
+import { Button } from '../common/Button';
 import { employeeService } from '../../services/EmployeeService';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -145,11 +146,16 @@ export function PayrollView() {
                   className: "text-right",
                   headerClassName: "text-right",
                   accessor: (emp: any) => (
-                     <div className="flex justify-end">
-                       <button onClick={() => generatePayslip(emp)} className="btn-secondary btn-sm inline-flex items-center gap-2">
-                         <Printer size={16} /> Generate PDF
-                       </button>
-                     </div>
+                      <div className="flex justify-end">
+                        <Button 
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => generatePayslip(emp)} 
+                          leftIcon={<Printer size={16} />}
+                        >
+                          Generate PDF
+                        </Button>
+                      </div>
                   )
                 }
               ]}

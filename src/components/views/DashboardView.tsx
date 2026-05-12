@@ -35,6 +35,7 @@ import { notificationService } from "../../services/NotificationService";
 import { AppNotification, NotificationModal } from "../common/NotificationModal";
 import { LeaveBalanceModal } from "../dashboard/LeaveBalanceModal";
 import { UndertimeRequestsModal } from "../dashboard/UndertimeRequestsModal";
+import { Button } from "../common/Button";
 import { useToast } from "../../context/ToastContext";
 
 // import { quotaService } from "../../services/QuotaService";
@@ -394,50 +395,69 @@ export function DashboardView() {
               Pending Leave Requests
             </h3>
             {pendingRequests.length > 0 && (
-              <button 
+              <Button 
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsPendingModalOpen(true)}
                 className="view-all-link"
               >
                 View All
-              </button>
+              </Button>
             )}
           </div>
           <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-5">
             {pendingRequests.length > 0 ? (
               pendingRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-3 rounded-2xl border border-border/60 p-4 sm:p-3 transition-colors hover:bg-slate-50"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={req.avatar || undefined}
-                      alt={req.name}
-                      className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
-                    />
-                    <div className="min-w-0 flex flex-col gap-0.5">
-                      <div className="text-[14px] sm:text-[16px] font-medium text-[#1a1a1a] truncate">
+                  <div
+                    key={req.id}
+                    className="group relative flex items-start gap-4 rounded-[20px] border border-border/50 bg-white p-4 transition-all duration-300 hover:border-primary/20 hover:shadow-md hover:shadow-primary/5"
+                  >
+                    <div className="flex flex-col items-center gap-3 shrink-0">
+                      <div className="relative">
+                        <img
+                          src={req.avatar || undefined}
+                          alt={req.name}
+                          className="h-14 w-14 rounded-2xl object-cover ring-2 ring-slate-50 transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white bg-amber-400 flex items-center justify-center">
+                          <Clock size={10} className="text-white" />
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-700/10 whitespace-nowrap">
+                        {req.type}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h4 className="text-[16px] font-bold text-[#1a1a1a] tracking-tight group-hover:text-primary transition-colors">
                         {req.name}
-                      </div>
-                      <div className="text-[12px] sm:text-[13px] text-text-secondary truncate">
+                      </h4>
+                      <span className="mt-1 text-[13px] font-medium text-text-secondary block">
                         {req.date}
+                      </span>
+                      
+                      <div className="mt-3 flex items-center gap-3">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-10 w-10 p-0 min-w-0 rounded-xl text-emerald-600 bg-emerald-50/30 hover:bg-emerald-50 border border-emerald-100/50 hover:border-emerald-100 transition-all"
+                          onClick={() => handleUpdateUndertimeStatus(req.id, 'Approved')}
+                          title="Approve"
+                        >
+                          <Check size={20} strokeWidth={2.5} />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-10 w-10 p-0 min-w-0 rounded-xl text-red-500 bg-red-50/30 hover:bg-red-50 border border-red-100/50 hover:border-red-100 transition-all"
+                          onClick={() => handleUpdateUndertimeStatus(req.id, 'Rejected')}
+                          title="Reject"
+                        >
+                          <XIcon size={20} strokeWidth={2.5} />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0 ml-13 sm:ml-0">
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 text-[12px] font-semibold whitespace-nowrap">
-                      {req.type}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button className="btn-icon-sm h-8 w-8 text-[#22C55E] hover:bg-[#F0FDF4] hover:border-[#22C55E]">
-                        <Check size={16} strokeWidth={3} />
-                      </button>
-                      <button className="btn-icon-sm h-8 w-8 text-[#EF4444] hover:bg-[#FEF2F2] hover:border-[#EF4444]">
-                        <XIcon size={16} strokeWidth={3} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
               ))
             ) : (
               <EmptyCardState
@@ -457,12 +477,14 @@ export function DashboardView() {
               Leave Balance Snapshot
             </h3>
             {leaveBalance.length > 0 && (
-              <button 
+              <Button 
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsLeaveBalanceModalOpen(true)}
                 className="view-all-link"
               >
                 View All
-              </button>
+              </Button>
             )}
           </div>
           {leaveBalance.length > 0 ? (
@@ -484,7 +506,7 @@ export function DashboardView() {
                         alt={item.name}
                         className="w-9 h-9 shrink-0 rounded-full object-cover border border-border"
                       />
-                      <span className="text-[15px] font-medium text-[#1a1a1a] truncate">
+                      <span className="text-[15px] font-medium text-[#1a1a1a]">
                         {item.name}
                       </span>
                     </div>
@@ -513,12 +535,14 @@ export function DashboardView() {
               Undertime Overview
             </h3>
             {undertimeRequests.length > 0 && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsUndertimeOverviewModalOpen(true)}
                 className="view-all-link"
               >
                 View All
-              </button>
+              </Button>
             )}
           </div>
           {undertimeRequests.length > 0 ? (
@@ -563,7 +587,7 @@ export function DashboardView() {
                         className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: item.color }}
                       ></span>
-                      <span className="text-text-secondary truncate">{item.name}</span>
+                      <span className="text-text-secondary">{item.name}</span>
                     </div>
                     <span className="font-semibold text-text-primary whitespace-nowrap">
                       {item.value} ({Math.round((item.value / undertimeRequests.length) * 100)}%)
@@ -587,12 +611,14 @@ export function DashboardView() {
               Recent Activity
             </h3>
             {recentActivity.length > 0 && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsActivityModalOpen(true)}
                 className="view-all-link"
               >
                 View All
-              </button>
+              </Button>
             )}
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col gap-4">

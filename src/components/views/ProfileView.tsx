@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { cn } from "../../lib/utils";
 import Modal from "../ui/Modal";
 import { Select } from "../common/Select";
+import { Button } from "../common/Button";
+import { Toggle } from './settings/Toggle';
 import { useToast } from "../../context/ToastContext";
 import {
   User,
@@ -145,12 +147,14 @@ export default function ProfileView({
                   className="hidden" 
                   accept="image/*"
                 />
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="xs"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white border border-border flex items-center justify-center text-[#1a1a1a] hover:bg-slate-50 transition-all"
+                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white border border-border flex items-center justify-center text-[#1a1a1a] hover:bg-slate-50 transition-all p-0 h-8 w-8 min-w-[32px]"
                 >
                   <Camera size={16} />
-                </button>
+                </Button>
               </div>
 
               <div className="mt-4 text-center">
@@ -211,12 +215,15 @@ export default function ProfileView({
               </div>
 
               {onChangePassword && (
-                <button 
+                <Button 
                   onClick={() => setIsChangePasswordModalOpen(true)}
-                  className="btn-secondary w-full mt-8 text-primary"
+                  variant="secondary"
+                  fullWidth
+                  className="mt-8 text-primary"
+                  leftIcon={<Lock size={16} />}
                 >
-                  <Lock size={16} /> Change Password
-                </button>
+                  Change Password
+                </Button>
               )}
             </div>
           </div>
@@ -229,26 +236,30 @@ export default function ProfileView({
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[20px] font-bold text-[#1a1a1a]">Personal Information</h3>
               {!isEditing ? (
-                <button 
+                <Button 
                   onClick={() => setIsEditing(true)}
-                  className="btn-secondary"
+                  variant="secondary"
+                  leftIcon={<Edit2 size={16} />}
                 >
-                  <Edit2 size={16} /> Edit Profile
-                </button>
+                  Edit Profile
+                </Button>
               ) : (
                 <div className="flex items-center gap-2">
-                  <button 
+                  <Button 
                     onClick={handleCancel}
-                    className="btn-secondary text-slate-600"
+                    variant="secondary"
+                    className="text-slate-600"
+                    leftIcon={<X size={16} />}
                   >
-                    <X size={16} /> Cancel
-                  </button>
-                  <button 
+                    Cancel
+                  </Button>
+                  <Button 
                     onClick={handleSave}
-                    className="btn-primary"
+                    variant="primary"
+                    leftIcon={<Save size={16} />}
                   >
-                    <Save size={16} /> Save Changes
-                  </button>
+                    Save Changes
+                  </Button>
                 </div>
               )}
             </div>
@@ -413,9 +424,7 @@ export default function ProfileView({
               </div>
               </div>
               
-              <button className="w-14 h-8 rounded-full bg-slate-200 p-1 relative transition-colors hover:bg-slate-300">
-                <div className="w-6 h-6 rounded-full bg-white shadow-sm" />
-              </button>
+              <Toggle enabled={false} />
             </div>
           </div>
         </div>
@@ -431,28 +440,30 @@ export default function ProfileView({
         title="Change Password"
         maxWidth="max-w-md"
         footer={
-          <>
-            <button
+          <div className="flex gap-3 w-full">
+            <Button
               onClick={() => {
                 setIsChangePasswordModalOpen(false);
                 setShowPassword({ current: false, new: false, confirm: false });
               }}
-              className="btn-secondary flex-1 text-text-secondary"
+              variant="secondary"
+              className="flex-1 text-text-secondary"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleChangePassword}
               disabled={
                 !passwordForm.current ||
                 !passwordForm.new ||
                 passwordForm.new !== passwordForm.confirm
               }
-              className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="primary"
+              className="flex-1"
             >
               Update Password
-            </button>
-          </>
+            </Button>
+          </div>
         }
       >
         <div className="flex flex-col gap-5">
@@ -472,17 +483,19 @@ export default function ProfileView({
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
                 {passwordForm.current ? (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
                     onClick={() =>
                       setShowPassword({
                         ...showPassword,
                         current: !showPassword.current,
                       })
                     }
-                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors"
+                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors p-1 h-auto w-auto"
                   >
                     {showPassword.current ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
+                  </Button>
                 ) : (
                   <Lock className="text-[#64748B]" size={16} />
                 )}
@@ -506,17 +519,19 @@ export default function ProfileView({
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
                 {passwordForm.new ? (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
                     onClick={() =>
                       setShowPassword({
                         ...showPassword,
                         new: !showPassword.new,
                       })
                     }
-                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors"
+                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors p-1 h-auto w-auto"
                   >
                     {showPassword.new ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
+                  </Button>
                 ) : (
                   <Lock className="text-[#64748B]" size={16} />
                 )}
@@ -540,17 +555,19 @@ export default function ProfileView({
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
                 {passwordForm.confirm ? (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
                     onClick={() =>
                       setShowPassword({
                         ...showPassword,
                         confirm: !showPassword.confirm,
                       })
                     }
-                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors"
+                    className="text-[#64748B] hover:text-[#0B7A4B] transition-colors p-1 h-auto w-auto"
                   >
                     {showPassword.confirm ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
+                  </Button>
                 ) : (
                   <Shield className="text-[#64748B]" size={16} />
                 )}

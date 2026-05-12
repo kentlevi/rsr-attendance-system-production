@@ -3,6 +3,7 @@ import { Menu, UserCircle, LogIn, Coffee, Utensils, LogOut, ChevronDown, Check, 
 import { cn } from '../lib/utils';
 import { Select } from './common/Select';
 import { Modal } from './common/Modal';
+import { Button } from './common/Button';
 import Webcam from 'react-webcam';
 import { useToast } from '../context/ToastContext';
 import { attendanceService } from '../services/AttendanceService';
@@ -527,13 +528,14 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
              </div>
              
              {!identifiedEmpName && !isProcessing && (
-               <button
+               <Button
+                 variant="ghost"
                  onClick={() => setIsPinModalOpen(true)}
-                 className="mt-1 flex items-center justify-center gap-2 text-primary font-medium text-[13px] sm:text-[14px] py-2 px-4 rounded-xl hover:bg-surface-muted transition-colors"
+                 className="mt-1 flex items-center justify-center gap-2 text-primary font-medium text-[13px] sm:text-[14px] py-2 px-4 rounded-xl hover:bg-surface-muted transition-colors h-auto w-auto"
+                 leftIcon={<LockKeyhole size={16} />}
                >
-                 <LockKeyhole size={16} />
                  Face Not Working? Use PIN Override
-               </button>
+               </Button>
              )}
             </div>
           </div>
@@ -541,71 +543,75 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
         {/* Bottom Actions */}
         <div className="w-full grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-          <button 
+          <Button 
             onClick={() => handleTimeAction("Time In")}
             disabled={isProcessing}
-            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
               <LogIn size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <span className="font-medium text-[14px] sm:text-[18px]">Time In</span>
-          </button>
+          </Button>
         
-        <button 
+        <Button 
           onClick={() => handleTimeAction("Lunch Out")}
           disabled={isProcessing}
-          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          variant="secondary"
+          className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-warning text-warning flex items-center justify-center bg-warning/5">
               <Utensils size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
             <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">Lunch Out</span>
-        </button>
+        </Button>
 
-        <button 
+        <Button 
           onClick={() => handleTimeAction("Lunch In")}
           disabled={isProcessing}
-          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          variant="secondary"
+          className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-info text-info flex items-center justify-center bg-info/5">
               <Utensils size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
            <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">Lunch In</span>
-        </button>
+        </Button>
 
-        <button 
+        <Button 
           onClick={() => handleTimeAction("PM Break Out")}
           disabled={isProcessing}
-          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          variant="secondary"
+          className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
               <Coffee size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
            <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">PM Break Out</span>
-        </button>
+        </Button>
 
-        <button 
+        <Button 
           onClick={() => handleTimeAction("PM Break In")}
           disabled={isProcessing}
-          className="h-[80px] sm:h-[100px] rounded-[24px] bg-white border border-border flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50"
+          variant="secondary"
+          className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-[#8B5CF6] text-[#8B5CF6] flex items-center justify-center bg-[#8B5CF6]/5">
               <Coffee size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
            </div>
            <span className="font-medium text-[13px] sm:text-[16px] text-text-primary">PM Break In</span>
-        </button>
+        </Button>
 
-          <button 
+          <Button 
             onClick={() => handleTimeAction("Time Out")}
             disabled={isProcessing}
-            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >
              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
                <LogOut size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
              </div>
              <span className="font-medium text-[14px] sm:text-[18px]">Time Out</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -631,10 +637,10 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                 Please select an action below to proceed with manual PIN entry.
               </p>
               <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                <button onClick={() => setPendingAction("Time In")} className="h-12 bg-[#0E8A54] text-white rounded-[14px] font-medium transition-all active:scale-95">Time In</button>
-                <button onClick={() => setPendingAction("Time Out")} className="h-12 bg-[#E03A2E] text-white rounded-[14px] font-medium transition-all active:scale-95">Time Out</button>
-                <button onClick={() => setPendingAction("Lunch Out")} className="h-12 bg-white border border-border rounded-[14px] font-medium transition-all active:scale-95 text-text-primary hover:bg-surface-muted">Lunch Out</button>
-                <button onClick={() => setPendingAction("Lunch In")} className="h-12 bg-white border border-border rounded-[14px] font-medium transition-all active:scale-95 text-text-primary hover:bg-surface-muted">Lunch In</button>
+                <Button onClick={() => setPendingAction("Time In")} className="h-12 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px]">Time In</Button>
+                <Button onClick={() => setPendingAction("Time Out")} variant="danger" className="h-12 rounded-[14px] bg-[#E03A2E] text-white border-none hover:bg-red-700">Time Out</Button>
+                <Button onClick={() => setPendingAction("Lunch Out")} variant="secondary" className="h-12 rounded-[14px]">Lunch Out</Button>
+                <Button onClick={() => setPendingAction("Lunch In")} variant="secondary" className="h-12 rounded-[14px]">Lunch In</Button>
               </div>
             </div>
           ) : (
@@ -668,31 +674,34 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                       value={pinCode}
                       onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
                     />
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       type="button"
                       onClick={() => setShowPin(!showPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors p-1 h-auto w-auto min-w-0"
                     >
                       {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setPendingAction(null)}
-                  className="flex-1 h-12 bg-white border border-[#E2E8F0] text-[#64748B] font-medium rounded-[14px] hover:bg-[#F8FAFC] hover:text-[#1a1a1a] transition-colors"
+                  className="flex-1 h-12 rounded-[14px]"
                 >
                   Back
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={!pinEmpId || pinCode.length !== 6}
-                  className="flex-1 h-12 bg-primary text-white font-medium rounded-[14px] hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 h-12 rounded-[14px]"
                 >
                   Confirm {pendingAction}
-                </button>
+                </Button>
               </div>
             </form>
           )}

@@ -99,6 +99,20 @@ class EmployeeService {
     return emp ? new EmployeeModel(emp) : null;
   }
 
+  async getEmployeeByEmail(email: string): Promise<EmployeeModel | null> {
+    try {
+      const q = query(collection(db, this.collectionPath), where("email", "==", email.trim()));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const firstDoc = querySnapshot.docs[0];
+        return new EmployeeModel({ ...firstDoc.data(), id: firstDoc.id } as Employee);
+      }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.GET, `${this.collectionPath}/email/${email}`);
+    }
+    return null;
+  }
+
   async getEmployeeById(id: string): Promise<EmployeeModel | null> {
     try {
       // 1. Try fetching by document ID

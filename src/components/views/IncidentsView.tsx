@@ -6,6 +6,7 @@ import { useToast } from '../../context/ToastContext';
 import { DatePicker } from '../common/DatePicker';
 import { Select } from '../common/Select';
 import { DataTable } from '../common/DataTable';
+import { Button } from '../common/Button';
 
 export function IncidentsView() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -90,9 +91,15 @@ export function IncidentsView() {
              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="control-field pl-10 h-10 w-full" placeholder="Search incidents..." />
              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           </div>
-          <button onClick={() => setIsModalOpen(true)} className="btn-primary h-10 px-4 whitespace-nowrap inline-flex items-center gap-2">
-             <Plus size={18} /> Log Incident
-          </button>
+          <Button 
+            onClick={() => setIsModalOpen(true)} 
+            variant="primary"
+            size="sm"
+            className="whitespace-nowrap"
+            leftIcon={<Plus size={18} />}
+          >
+            Log Incident
+          </Button>
         </div>
       </div>
 
@@ -174,9 +181,14 @@ export function IncidentsView() {
                   <p className="text-[14px] text-text-secondary mt-0.5">Create a new report or appraisal</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 text-[#64748B] hover:text-[#1a1a1a] transition-colors">
+              <Button 
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsModalOpen(false)} 
+                className="w-8 h-8 p-0 min-w-0 rounded-full text-[#64748B] hover:text-[#1a1a1a]"
+              >
                 <Plus size={20} className="rotate-45" />
-              </button>
+              </Button>
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
@@ -234,10 +246,12 @@ export function IncidentsView() {
                </div>
 
                <div className="pt-4 flex items-center justify-end gap-3 mt-4">
-                 <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary px-6">Cancel</button>
-                 <button type="submit" className="btn-primary px-6 inline-flex items-center gap-2">
-                   <Plus size={18} /> Save Report
-                 </button>
+                 <Button type="button" variant="secondary" className="px-6" onClick={() => setIsModalOpen(false)}>
+                   Cancel
+                 </Button>
+                 <Button type="submit" variant="primary" className="px-6" leftIcon={<Plus size={18} />}>
+                   Save Report
+                 </Button>
                </div>
             </form>
           </div>

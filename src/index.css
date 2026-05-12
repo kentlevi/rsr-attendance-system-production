@@ -59,7 +59,7 @@
 @layer components {
   /* Unified button styling */
   .btn-primary {
-    @apply inline-flex items-center justify-center font-semibold transition-all ease-in-out duration-200 cursor-pointer text-white h-11 px-6 whitespace-nowrap gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0;
+    @apply inline-flex items-center justify-center font-semibold transition-all ease-in-out duration-200 cursor-pointer text-white h-11 px-6 whitespace-nowrap gap-2 outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 shadow-sm;
     background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
     border-radius: var(--radius-button);
     font-size: 14px;
@@ -68,18 +68,27 @@
   
   .btn-primary:hover {
     transform: translateY(-0.5px);
-    @apply brightness-105;
+    @apply brightness-105 shadow-md;
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
   }
   
   .btn-secondary {
-    @apply inline-flex items-center justify-center font-semibold transition-all ease-in-out duration-200 cursor-pointer bg-white h-11 px-6 border border-border text-text-primary whitespace-nowrap gap-2 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0;
+    @apply inline-flex items-center justify-center font-semibold transition-all ease-in-out duration-200 cursor-pointer bg-white h-11 px-6 border border-border text-text-primary whitespace-nowrap gap-2 outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 shadow-sm;
     border-radius: var(--radius-button);
     font-size: 14px;
     line-height: 1;
   }
   
   .btn-secondary:hover {
-    @apply bg-slate-50 border-border-strong;
+    @apply bg-slate-50 border-border-strong shadow-md;
+    transform: translateY(-0.5px);
+  }
+
+  .btn-secondary:active {
+    transform: translateY(0);
   }
   
   .btn-danger {
@@ -110,17 +119,15 @@
   }
 
   .btn-sm {
-    @apply h-11 px-4;
-    font-size: 14px;
+    @apply h-9 px-4;
   }
 
   .btn-xs {
     @apply h-8 px-3 rounded-lg;
-    font-size: 12px;
   }
 
   .btn-icon {
-    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-secondary transition-all outline-none hover:border-border-strong hover:bg-slate-50 hover:text-text-primary focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-text-secondary transition-all outline-none hover:border-border-strong hover:bg-slate-50 hover:text-text-primary focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm;
     line-height: 1;
   }
 
@@ -130,12 +137,13 @@
   }
 
   .btn-page {
-    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-semibold transition-all outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-semibold transition-all outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-40;
     line-height: 1;
   }
 
   .btn-menu-item {
-    @apply flex w-full items-center gap-2 px-4 py-2 text-left text-[12px] font-semibold text-text-primary transition-colors outline-none hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-inset;
+    @apply flex w-full items-center gap-2 px-4 py-2 text-left font-semibold text-text-primary transition-colors outline-none hover:bg-slate-50 focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-inset;
+    font-size: 14px;
   }
 
   .control-focus {

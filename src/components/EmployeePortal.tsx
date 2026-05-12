@@ -8,6 +8,7 @@ import { Select } from './common/Select';
 import { DatePicker } from './common/DatePicker';
 import { TimePicker } from './common/TimePicker';
 import { DataTable } from './common/DataTable';
+import { Button } from './common/Button';
 import { useToast } from '../context/ToastContext';
 import { attendanceService } from '../services/AttendanceService';
 import { leaveService } from '../services/LeaveService';
@@ -235,18 +236,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
     setIsEmployeeLoggingIn(true);
     try {
-      const emailToUse = loginId.includes('@') ? loginId : `${loginId}@rsrengineering.com`;
+      let emp: any = null;
+      let emailToUse = "";
+      
+      if (loginId.includes('@')) {
+        emailToUse = loginId;
+        emp = await employeeService.getEmployeeByEmail(loginId);
+      } else {
+        emp = await employeeService.getEmployeeById(loginId);
+        emailToUse = emp?.data.email || `${loginId}@rsrengineering.com`;
+      }
+
       const auth = getAuth();
       let firebasePin = pin;
       if (firebasePin.length < 6) {
         firebasePin = firebasePin.padEnd(6, '0');
       }
+
       try {
         await signInWithEmailAndPassword(auth, emailToUse, firebasePin);
       } catch (authError: any) {
          if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
-             const { createUserWithEmailAndPassword } = await import('firebase/auth');
-             await createUserWithEmailAndPassword(auth, emailToUse, firebasePin);
+             // If we found an employee in Firestore but not in Auth, create them
+             if (emp) {
+                const { createUserWithEmailAndPassword } = await import('firebase/auth');
+                await createUserWithEmailAndPassword(auth, emailToUse, firebasePin);
+             } else {
+                throw authError;
+             }
          } else {
              throw authError;
          }
@@ -254,7 +271,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
       if (!auth.currentUser) throw new Error("Not logged in");
       
-      let emp = await employeeService.getEmployeeById(auth.currentUser.uid);
+      emp = await employeeService.getEmployeeById(auth.currentUser.uid);
 
       if (!emp) {
         // Since we are bypassing backend, create a dummy employee for them to test
@@ -708,14 +725,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                   )}
                 </div>
 
-                <button
-                  type="button"
+                <Button
                   onClick={handleFaceLogin}
-                  disabled={isFaceScanning}
-                  className="btn-primary w-full h-12 rounded-xl transition-all active:scale-95"
+                  isLoading={isFaceScanning}
+                  fullWidth
+                  className="h-12 rounded-xl transition-all active:scale-95"
                 >
                   {isFaceScanning ? "Processing..." : "Continue with Facial Login"}
-                </button>
+                </Button>
             </div>
           ) : (
             <form onSubmit={handleEmployeeLogin} className="flex flex-col gap-6">
@@ -756,24 +773,26 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     className="control-field h-12 pl-10 pr-12"
                         autoComplete="current-password"
                       />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
                     type="button"
                     onClick={() => setShowEmployeePin((visible) => !visible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors p-1 h-auto w-auto min-w-0"
                     aria-label={showEmployeePin ? "Hide PIN" : "Show PIN"}
                   >
                     {showEmployeePin ? <Eye size={20} /> : <EyeOff size={20} />}
-                  </button>
+                  </Button>
                     </div>
                   </div>
 
-                  <button
+                  <Button
                     type="submit"
-                    disabled={isEmployeeLoggingIn}
-                    className="btn-primary w-full"
+                    isLoading={isEmployeeLoggingIn}
+                    fullWidth
                 >
                   {isEmployeeLoggingIn ? "Verifying" : "Login"}
-                </button>
+                </Button>
               </form>
           )}
 
@@ -781,22 +800,23 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3">
               <span className="text-[14px] font-medium text-text-muted">OR</span>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              fullWidth
+              className="text-primary"
               onClick={() => {
                 setEmployeeLoginMode((mode) => (mode === "face" ? "manual" : "face"));
                 setEmployeeLoginPin("");
                 setShowEmployeePin(false);
               }}
-              className="btn-secondary w-full text-primary"
-            >
-              {isFaceLogin ? (
+              leftIcon={isFaceLogin ? (
                 <LockKeyhole size={18} strokeWidth={2.5} />
               ) : (
                 <ScanFace size={18} strokeWidth={2.5} />
               )}
+            >
               {isFaceLogin ? "Manual Login" : "Facial Login"}
-            </button>
+            </Button>
             <p className="pt-3 text-center text-[13px] font-medium text-text-muted">
               Switch to {isFaceLogin ? "Manual access" : "Facial access"}
             </p>
@@ -854,9 +874,11 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       showMenu={true}
       headerRight={
         <div className="flex items-center gap-6 z-50">
-          <button 
+          <Button 
+            variant="ghost"
+            size="xs"
             onClick={() => setActiveTab("notifications")}
-            className="btn-icon relative rounded-full text-[#1a1a1a] hover:text-primary"
+            className="relative rounded-full text-[#1a1a1a] hover:text-primary h-10 w-10 min-w-0"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -864,12 +886,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                 {unreadCount}
               </div>
             )}
-          </button>
+          </Button>
           
           <div className="relative group">
-            <button 
+            <Button 
+              variant="secondary"
+              size="xs"
               onClick={() => setActiveTab(activeTab === "menu" ? "dashboard" : "menu")}
-              className="flex items-center gap-3 cursor-pointer group bg-white border border-border rounded-full py-1.5 px-2 hover:border-[#0B7A4B]/30 transition-colors"
+              className="flex items-center gap-3 cursor-pointer group bg-white border border-border rounded-full py-1.5 px-2 hover:border-[#0B7A4B]/30 transition-colors h-auto w-auto min-w-0 shadow-none"
             >
               <div className="w-8 h-8 rounded-full bg-surface-muted overflow-hidden">
                 <img
@@ -886,7 +910,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                   {identifiedEmp?.role || "Staff"}
                 </span>
               </div>
-            </button>
+            </Button>
           </div>
         </div>
       }
@@ -912,10 +936,11 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     if (tab.id === "profile") subtitle = "Your profile info";
                     
                     return (
-                      <button
+                      <Button
                         key={tab.id}
+                        variant="secondary"
                         onClick={() => setActiveTab(tab.id)}
-                        className="group flex items-center gap-3 sm:gap-4 bg-white border border-border p-3.5 sm:p-4 rounded-2xl hover:border-primary/30 transition-all text-left shadow-sm active:scale-[0.98]"
+                        className="group flex items-center gap-3 sm:gap-4 bg-white border border-border p-3.5 sm:p-4 rounded-2xl hover:border-primary/30 transition-all text-left shadow-sm active:scale-[0.98] h-auto w-auto"
                       >
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/5 group-hover:border-primary/20 transition-colors">
                           <Icon size={20} className="text-slate-500 group-hover:text-primary transition-colors sm:size-24" />
@@ -931,12 +956,13 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                         <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary transition-colors">
                           <ChevronRight size={14} className="text-slate-400 group-hover:text-white transition-colors" />
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                   
                   {/* Logout Card */}
-                  <button
+                  <Button
+                    variant="secondary"
                     onClick={async () => {
                         clearEmployeeSession();
                         setIsAuthenticated(false);
@@ -949,7 +975,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                         }
                         onNavigate("welcome");
                     }}
-                    className="group flex items-center gap-4 bg-white border border-red-100 p-4 rounded-2xl hover:border-red-300 transition-all text-left"
+                    className="group flex items-center gap-4 bg-white border border-red-100 p-4 rounded-2xl hover:border-red-300 transition-all text-left h-auto w-auto shadow-none"
                   >
                     <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 transition-colors">
                       <LogOut size={24} className="text-red-500" />
@@ -965,7 +991,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500 transition-colors">
                       <ChevronRight size={16} className="text-red-400 group-hover:text-white transition-colors" />
                     </div>
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : activeTab === "dashboard" ? (
@@ -1070,12 +1096,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
              <div className="flex items-center justify-between pt-1">
                <span className="font-medium text-[16px] text-text-primary">Weekly Summary: <span className="text-primary">{totalWeeklyHours} hrs</span></span>
-               <button 
+               <Button 
+                 variant="secondary" 
+                 size="sm"
                  onClick={() => setActiveTab("my-time")}
-                 className="btn-secondary btn-sm text-primary"
+                 className="text-primary"
                >
                  View Details
-               </button>
+               </Button>
              </div>
            </div>
 
@@ -1106,12 +1134,13 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
              </div>
 
              <div className="pt-2">
-               <button 
+               <Button 
+                 variant="primary"
+                 fullWidth
                  onClick={() => setActiveTab("file-leave")}
-                 className="btn-primary w-full"
                >
                  Apply for Leave
-               </button>
+               </Button>
              </div>
            </div>
 
@@ -1143,12 +1172,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
              </div>
 
              <div>
-               <button 
+               <Button 
+                 variant="secondary" 
+                 fullWidth
                  onClick={() => setActiveTab("leave-status")}
-                 className="btn-secondary w-full text-primary"
+                 className="text-primary"
                >
                  View My Requests
-               </button>
+               </Button>
              </div>
            </div>
 
@@ -1176,13 +1207,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
              </div>
 
              <div className="pt-2">
-               <button 
+               <Button 
+                 variant="primary"
+                 fullWidth
                  onClick={() => setActiveTab("undertime")}
-                 className="btn-primary w-full"
-                 style={{ background: "#B91C1C" }}
+                 className="bg-[#B91C1C] hover:bg-[#A81919]"
                >
                  Submit Undertime
-               </button>
+               </Button>
              </div>
            </div>
 
@@ -1216,18 +1248,22 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
            </div>
 
            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center w-full sm:w-auto gap-3 self-center sm:self-end shrink-0 pt-3 sm:pt-0 border-t border-border/40 sm:border-0">
-              <button 
+              <Button 
+                variant="secondary"
+                size="xs"
                 onClick={() => setActiveTab("notifications")}
-                className="btn-secondary h-9 px-4 text-xs font-bold uppercase tracking-wider text-primary border-primary/20 hover:bg-primary/5 sm:hidden"
+                className="h-9 px-4 text-xs font-bold uppercase tracking-wider text-primary border-primary/20 hover:bg-primary/5 sm:hidden"
               >
                 View All
-              </button>
-              <button 
+              </Button>
+              <Button 
+                variant="ghost"
+                size="xs"
                 onClick={() => setActiveTab("notifications")}
-                className="view-all-link hidden sm:inline-flex"
+                className="view-all-link hidden sm:inline-flex h-auto w-auto p-0 min-w-0"
               >
                 View All
-              </button>
+              </Button>
               {notifications.length > 0 && (
                 <p className="text-[11px] sm:text-[12px] text-text-secondary font-bold uppercase tracking-wide opacity-60">
                   {new Date(notifications[0].createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
@@ -1259,12 +1295,17 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                               </span>
                            </div>
                            <p className="text-[14px] text-text-secondary mb-4">{inc.data.description}</p>
-                           <button onClick={() => {
-                             incidentService.acknowledgeIncident(inc.id);
-                             showToast("Incident acknowledged successfully.");
-                           }} className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-medium transition-colors">
+                           <Button 
+                             variant="primary"
+                             fullWidth
+                             onClick={() => {
+                               incidentService.acknowledgeIncident(inc.id);
+                               showToast("Incident acknowledged successfully.");
+                             }} 
+                             className="bg-orange-600 hover:bg-orange-700"
+                           >
                              I Acknowledge
-                           </button>
+                           </Button>
                         </div>
                       ))}
                     </div>
@@ -1302,9 +1343,9 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
             <span className="font-medium text-text-primary text-[16px]">
               {weeklyData[6]?.dateStr} – {weeklyData[0]?.dateStr}
             </span>
-            <button className="btn-icon-sm rounded-full">
-              <ChevronRight size={20} />
-            </button>
+             <Button variant="icon-sm" className="rounded-full">
+               <ChevronRight size={20} />
+             </Button>
           </div>
 
           {/* Table */}
@@ -1421,14 +1462,16 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                   className="control-field flex-1 p-2.5 text-[14px] resize-none"
                   rows={1}
                 />
-                <button
-                  type="button"
-                  onClick={handleParseLeaveText}
-                  disabled={isParsingLeave || !leaveAiText.trim()}
-                  className="btn-primary px-4 text-[12px] disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                >
-                  {isParsingLeave ? "Parsing" : "Auto-fill"}
-                </button>
+                 <Button
+                   variant="primary"
+                   size="sm"
+                   onClick={handleParseLeaveText}
+                   isLoading={isParsingLeave}
+                   disabled={!leaveAiText.trim()}
+                   className="px-4 text-[12px] flex-shrink-0"
+                 >
+                   {isParsingLeave ? "Parsing" : "Auto-fill"}
+                 </Button>
               </div>
             </div>
 
@@ -1538,34 +1581,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     <Paperclip size={14} className="text-primary shrink-0" />
                     <span className="truncate">{leaveAttachment.name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setLeaveAttachment(null)}
-                    className="btn-icon-sm h-7 w-7"
-                    aria-label="Remove leave attachment"
-                  >
-                    <X size={14} />
-                  </button>
+                   <Button
+                     variant="ghost"
+                     size="xs"
+                     onClick={() => setLeaveAttachment(null)}
+                     className="h-7 w-7 p-0 min-w-0"
+                     aria-label="Remove leave attachment"
+                   >
+                     <X size={14} />
+                   </Button>
                 </div>
               )}
             </div>
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setActiveTab("dashboard")}
-                className="btn-secondary w-full sm:w-auto text-text-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmitLeave}
-                disabled={isSubmittingLeave}
-                className="btn-primary w-full sm:w-auto"
-              >
-                {isSubmittingLeave ? "Submitting" : "Submit Request"}
-              </button>
-            </div>
+             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-border">
+               <Button
+                 variant="secondary"
+                 onClick={() => setActiveTab("dashboard")}
+                 className="w-full sm:w-auto text-text-secondary"
+               >
+                 Cancel
+               </Button>
+               <Button
+                 onClick={handleSubmitLeave}
+                 isLoading={isSubmittingLeave}
+                 className="w-full sm:w-auto"
+               >
+                 {isSubmittingLeave ? "Submitting" : "Submit Request"}
+               </Button>
+             </div>
           </form>
         </div>
       </div>
@@ -1680,35 +1723,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     <Paperclip size={14} className="text-primary shrink-0" />
                     <span className="truncate">{undertimeAttachment.name}</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setUndertimeAttachment(null)}
-                    className="btn-icon-sm h-7 w-7"
-                    aria-label="Remove undertime attachment"
-                  >
-                    <X size={14} />
-                  </button>
+                   <Button
+                     variant="ghost"
+                     size="xs"
+                     onClick={() => setUndertimeAttachment(null)}
+                     className="h-7 w-7 p-0 min-w-0"
+                     aria-label="Remove undertime attachment"
+                   >
+                     <X size={14} />
+                   </Button>
                 </div>
               )}
             </div>
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setActiveTab("dashboard")}
-                className="btn-secondary w-full sm:w-auto text-text-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmitUndertime}
-                disabled={isSubmittingUndertime}
-                className="btn-primary w-full sm:w-auto"
-                style={{ background: "#B91C1C" }}
-              >
-                {isSubmittingUndertime ? "Submitting" : "Submit Request"}
-              </button>
-            </div>
+             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-border">
+               <Button
+                 variant="secondary"
+                 onClick={() => setActiveTab("dashboard")}
+                 className="w-full sm:w-auto text-text-secondary"
+               >
+                 Cancel
+               </Button>
+               <Button
+                 onClick={handleSubmitUndertime}
+                 isLoading={isSubmittingUndertime}
+                 className="w-full sm:w-auto bg-[#B91C1C] hover:bg-[#A81919]"
+               >
+                 {isSubmittingUndertime ? "Submitting" : "Submit Request"}
+               </Button>
+             </div>
           </form>
         </div>
       </div>

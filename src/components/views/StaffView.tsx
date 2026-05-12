@@ -33,6 +33,7 @@ import {
 import { useStaffManagementController } from "../../controllers/StaffManagementController";
 import { StatsCard } from "../common/StatsCard";
 import { Select } from "../common/Select";
+import { Button } from "../common/Button";
 import { DataTable } from "../common/DataTable";
 import { AddEmployeeModal } from "./staff/AddEmployeeModal";
 import { EmployeeDetailsModal } from "./staff/EmployeeDetailsModal";
@@ -349,8 +350,10 @@ export function StaffView() {
       headerClassName: "text-right",
       className: "text-right",
       accessor: (row: any) => (
-        <button
-          className="btn-icon-sm mx-auto"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mx-auto h-9 w-9 p-0"
           onClick={(e) => {
             e.stopPropagation();
             if (actionMenuState?.id === row.id) {
@@ -366,7 +369,7 @@ export function StaffView() {
           }}
         >
           <MoreVertical size={18} />
-        </button>
+        </Button>
       )
     }
   ];
@@ -429,24 +432,30 @@ export function StaffView() {
               <span className="text-[14px] font-bold text-text-secondary uppercase tracking-wider mr-2">
                 Bulk Actions
               </span>
-              <button
+              <Button
                 onClick={handleExportStaffList}
-                className="btn-secondary btn-sm"
+                variant="secondary"
+                size="sm"
+                leftIcon={<Download size={16} />}
               >
-                <Download size={16} /> Export CSV
-              </button>
-              <button
+                Export CSV
+              </Button>
+              <Button
                 onClick={handleDownloadTemplate}
-                className="btn-secondary btn-sm"
+                variant="secondary"
+                size="sm"
+                leftIcon={<Download size={16} />}
               >
-                <Download size={16} /> Template
-              </button>
-              <button
+                Template
+              </Button>
+              <Button
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-secondary btn-sm"
+                variant="secondary"
+                size="sm"
+                leftIcon={<Download size={16} />}
               >
-                <Download size={16} /> Import
-              </button>
+                Import
+              </Button>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -455,12 +464,14 @@ export function StaffView() {
                 className="hidden"
               />
             </div>
-            <button
-              className="btn-primary btn-sm"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => setIsAddEmployeeModalOpen(true)}
+              leftIcon={<Plus size={18} strokeWidth={2.5} />}
             >
-              <Plus size={18} strokeWidth={2.5} /> Add Employee
-            </button>
+              Add Employee
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(240px,1.35fr)_repeat(3,minmax(0,1fr))_44px] gap-3 items-center">
@@ -524,14 +535,14 @@ export function StaffView() {
             </Select>
 
             <div className="flex justify-end sm:col-span-2 lg:col-span-1">
-              <button
+              <Button
+                variant="ghost"
                 onClick={handleResetFilters}
-                className="btn-icon text-text-primary"
+                className="text-text-primary h-11 w-11 p-0 min-w-0"
                 title="Reset Filters"
               >
                 <RefreshCw size={16} />
-                <span className="sr-only">Reset filters</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -571,26 +582,31 @@ export function StaffView() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 setSelectedEmployeeId(actionMenuState.id);
                 setActionMenuState(null);
               }}
-              className="btn-menu-item"
+              className="btn-menu-item w-full justify-start h-11 px-4 gap-3 rounded-none hover:bg-slate-50 border-none font-medium text-[14px]"
+              leftIcon={<Eye size={16} className="text-text-muted" />}
             >
-              <Eye size={16} className="text-text-muted" /> View Details
-            </button>
-            <button
+              View Details
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 setEditingEmployeeId(actionMenuState.id);
                 setActionMenuState(null);
               }}
-              className="btn-menu-item"
+              className="btn-menu-item w-full justify-start h-11 px-4 gap-3 rounded-none hover:bg-slate-50 border-none font-medium text-[14px]"
+              leftIcon={<Edit size={16} className="text-text-muted" />}
             >
-              <Edit size={16} className="text-text-muted" /> Edit Details
-            </button>
+              Edit Details
+            </Button>
             <div className="h-px bg-border my-1" />
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 const emp = employees.find(
                   (e) => e.data.id === actionMenuState.id,
@@ -600,26 +616,22 @@ export function StaffView() {
                 }
                 setActionMenuState(null);
               }}
-              className={`btn-menu-item ${
+              className={cn(
+                "btn-menu-item w-full justify-start h-11 px-4 gap-3 rounded-none border-none font-medium text-[14px]",
                 employees.find((e) => e.data.id === actionMenuState.id)?.data
                   .status === "Active"
                   ? "text-[#DC2626] hover:bg-[#FEF2F2]"
                   : "text-[#0B7A4B] hover:bg-[#F0FDF4]"
-              }`}
+              )}
+              leftIcon={employees.find((e) => e.data.id === actionMenuState.id)?.data
+                .status === "Active" ? <UserX size={16} /> : <UserCheck size={16} />}
             >
               {employees.find((e) => e.data.id === actionMenuState.id)?.data
-                .status === "Active" ? (
-                <>
-                  <UserX size={16} /> Deactivate Account
-                </>
-              ) : (
-                <>
-                  <UserCheck size={16} /> Activate Account
-                </>
-              )}
-            </button>
+                .status === "Active" ? "Deactivate Account" : "Activate Account"}
+            </Button>
             <div className="h-px bg-border my-1" />
-            <button
+            <Button
+              variant="ghost"
               onClick={() => {
                 const emp = employees.find(
                   (e) => e.data.id === actionMenuState.id,
@@ -627,13 +639,15 @@ export function StaffView() {
                 handleDeleteEmployeeRecord(actionMenuState.id, emp?.name);
                 setActionMenuState(null);
               }}
-              className="btn-menu-item text-[#DC2626] hover:bg-[#FEF2F2]"
+              className="btn-menu-item w-full justify-start h-11 px-4 gap-3 rounded-none hover:bg-[#FEF2F2] border-none font-medium text-[14px] text-[#DC2626]"
+              leftIcon={<Trash2 size={16} />}
             >
-              <Trash2 size={16} /> Delete Employee
-            </button>
+              Delete Employee
+            </Button>
           </div>,
           document.body,
         )}
+
 
       <EmployeeDetailsModal
         employee={selectedEmployee}

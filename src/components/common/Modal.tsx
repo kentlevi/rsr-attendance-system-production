@@ -2,6 +2,7 @@ import React, { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "./Button";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function Modal({
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div id="global-modal-overlay" className="fixed inset-0 z-[10000] flex sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <div id="global-modal-overlay" className="fixed inset-0 z-[10000] flex items-start justify-center p-4 pt-10 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -58,13 +59,15 @@ export function Modal({
               <h3 className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
                 {title}
               </h3>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
-                className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center hover:bg-slate-100 transition-colors"
+                className="w-10 h-10 p-0 min-w-0 rounded-full bg-slate-50 hover:bg-slate-100"
                 aria-label="Close"
               >
                 <X size={20} className="text-slate-500" />
-              </button>
+              </Button>
             </div>
 
             {/* Body */}

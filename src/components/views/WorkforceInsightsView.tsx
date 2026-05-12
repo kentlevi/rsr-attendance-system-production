@@ -35,6 +35,7 @@ import { DataTable } from "../common/DataTable";
 import { Modal } from "../common/Modal";
 import { ExportPayrollModal } from "../common/ExportPayrollModal";
 import { UndertimeRequestsModal } from "../dashboard/UndertimeRequestsModal";
+import { Button } from "../common/Button";
 import {
   PieChart as RePieChart,
   Pie,
@@ -560,24 +561,23 @@ export function WorkforceInsightsView() {
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700 pb-10">
       {/* Action Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-end gap-3 items-end md:items-center">
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="btn-secondary w-fit"
+          leftIcon={<RefreshCw size={18} className={cn("text-[#0B7A4B]", isRefreshing && "animate-spin")} />}
         >
-          <RefreshCw
-            size={18}
-            className={cn("text-[#0B7A4B]", isRefreshing && "animate-spin")}
-          />
           {isRefreshing ? "Refreshing" : "Refresh"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleExport}
-          className="btn-secondary w-fit"
+          leftIcon={<Download size={18} className="text-[#0B7A4B]" />}
         >
-          <Download size={18} className="text-[#0B7A4B]" />
           Export Report
-        </button>
+        </Button>
       </div>
 
       {/* Stats Cards Row */}
@@ -682,17 +682,20 @@ export function WorkforceInsightsView() {
               />
             </div>
 
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => {
                 setSearchQuery("");
                 setSiteFilter("All Sites");
                 setDeptFilter("All Departments");
                 setSelectedDate(new Date().toISOString().split("T")[0]);
               }}
-              className="btn-secondary min-w-[140px]"
+              className="min-w-[140px]"
+              leftIcon={<X size={18} />}
             >
-              <X size={18} /> Reset
-            </button>
+              Reset
+            </Button>
           </div>
         </div>
 
@@ -810,14 +813,16 @@ export function WorkforceInsightsView() {
             <h3 className="text-[18px] font-medium text-[#1a1a1a]">
               Undertime Summary
             </h3>
-            {undertimeRequests.length > 0 && (
-              <button
-                onClick={() => setIsUndertimeModalOpen(true)}
-                className="view-all-link"
-              >
-                View all
-              </button>
-            )}
+             {undertimeRequests.length > 0 && (
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={() => setIsUndertimeModalOpen(true)}
+                 className="view-all-link"
+               >
+                 View all
+               </Button>
+             )}
           </div>
           {undertimeRequests.length > 0 ? (
             <>
@@ -879,14 +884,16 @@ export function WorkforceInsightsView() {
             <h3 className="text-[18px] font-medium text-[#1a1a1a]">
               Live Activity Feed
             </h3>
-            {activityFeed.length > 0 && (
-              <button
-                onClick={() => setIsActivityModalOpen(true)}
-                className="view-all-link"
-              >
-                View all
-              </button>
-            )}
+             {activityFeed.length > 0 && (
+               <Button
+                 variant="ghost"
+                 size="sm"
+                 onClick={() => setIsActivityModalOpen(true)}
+                 className="view-all-link"
+               >
+                 View all
+               </Button>
+             )}
           </div>
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[460px] pr-2 scrollbar-hide">
             {activityFeed.length > 0 ? (

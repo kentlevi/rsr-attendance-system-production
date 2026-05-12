@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, X, MessageSquare, Loader2, Bot, User } from 'lucide-react';
 import { cn } from "../../../lib/utils";
+import { Button } from '../../common/Button';
 import { useToast } from "../../../context/ToastContext";
 import { leaveService } from '../../../services/LeaveService';
 import { authenticatedFetch } from '../../../lib/api';
@@ -134,15 +135,15 @@ Company Settings:
 
   return (
     <>
-      <button
+      <Button
         onClick={toggleChat}
         className={cn(
-          "fixed bottom-6 right-6 p-4 rounded-full shadow-lg transition-transform hover:scale-105 z-50",
-          isOpen ? "bg-[#DC2626] text-white" : "bg-[#0B7A4B] text-white"
+          "fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-transform hover:scale-105 z-50 p-0",
+          isOpen ? "bg-[#DC2626] text-white hover:bg-[#B91C1C]" : "bg-[#0B7A4B] text-white hover:bg-[#096A41]"
         )}
       >
         {isOpen ? <X size={24} /> : <MessageSquare size={24} />}
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-border flex flex-col z-50 overflow-hidden" style={{ height: '500px', maxHeight: 'calc(100vh - 120px)' }}>
@@ -206,13 +207,14 @@ Company Settings:
                 placeholder="Ask me anything..."
                 className="w-full bg-[#F1F5F9] rounded-full pl-4 pr-12 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#0B7A4B]/20 transition-all border border-transparent focus:border-[#0B7A4B]/30"
               />
-              <button
+              <Button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#0B7A4B] text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors hover:bg-[#096A41]"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full p-0 flex items-center justify-center transition-colors"
+                variant="primary"
               >
                 <Send size={14} className="ml-0.5" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ import { applyLeaveApprovalDecision, calculateLeaveBalanceUpdate } from '../../l
 import { cn } from '../../lib/utils';
 import { DataTable } from '../common/DataTable';
 import { TimePicker } from '../common/TimePicker';
+import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
 import { FileLeaveModal } from './common/FileLeaveModal';
 
@@ -245,24 +246,28 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
                 className="w-[125px]"
               />
             ) : null}
-            <button
+            <Button
               type="button"
               disabled={isUpdating || (needsOfficialTimeOut && !officialTimeOutByLogId[log.data.id])}
               onClick={() => handleDecision(log, 'Approved')}
-              className="btn-secondary h-9 px-3 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50"
+              variant="secondary"
+              size="sm"
+              className="text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50"
+              leftIcon={<Check size={15} />}
             >
-              <Check size={15} />
               Approve
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={isUpdating}
               onClick={() => handleDecision(log, 'Rejected')}
-              className="btn-secondary h-9 px-3 text-red-700 hover:border-red-200 hover:bg-red-50"
+              variant="secondary"
+              size="sm"
+              className="text-red-700 hover:border-red-200 hover:bg-red-50"
+              leftIcon={<X size={15} />}
             >
-              <X size={15} />
               Reject
-            </button>
+            </Button>
           </div>
         );
       },
@@ -337,24 +342,28 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         const isUpdating = isUpdatingId === request.data.id;
         return (
           <div className="flex items-center justify-end gap-2">
-            <button
+            <Button
               type="button"
               disabled={isUpdating}
               onClick={() => handleLeaveDecision(request, 'Approved')}
-              className="btn-secondary h-9 px-3 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50"
+              variant="secondary"
+              size="sm"
+              className="text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50"
+              leftIcon={<Check size={15} />}
             >
-              <Check size={15} />
               Approve
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               disabled={isUpdating}
               onClick={() => handleLeaveDecision(request, 'Rejected')}
-              className="btn-secondary h-9 px-3 text-red-700 hover:border-red-200 hover:bg-red-50"
+              variant="secondary"
+              size="sm"
+              className="text-red-700 hover:border-red-200 hover:bg-red-50"
+              leftIcon={<X size={15} />}
             >
-              <X size={15} />
               Reject
-            </button>
+            </Button>
           </div>
         );
       },
@@ -442,12 +451,13 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
               Review pending leave requests submitted by employees.
             </p>
           </div>
-          <button 
-            className="btn-primary h-10 px-4 text-[14px]"
+          <Button 
+            variant="primary"
+            size="sm"
             onClick={() => setIsFileLeaveModalOpen(true)}
           >
             File Leave Request
-          </button>
+          </Button>
         </div>
         <DataTable
           columns={leaveColumns}

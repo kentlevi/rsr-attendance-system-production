@@ -6,6 +6,7 @@ import { employeeService } from '../../services/EmployeeService';
 import { Select } from '../common/Select';
 import { DatePicker } from '../common/DatePicker';
 import { DataTable } from '../common/DataTable';
+import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
 import { getPayrollReviewExportStatus } from '../../lib/AttendanceApprovalRules';
 
@@ -331,9 +332,14 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
                 <option value="Late">Late</option>
               </Select>
 
-              <button className="btn-secondary px-4" onClick={handleExportLogs}>
-                <Download size={18} /> Export
-              </button>
+              <Button 
+                variant="secondary"
+                size="sm"
+                onClick={handleExportLogs}
+                leftIcon={<Download size={18} />}
+              >
+                Export
+              </Button>
             </div>
           </div>
         </div>

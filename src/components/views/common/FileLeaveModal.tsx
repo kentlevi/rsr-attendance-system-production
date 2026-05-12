@@ -7,6 +7,7 @@ import { employeeService } from '../../../services/EmployeeService';
 import { Modal } from '../../common/Modal';
 import { Select } from '../../common/Select';
 import { DatePicker } from '../../common/DatePicker';
+import { Button } from '../../common/Button';
 import { authenticatedFetch } from '../../../lib/api';
 
 interface FileLeaveModalProps {
@@ -112,18 +113,20 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
       title="File Leave Request"
       maxWidth="max-w-2xl"
       footer={
-        <>
-          <button className="btn-secondary px-8 h-12" onClick={onClose} disabled={isSubmitting}>
+        <div className="flex gap-3 w-full">
+          <Button variant="secondary" className="px-8 flex-1" onClick={onClose} disabled={isSubmitting}>
             Cancel
-          </button>
-          <button 
-            className="btn-primary h-12 px-10 text-[16px]" 
+          </Button>
+          <Button 
+            variant="primary"
+            className="px-10 flex-1" 
             onClick={handleSubmit}
-            disabled={isSubmitting || !employeeId || !leaveForm.startDate || !leaveForm.endDate}
+            isLoading={isSubmitting}
+            disabled={!employeeId || !leaveForm.startDate || !leaveForm.endDate}
           >
-            {isSubmitting ? "Filing..." : "File Request"}
-          </button>
-        </>
+            File Request
+          </Button>
+        </div>
       }
     >
       <div className="p-6 md:p-8 flex flex-col gap-8">
@@ -147,14 +150,16 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
               value={leaveAiText}
               onChange={(e) => setLeaveAiText(e.target.value)}
             />
-            <button 
-              className="btn-secondary whitespace-nowrap bg-indigo-50 flex items-center justify-center gap-2 h-12 px-6 shadow-sm border border-indigo-200"
+            <Button 
+              variant="secondary"
+              className="bg-indigo-50 border-indigo-200"
               onClick={handleParseLeaveText}
-              disabled={isParsingLeave || !leaveAiText.trim()}
+              isLoading={isParsingLeave}
+              disabled={!leaveAiText.trim()}
+              leftIcon={!isParsingLeave && <Wand2 size={18} className="text-indigo-600" />}
             >
-              {isParsingLeave ? <Loader2 size={18} className="animate-spin text-indigo-600" /> : <Wand2 size={18} className="text-indigo-600" />}
               <span className="font-semibold text-indigo-700">{isParsingLeave ? "Parsing..." : "Auto-fill"}</span>
-            </button>
+            </Button>
           </div>
           <p className="text-[14px] text-indigo-700/80 font-medium">Type a natural sentence and the AI will try to populate the form below.</p>
         </div>
@@ -206,17 +211,28 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
           <div className="flex flex-col gap-1.5">
             <label className="text-label pl-1">Medical Certificate (Optional)</label>
             <div className="flex items-center gap-4">
-              <label className="btn-secondary h-12 cursor-pointer inline-flex items-center gap-2">
-                <Paperclip size={18} />
-                <span>Choose File</span>
+              <label className="inline-flex items-center">
                 <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleAttachmentSelect(e.target.files?.[0])} />
+                <Button 
+                  as="div" 
+                  variant="secondary" 
+                  className="h-12 cursor-pointer"
+                  leftIcon={<Paperclip size={18} />}
+                >
+                  Choose File
+                </Button>
               </label>
               {leaveAttachment && (
                 <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2 rounded-xl border border-border">
                   <span className="text-sm font-medium text-[#1a1a1a] truncate max-w-[200px]">{leaveAttachment.name}</span>
-                  <button className="text-text-muted hover:text-red-500 p-1" onClick={() => setLeaveAttachment(null)}>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setLeaveAttachment(null)}
+                    className="text-text-muted hover:text-red-500 p-1 h-auto w-auto"
+                  >
                     <X size={16} />
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

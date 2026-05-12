@@ -59,6 +59,7 @@ import {
   Database,
   Upload,
 } from "lucide-react";
+import { Button } from "./common/Button";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -277,6 +278,22 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       adminProfileService.updateProfile(adminLoginId, nextProfile),
       adminAccountService.updateProfile(adminLoginId, nextProfile),
     ]);
+    
+    // Update Firebase Auth email if it changed
+    if (info.email && info.email.trim() !== personalInfo.email) {
+      try {
+        const { getAuth, updateEmail } = await import('firebase/auth');
+        const auth = getAuth();
+        if (auth.currentUser && auth.currentUser.email !== info.email.trim()) {
+           await updateEmail(auth.currentUser, info.email.trim());
+        }
+      } catch (err: any) {
+        console.error("Failed to update Firebase Auth email:", err);
+        if (err.code === "auth/requires-recent-login") {
+           alert("Your email profile was updated, but Firebase requires a recent login to change your login email. Please log out and log back in to fully apply this change.");
+        }
+      }
+    }
   };
 
   const handleAdminImageUpdate = async (image: string) => {
@@ -407,9 +424,10 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       showMenu={true}
       headerRight={
         <div className="flex items-center gap-6 z-50">
-          <button 
+          <Button 
+            variant="ghost"
             onClick={() => setIsNotificationModalOpen(true)}
-            className="btn-icon relative rounded-full text-[#1a1a1a] hover:text-primary"
+            className="btn-icon relative rounded-full text-[#1a1a1a] hover:text-primary p-0 h-10 w-10 min-w-0"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -417,11 +435,13 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 {unreadCount}
               </div>
             )}
-          </button>
+          </Button>
           <div className="relative group">
-            <button 
+            <Button 
+              as="button"
+              variant="ghost"
               onClick={() => setActiveTab(activeTab === "menu" ? "dashboard" : "menu")}
-              className="flex items-center gap-3 cursor-pointer group bg-white border border-border rounded-full py-1.5 px-2 hover:border-[#0B7A4B]/30 transition-colors"
+              className="flex items-center gap-3 cursor-pointer group bg-white border border-border rounded-full py-1.5 px-2 hover:border-[#0B7A4B]/30 transition-colors h-auto min-w-0"
             >
               <div className="w-8 h-8 rounded-full bg-surface-muted overflow-hidden">
                 <img
@@ -430,15 +450,16 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="hidden md:flex flex-col gap-0.5 text-left pr-2">
-                <span className="text-[15px] font-medium text-[#1a1a1a] leading-none">
+              <div className="hidden sm:flex flex-col items-start gap-0">
+                <span className="text-[14px] font-bold text-[#1a1a1a]">
                   {personalInfo.fullName}
                 </span>
-                <span className="text-[14px] font-medium text-text-secondary leading-none">
+                <span className="text-[11px] font-medium text-text-secondary uppercase tracking-wider">
                   {personalInfo.role}
                 </span>
               </div>
-            </button>
+              <ChevronDown size={16} className={cn("text-text-muted transition-transform", activeTab === "menu" && "rotate-180")} />
+            </Button>
           </div>
         </div>
       }
@@ -484,10 +505,12 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     if (tab.id === "profile") subtitle = "Your profile";
                     
                     return (
-                      <button
+                      <Button
+                        as="button"
+                        variant="ghost"
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className="group flex items-center gap-4 bg-white border border-border p-4 rounded-2xl hover:border-[#0B7A4B]/30 transition-all text-left"
+                        className="group flex items-center gap-4 bg-white border border-border p-4 rounded-2xl hover:border-[#0B7A4B]/30 transition-all text-left h-auto w-full"
                       >
                         <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-[#f0fdf4] group-hover:border-[#0B7A4B]/20 transition-colors">
                           <Icon size={24} className="text-slate-500 group-hover:text-[#0B7A4B] transition-colors" />
@@ -503,12 +526,13 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                         <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0B7A4B] transition-colors">
                           <ChevronRight size={16} className="text-slate-400 group-hover:text-white transition-colors" />
                         </div>
-                      </button>
+                      </Button>
                     );
                   })}
                   
                   {/* Logout Card */}
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={async () => {
                       sessionStorage.removeItem("rsr_active_role");
                       sessionStorage.removeItem("rsr_admin_account");
@@ -520,7 +544,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                       }
                       onNavigate("welcome");
                     }}
-                    className="group flex items-center gap-4 bg-white border border-red-100 p-4 rounded-2xl hover:border-red-300 transition-all text-left"
+                    className="group flex items-center gap-4 bg-white border border-red-100 p-4 rounded-2xl hover:border-red-300 transition-all text-left h-auto w-full"
                   >
                     <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 transition-colors">
                       <LogOut size={24} className="text-red-500" />
@@ -536,7 +560,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500 transition-colors">
                       <ChevronRight size={16} className="text-red-400 group-hover:text-white transition-colors" />
                     </div>
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

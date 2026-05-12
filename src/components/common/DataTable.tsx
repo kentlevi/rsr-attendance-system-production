@@ -2,6 +2,7 @@ import React from "react";
 import { cn } from "../../lib/utils";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import { Select } from "./Select";
+import { Button } from "./Button";
 
 interface Column<T> {
   header: string;
@@ -62,62 +63,64 @@ export function DataTable<T>({
 
     return (
       <div className="flex items-center gap-1">
-        <button
+        <Button
           onClick={() => onPageChange?.(currentPage - 1)}
           disabled={currentPage === 1}
-          className="btn-page text-text-secondary"
+          variant="page"
+          className="text-text-secondary"
         >
           <ChevronLeft size={18} />
-        </button>
+        </Button>
         
         {startPage > 1 && (
           <>
-            <button
+            <Button
               onClick={() => onPageChange?.(1)}
+              variant="page"
               className={cn(
-                "btn-page",
                 currentPage === 1 ? "bg-primary text-white" : "text-text-secondary hover:bg-slate-50"
               )}
             >
               1
-            </button>
+            </Button>
           </>
         )}
 
         {pages.map(page => (
-            <button
+            <Button
               key={page}
               onClick={() => onPageChange?.(page)}
+              variant="page"
               className={cn(
-                "btn-page",
                 currentPage === page ? "bg-primary text-white" : "text-text-secondary hover:bg-slate-50"
               )}
             >
               {page}
-            </button>
+            </Button>
         ))}
 
         {endPage < totalPages && (
           <>
-            <button
+            <Button
               onClick={() => onPageChange?.(totalPages)}
+              variant="page"
               className={cn(
-                "btn-page",
                 currentPage === totalPages ? "bg-primary text-white" : "text-text-secondary hover:bg-slate-50"
               )}
             >
               {totalPages}
-            </button>
+            </Button>
           </>
         )}
 
-        <button
+        <Button
           onClick={() => onPageChange?.(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="btn-page text-text-secondary"
+          variant="page"
+          className="text-text-secondary"
         >
           <ChevronRight size={18} />
-        </button>
+        </Button>
       </div>
     );
   };

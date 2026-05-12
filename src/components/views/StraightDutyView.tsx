@@ -6,7 +6,9 @@ import { DataTable } from '../common/DataTable';
 import { Modal } from '../common/Modal';
 import { Select } from '../common/Select';
 import { DatePicker } from '../common/DatePicker';
+import { Button } from '../common/Button';
 import { cn } from '../../lib/utils';
+import { Check, X } from 'lucide-react';
 
 export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
   const { showToast } = useToast();
@@ -92,8 +94,24 @@ export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
       accessor: (record: typeof records[0]) => (
         record.status === 'Pending' ? (
           <div className="flex justify-end gap-2">
-            <button onClick={() => approveRecord(record.id)} className="btn-secondary px-3 text-emerald-700 hover:bg-emerald-50">Approve</button>
-            <button onClick={() => rejectRecord(record.id)} className="btn-secondary px-3 text-red-700 hover:bg-red-50">Reject</button>
+            <Button 
+              onClick={() => approveRecord(record.id)} 
+              variant="secondary"
+              size="sm"
+              className="px-3 text-emerald-700 hover:bg-emerald-50"
+              leftIcon={<Check size={14} />}
+            >
+              Approve
+            </Button>
+            <Button 
+              onClick={() => rejectRecord(record.id)} 
+              variant="secondary"
+              size="sm"
+              className="px-3 text-red-700 hover:bg-red-50"
+              leftIcon={<X size={14} />}
+            >
+              Reject
+            </Button>
           </div>
         ) : null
       ),
@@ -109,12 +127,13 @@ export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
           <p className="text-text-secondary text-sm">View and manage employee straight duty records and approvals.</p>
         </div>
         {isAssistant && (
-          <button 
+          <Button 
             onClick={() => setIsModalOpen(true)}
-            className="btn-primary"
+            variant="primary"
+            leftIcon={<Plus size={18} />}
           >
-            <Plus size={18} className="mr-2" /> File Straight Duty
-          </button>
+            File Straight Duty
+          </Button>
         )}
       </div>
 
@@ -146,10 +165,10 @@ export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
         title="File Straight Duty"
         maxWidth="max-w-md"
         footer={
-          <>
-            <button onClick={() => setIsModalOpen(false)} className="btn-secondary text-[14px]">Cancel</button>
-            <button onClick={handleFile} className="btn-primary text-[14px]">Submit Request</button>
-          </>
+          <div className="flex gap-3 w-full">
+            <Button onClick={() => setIsModalOpen(false)} variant="secondary" className="flex-1">Cancel</Button>
+            <Button onClick={handleFile} variant="primary" className="flex-1">Submit Request</Button>
+          </div>
         }
       >
         <div className="p-6 flex flex-col gap-6">

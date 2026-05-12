@@ -3,6 +3,7 @@ import { cn } from "../../lib/utils";
 import { Select } from "../common/Select";
 import { DatePicker } from "../common/DatePicker";
 import { DataTable } from "../common/DataTable";
+import { Button } from "../common/Button";
 import {
   Download,
   RefreshCw,
@@ -186,15 +187,17 @@ export function SmsLogsView() {
       headerClassName: "text-center",
       className: "text-center",
       accessor: (log: SmsLog) => (
-        <button
-          className="btn-icon-sm mx-auto"
+        <Button
+          variant="ghost"
+          size="xs"
+          className="mx-auto h-9 w-9 p-0 min-w-0"
           onClick={(e) => {
             e.stopPropagation();
             setShowDetails(log.id);
           }}
         >
           <Eye size={18} />
-        </button>
+        </Button>
       )
     }
   ];
@@ -254,12 +257,12 @@ export function SmsLogsView() {
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-end gap-3 items-end md:items-center">
         <div className="flex items-center gap-3">
-          <button className="btn-secondary btn-sm" onClick={handleExportLogs}>
-            <Download size={16} /> Export CSV
-          </button>
-          <button onClick={fetchLogs} className="btn-secondary btn-sm text-primary">
-            <RefreshCw size={16} className={cn(loading && "animate-spin")} /> Refresh
-          </button>
+          <Button variant="secondary" size="sm" onClick={handleExportLogs} leftIcon={<Download size={16} />}>
+            Export CSV
+          </Button>
+          <Button onClick={fetchLogs} variant="secondary" size="sm" className="text-primary" leftIcon={<RefreshCw size={16} className={cn(loading && "animate-spin")} />}>
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -350,12 +353,14 @@ export function SmsLogsView() {
               <h3 className="text-[16px] font-medium text-[#1a1a1a]">
                 SMS Details
               </h3>
-              <button
-                className="btn-icon-sm"
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-9 w-9 p-0 min-w-0"
                 onClick={() => setShowDetails(null)}
               >
                 <XIcon size={20} />
-              </button>
+              </Button>
             </div>
 
             <div className="p-6 flex flex-col gap-6">
@@ -433,9 +438,9 @@ export function SmsLogsView() {
 
               {activeDetails.status === "Failed" && (
                 <div className="mt-8 flex justify-center">
-                  <button className="btn-secondary text-primary w-1/2">
-                    <Send size={16} /> Retry SMS
-                  </button>
+                  <Button variant="secondary" className="text-primary w-1/2 mx-auto" leftIcon={<Send size={16} />}>
+                    Retry SMS
+                  </Button>
                 </div>
               )}
             </div>

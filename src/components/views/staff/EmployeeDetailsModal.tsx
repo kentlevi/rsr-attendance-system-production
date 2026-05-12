@@ -3,6 +3,7 @@ import { X as XIcon, CheckCircle2, Clock, Briefcase, Wallet, User, Calendar, Bui
 import { Modal } from '../../common/Modal';
 import { settingsService } from '../../../services/SettingsService';
 import { formatISOToDisplay, formatTimeTo12h } from '../../../lib/utils';
+import { Button } from '../../common/Button';
 
 export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onResetPin, onToggleStatus, onDelete }: any) {
   const [activeTab, setActiveTab] = useState('overview');
@@ -34,49 +35,55 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
       footer={
         <div className="w-full flex flex-col gap-4">
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onEdit}
-              className="btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+              className="flex-1 sm:flex-none justify-center"
+              leftIcon={<Edit size={16} className="text-text-muted" />}
             >
-              <Edit size={16} className="text-text-muted" /> Edit
-            </button>
-            <button
+              Edit
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onToggleStatus}
-              className={`btn-secondary btn-sm flex-1 sm:flex-none justify-center ${
+              className={cn(
+                "flex-1 sm:flex-none justify-center",
                 employee.status === "Active"
                   ? "border-red-100 text-red-600 hover:bg-red-50"
                   : "border-green-100 text-green-600 hover:bg-green-50"
-              }`}
-            >
-              {employee.status === "Active" ? (
-                <>
-                  <UserX size={16} /> Deactivate
-                </>
-              ) : (
-                <>
-                  <UserCheck size={16} /> Activate
-                </>
               )}
-            </button>
-            <button
+              leftIcon={employee.status === "Active" ? <UserX size={16} /> : <UserCheck size={16} />}
+            >
+              {employee.status === "Active" ? "Deactivate" : "Activate"}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onDelete}
-              className="btn-secondary btn-sm flex-1 sm:flex-none justify-center text-red-600 border-red-100 hover:bg-red-50"
+              className="flex-1 sm:flex-none justify-center text-red-600 border-red-100 hover:bg-red-50"
+              leftIcon={<Trash2 size={16} />}
             >
-              <Trash2 size={16} /> Delete
-            </button>
-            <button
+              Delete
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onResetPin}
-              className="btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+              className="flex-1 sm:flex-none justify-center"
+              leftIcon={<Lock size={16} />}
             >
-              <Lock size={16} /> Reset
-            </button>
+              Reset
+            </Button>
           </div>
-          <button
+          <Button
+            variant="primary"
             onClick={onClose}
-            className="btn-primary w-full sm:hidden"
+            className="w-full sm:hidden"
           >
             Close
-          </button>
+          </Button>
         </div>
       }
     >
@@ -96,7 +103,7 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
           
           <div className="flex flex-col gap-1 sm:mt-1 flex-1 min-w-0 w-full">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <h3 className="text-[22px] sm:text-[20px] font-bold text-[#1a1a1a] truncate">{employee.name}</h3>
+              <h3 className="text-[22px] sm:text-[20px] font-bold text-[#1a1a1a]">{employee.name}</h3>
               <span className="text-[14px] font-mono text-text-muted bg-slate-100 px-2 py-0.5 rounded">#{employee.employeeId || employee.id.slice(-6)}</span>
               <div className="flex justify-center sm:justify-start">
                 {employee.status === 'Active' && <span className="px-2 py-0.5 rounded-md bg-[#E8F3EE] text-[#0B7A4B] text-[12px] sm:text-[14px] font-bold tracking-wide uppercase">Active</span>}
@@ -125,32 +132,53 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
         </div>
 
         <div className="flex items-center border-b border-border/60 mb-6 space-x-6 sm:space-x-8 overflow-x-auto whitespace-nowrap hide-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
-           <button 
+           <Button 
+             variant="ghost"
              onClick={() => setActiveTab('overview')}
-             className={`flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] transition-colors ${activeTab === 'overview' ? 'text-[#0B7A4B] border-b-2 border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a]'}`}>
+             className={cn(
+               "flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] rounded-none border-b-2 transition-colors h-auto px-0",
+               activeTab === 'overview' ? 'text-[#0B7A4B] border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a] border-transparent'
+             )}>
              Overview
-           </button>
-           <button 
+           </Button>
+           <Button 
+             variant="ghost"
              onClick={() => setActiveTab('employment')}
-             className={`flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] transition-colors ${activeTab === 'employment' ? 'text-[#0B7A4B] border-b-2 border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a]'}`}>
+             className={cn(
+               "flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] rounded-none border-b-2 transition-colors h-auto px-0",
+               activeTab === 'employment' ? 'text-[#0B7A4B] border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a] border-transparent'
+             )}>
              Employment
-           </button>
-           <button 
+           </Button>
+           <Button 
+             variant="ghost"
              onClick={() => setActiveTab('financial')}
-             className={`flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] transition-colors ${activeTab === 'financial' ? 'text-[#0B7A4B] border-b-2 border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a]'}`}>
+             className={cn(
+               "flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] rounded-none border-b-2 transition-colors h-auto px-0",
+               activeTab === 'financial' ? 'text-[#0B7A4B] border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a] border-transparent'
+             )}>
              Financial
-           </button>
-           <button 
+           </Button>
+           <Button 
+             variant="ghost"
              onClick={() => setActiveTab('access')}
-             className={`flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] transition-colors ${activeTab === 'access' ? 'text-[#0B7A4B] border-b-2 border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a]'}`}>
+             className={cn(
+               "flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] rounded-none border-b-2 transition-colors h-auto px-0",
+               activeTab === 'access' ? 'text-[#0B7A4B] border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a] border-transparent'
+             )}>
              Access
-           </button>
-           <button 
+           </Button>
+           <Button 
+             variant="ghost"
              onClick={() => setActiveTab('logs')}
-             className={`flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] transition-colors ${activeTab === 'logs' ? 'text-[#0B7A4B] border-b-2 border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a]'}`}>
+             className={cn(
+               "flex-shrink-0 text-[16px] font-medium pb-3 -mb-[2px] rounded-none border-b-2 transition-colors h-auto px-0",
+               activeTab === 'logs' ? 'text-[#0B7A4B] border-[#0B7A4B]' : 'text-[#64748B] hover:text-[#1a1a1a] border-transparent'
+             )}>
              Logs
-           </button>
+           </Button>
         </div>
+
 
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
@@ -346,9 +374,14 @@ export function EmployeeDetailsModal({ employee, isOpen, onClose, onEdit, onRese
                 <span className="font-medium text-[#DC2626]">Reset Access Credentials</span>
                 <span className="text-[#DC2626]/80 text-[16px]">Resetting credentials will remove facial profile and require re-enrollment.</span>
               </div>
-              <button onClick={onResetPin} className="btn-danger btn-xs">
+              <Button 
+                onClick={onResetPin} 
+                variant="primary" 
+                size="sm"
+                className="bg-[#DC2626] hover:bg-[#B91C1C] border-none text-white px-4"
+              >
                 Reset Access
-              </button>
+              </Button>
             </div>
           </div>
         )}

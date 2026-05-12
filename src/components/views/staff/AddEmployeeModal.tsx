@@ -11,6 +11,7 @@ import {
 import { Modal } from "../../common/Modal";
 import { Select } from "../../common/Select";
 import { DatePicker } from "../../common/DatePicker";
+import { Button } from "../../common/Button";
 import { cn, formatTimeTo12h, resizeImage } from "../../../lib/utils";
 import Webcam from "react-webcam";
 import { settingsService } from "../../../services/SettingsService";
@@ -311,13 +312,15 @@ export function AddEmployeeModal({
       maxWidth="max-w-[700px]"
       footer={
         <div className="flex flex-row w-full gap-3 sm:justify-end">
-          <button
+          <Button
             onClick={onClose}
-            className="btn-secondary flex-1 sm:flex-initial sm:btn-sm"
+            variant="secondary"
+            size="sm"
+            className="flex-1 sm:flex-initial"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={
               activeTab === "personal"
                 ? () => setActiveTab("employment")
@@ -327,24 +330,24 @@ export function AddEmployeeModal({
                     ? () => setActiveTab("account")
                     : handleSubmit
             }
-            disabled={isSubmitting}
-            className="btn-primary flex-1 sm:flex-initial sm:btn-sm flex items-center justify-center gap-2"
+            isLoading={isSubmitting}
+            className="flex-1 sm:flex-initial"
+            size="sm"
           >
-            {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
             {employeeToEdit 
               ? (activeTab === "account" ? "Save Changes" : "Next")
               : (activeTab === "account" ? "Save Employee" : "Next")
             }
-          </button>
+          </Button>
           {employeeToEdit && activeTab !== "account" && (
-            <button
+            <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="flex-1 sm:flex-initial btn-primary sm:btn-sm flex items-center justify-center gap-2"
+              isLoading={isSubmitting}
+              className="flex-1 sm:flex-initial"
+              size="sm"
             >
-              {isSubmitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
               Save Changes
-            </button>
+            </Button>
           )}
         </div>
       }
@@ -352,51 +355,56 @@ export function AddEmployeeModal({
       <div className="flex flex-col">
         {/* Tabs */}
         <div className="flex items-center border-b border-border/60 px-5 sm:px-6 sticky top-0 bg-white z-10 overflow-x-auto whitespace-nowrap hide-scrollbar -mx-5 sm:mx-0">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab("personal")}
             className={cn(
-              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 rounded-none border-b-2 transition-colors h-auto",
               activeTab === "personal"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
             Personal
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab("employment")}
             className={cn(
-              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 rounded-none border-b-2 transition-colors h-auto",
               activeTab === "employment"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
             Employment
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab("financial")}
             className={cn(
-              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 rounded-none border-b-2 transition-colors h-auto",
               activeTab === "financial"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
             Financial
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => setActiveTab("account")}
             className={cn(
-              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 border-b-2 transition-colors text-center",
+              "flex-shrink-0 text-[14px] sm:text-[16px] font-medium py-4 px-3 rounded-none border-b-2 transition-colors h-auto",
               activeTab === "account"
                 ? "border-[#0B7A4B] text-[#0B7A4B]"
                 : "border-transparent text-[#64748B] hover:text-[#1a1a1a]",
             )}
           >
             Facial Data
-          </button>
+          </Button>
         </div>
+
 
         {/* Content */}
         <div ref={scrollContainerRef} className="p-5 sm:p-8 pb-12">
@@ -977,12 +985,15 @@ export function AddEmployeeModal({
 
                       {isCameraReady && (
                         <div className="absolute bottom-4 left-0 right-0 z-10 flex justify-center">
-                          <button 
+                          <Button 
                             onClick={(e) => { e.preventDefault(); handleCapture(); }}
-                            className="btn-primary btn-sm px-6 shadow-lg"
+                            variant="primary"
+                            size="sm"
+                            className="px-6 shadow-lg"
+                            leftIcon={<Camera size={16} />}
                           >
-                            <Camera size={16} /> Capture ({capturedImages.length}/5)
-                          </button>
+                            Capture ({capturedImages.length}/5)
+                          </Button>
                         </div>
                       )}
                     </>
@@ -998,12 +1009,14 @@ export function AddEmployeeModal({
                         {capturedImages.length >= 5 ? "5 samples captured" : <>Position the employee in front<br className="hidden sm:block" /> of the camera</>}
                       </p>
                       {capturedImages.length < 5 && (
-                        <button 
+                        <Button 
                           onClick={(e) => { e.preventDefault(); setIsCapturing(true); }}
-                          className="btn-primary btn-sm w-full sm:w-[200px] px-8"
+                          size="sm"
+                          className="w-full sm:w-[200px] px-8"
+                          leftIcon={<Camera size={16} />}
                         >
-                          <Camera size={16} /> Start Capture
-                        </button>
+                          Start Capture
+                        </Button>
                       )}
                     </>
                   )}
@@ -1068,13 +1081,15 @@ export function AddEmployeeModal({
                         </div>
                       ))}
                       {capturedImages.length > 0 && (
-                        <button
+                        <Button
                           title="Clear Photos"
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => { e.preventDefault(); setCapturedImages([]); setIsCapturing(false); }}
-                          className="btn-ghost btn-sm text-red-500 hover:bg-red-50 px-2 h-10 flex items-center transition-colors"
+                          className="text-red-500 hover:bg-red-50 px-2 h-10 flex items-center transition-colors"
                         >
                           Clear
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>

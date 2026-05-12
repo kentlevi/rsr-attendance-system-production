@@ -4,14 +4,15 @@ import { PageLayout } from './layout/PageLayout';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '../context/ToastContext';
+import { Button } from './common/Button';
 
 interface AdminLoginProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
 }
 
 export default function AdminLogin({ onNavigate }: AdminLoginProps) {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isAssistant, setIsAssistant] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -19,11 +20,16 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      setLoginError("Please enter both email and password.");
+      return;
+    }
+
     setIsLoggingIn(true);
     setLoginError("");
 
-    const emailToUse = isAssistant ? "hr@rsr.com" : "admin@rsr.com";
-    const usernameToUse = isAssistant ? "assistant" : "admin";
+    const emailToUse = email.trim();
     
     let firebasePassword = password;
     if (firebasePassword.length < 6) {
@@ -35,10 +41,19 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
         await signInWithEmailAndPassword(auth, emailToUse, firebasePassword);
       } catch (err: any) {
         if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            const defaultFirebasePass = usernameToUse.padEnd(6, '0');
-            // Check if we can rescue the account because they typed their correct new password
-            // but Firebase Auth is stuck on the default password.
-            if (password.trim() !== (isAssistant ? "assistant" : "admin")) {
+            // We can no longer assume "admin" or "assistant" based on a toggle.
+            // If they are logging in for the first time, we check if they used the default emails.
+            let usernameToUse = "";
+            let defaultFirebasePass = "";
+            if (emailToUse === "admin@rsrengineering.com" || emailToUse === "admin@rsr.com") {
+                usernameToUse = "admin";
+                defaultFirebasePass = "admin".padEnd(6, '0');
+            } else if (emailToUse === "hr@rsrengineering.com" || emailToUse === "hr@rsr.com") {
+                usernameToUse = "assistant";
+                defaultFirebasePass = "assistant".padEnd(6, '0');
+            }
+
+            if (usernameToUse && password.trim() !== (usernameToUse === "assistant" ? "assistant" : "admin")) {
                 try {
                     // Sign in with default password
                     await signInWithEmailAndPassword(auth, emailToUse, defaultFirebasePass);
@@ -61,7 +76,7 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                 } catch (rescueErr) {
                     throw new Error("Invalid credentials");
                 }
-            } else {
+            } else if (usernameToUse) {
                 // They typed the default password. Let's try to create if it doesn't exist.
                 try {
                     const { createUserWithEmailAndPassword } = await import('firebase/auth');
@@ -69,29 +84,64 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                 } catch (createErr: any) {
                     throw new Error("Invalid credentials");
                 }
+            } else {
+                // Not a default email, and login failed. Just throw.
+                throw new Error("Invalid credentials");
             }
         } else {
           throw err;
         }
       }
       
-      const { adminAccountService } = await import('../services/AdminAccountService');
-      const account = await adminAccountService.getAccount(usernameToUse, {
-        fullName: isAssistant ? "Assistant" : "Administrator",
-        username: usernameToUse,
-        email: emailToUse,
-        department: "Administration",
-        mobile: "",
-        position: isAssistant ? "HR Assistant" : "System Administrator",
-        gender: "Any",
-        dateRegistered: new Date().toISOString(),
-        address: "",
-        lastLogin: "",
-        timezone: "(GMT+08:00) Asia/Manila",
-        role: isAssistant ? "Assistant" : "Administrator",
-        avatar: "https://i.pravatar.cc/150",
-        password: password.trim(),
-      });
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../lib/firebase');
+      
+      // Look up the admin account by email
+      const q = query(collection(db, "adminAccounts"), where("email", "==", emailToUse));
+      const querySnapshot = await getDocs(q);
+      
+      let usernameToUse = "";
+      let isAssistant = false;
+      
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        usernameToUse = doc.id;
+        isAssistant = doc.data().role === "Assistant";
+        
+        // Save login id to session so Dashboard knows who logged in
+        sessionStorage.setItem("rsr_admin_login_id", usernameToUse);
+      } else {
+        // Fallback for first time initialization if the document doesn't exist yet but auth succeeded
+        if (emailToUse === "admin@rsrengineering.com" || emailToUse === "admin@rsr.com") {
+            usernameToUse = "admin";
+            isAssistant = false;
+        } else if (emailToUse === "hr@rsrengineering.com" || emailToUse === "hr@rsr.com") {
+            usernameToUse = "assistant";
+            isAssistant = true;
+        } else {
+            // Should not happen unless admin is created without firestore document
+            usernameToUse = "admin"; 
+        }
+        sessionStorage.setItem("rsr_admin_login_id", usernameToUse);
+        
+        const { adminAccountService } = await import('../services/AdminAccountService');
+        await adminAccountService.getAccount(usernameToUse, {
+          fullName: isAssistant ? "Assistant" : "Administrator",
+          username: usernameToUse,
+          email: emailToUse,
+          department: "Administration",
+          mobile: "",
+          position: isAssistant ? "HR Assistant" : "System Administrator",
+          gender: "Any",
+          dateRegistered: new Date().toISOString(),
+          address: "",
+          lastLogin: "",
+          timezone: "(GMT+08:00) Asia/Manila",
+          role: isAssistant ? "Assistant" : "Administrator",
+          avatar: "https://i.pravatar.cc/150",
+          password: password.trim(),
+        });
+      }
 
       showToast("Login successful!", "success");
       onNavigate('admin');
@@ -124,25 +174,21 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">
-          <div className="flex bg-slate-100 p-1.5 rounded-xl mb-2">
-            <button
-              type="button"
-              onClick={() => { setIsAssistant(false); setLoginError(""); }}
-              className={`flex-1 py-3 text-[15px] font-semibold rounded-lg transition-all ${
-                !isAssistant ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
+          <div className="flex flex-col gap-2">
+            <label className="block text-[16px] font-medium text-text-primary">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setLoginError("");
+              }}
+              placeholder="Enter admin email"
+              className={`control-field h-12 px-4 ${
+                loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
               }`}
-            >
-              Administrator
-            </button>
-            <button
-              type="button"
-              onClick={() => { setIsAssistant(true); setLoginError(""); }}
-              className={`flex-1 py-3 text-[15px] font-semibold rounded-lg transition-all ${
-                isAssistant ? "bg-white text-text-primary shadow-sm" : "text-text-secondary hover:text-text-primary"
-              }`}
-            >
-              Assistant
-            </button>
+              autoFocus
+            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -161,13 +207,14 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                 }`}
                 autoFocus
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors p-0 w-8 h-8 min-w-0 rounded-full"
               >
                 {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
-              </button>
+              </Button>
             </div>
             {loginError && (
               <p className="text-[14px] font-medium text-red-600">
@@ -176,13 +223,14 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
             )}
           </div>
 
-          <button 
+          <Button 
             type="submit"
-            disabled={isLoggingIn}
-            className="btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+            isLoading={isLoggingIn}
+            fullWidth
+            className="mt-2"
           >
-            {isLoggingIn ? "Authenticating..." : "Login"}
-          </button>
+            Login
+          </Button>
         </form>
       </div>
     </PageLayout>

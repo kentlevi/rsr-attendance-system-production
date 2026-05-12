@@ -210,15 +210,17 @@ export function PhotosView() {
              )}
           </div>
           <div className="flex items-center gap-3">
-            <button className="btn-secondary btn-sm" onClick={handleExportPhotos}>
-              <Download size={16} /> Export
-            </button>
-            <button 
-              className="btn-danger btn-sm"
+            <Button variant="secondary" size="sm" onClick={handleExportPhotos} leftIcon={<Download size={16} />}>
+              Export
+            </Button>
+            <Button 
+              variant="danger" 
+              size="sm"
               onClick={handleClearPhotos}
+              leftIcon={<Trash2 size={16} />}
             >
-              <Trash2 size={16} /> Clear all
-            </button>
+              Clear all
+            </Button>
           </div>
         </div>
 
@@ -257,16 +259,17 @@ export function PhotosView() {
             <option value="Lunch Out">Lunch Out</option>
           </Select>
 
-          <button 
+          <Button 
             onClick={() => {
               setSelectedEmployee("");
               setSelectedDate("");
               setSelectedPunchType("");
             }}
-            className="btn-secondary"
+            variant="secondary"
+            leftIcon={<RefreshCw size={16} className="text-primary" />}
           >
-            <RefreshCw size={16} className="text-primary" /> Reset
-          </button>
+            Reset
+          </Button>
         </div>
 
         {paginatedPhotos.length > 0 ? (
@@ -290,12 +293,14 @@ export function PhotosView() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-60 group-hover:opacity-80 transition-opacity pointer-events-none" />
                     
-                    <button 
+                    <Button 
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setSelectedPhoto(photo)}
-                      className="absolute top-4 right-4 btn-icon bg-white/20 border-transparent text-white backdrop-blur-md opacity-0 group-hover:opacity-100 hover:bg-white/40 hover:text-white active:scale-90"
+                      className="absolute top-4 right-4 bg-white/20 border-transparent text-white backdrop-blur-md opacity-0 group-hover:opacity-100 hover:bg-white/40 hover:text-white active:scale-90 p-0 h-10 w-10 min-w-0"
                     >
                       <ZoomIn size={20} />
-                    </button>
+                    </Button>
 
                     <div className="absolute top-4 left-4">
                        <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[16px] font-bold uppercase tracking-widest shadow-lg", getTagColor(photo.tag))}>
@@ -341,39 +346,37 @@ export function PhotosView() {
             Showing <span className="text-[#1a1a1a] font-medium">{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredPhotos.length)}</span> of <span className="text-[#1a1a1a] font-medium">{filteredPhotos.length}</span> photos
           </div>
           <div className="flex items-center gap-1.5">
-            <button 
+            <Button 
+              variant="icon-sm"
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(prev => prev - 1)}
-              className="btn-icon text-text-muted hover:text-primary hover:border-primary active:scale-90"
+              className="active:scale-90"
             >
               <ChevronLeft size={20} />
-            </button>
+            </Button>
             
             {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
                const pageNum = i + 1;
                return (
-                 <button 
+                 <Button 
                    key={pageNum}
+                   variant={currentPage === pageNum ? "primary" : "page"}
                    onClick={() => setCurrentPage(pageNum)}
-                   className={cn(
-                     "btn-icon font-semibold active:scale-90",
-                     currentPage === pageNum 
-                       ? "bg-primary text-white" 
-                       : "border border-border bg-white text-text-secondary hover:border-primary hover:text-primary"
-                   )}
+                   className="active:scale-90 p-0 h-9 w-9 min-w-0"
                  >
                    {pageNum}
-                 </button>
+                 </Button>
                );
             })}
 
-            <button 
+            <Button 
+              variant="icon-sm"
               disabled={currentPage === totalPages || totalPages === 0}
               onClick={() => setCurrentPage(prev => prev + 1)}
-              className="btn-icon text-text-muted hover:text-primary hover:border-primary active:scale-90"
+              className="active:scale-90"
             >
               <ChevronRight size={20} />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -396,12 +399,14 @@ export function PhotosView() {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative bg-white w-full max-w-4xl rounded-[32px] overflow-hidden shadow-2xl flex flex-col md:flex-row h-full max-h-[85vh]"
             >
-              <button 
+              <Button 
+                variant="ghost"
+                size="xs"
                 onClick={() => setSelectedPhoto(null)}
-                className="absolute top-6 right-6 z-20 btn-icon bg-black/20 border-transparent text-white backdrop-blur-md hover:bg-black/40 hover:text-white active:scale-90"
+                className="absolute top-6 right-6 z-20 bg-black/20 border-transparent text-white backdrop-blur-md hover:bg-black/40 hover:text-white active:scale-90 p-0 h-10 w-10 min-w-0"
               >
                 <X size={24} />
-              </button>
+              </Button>
 
               <div className="md:w-3/5 h-full bg-black flex items-center justify-center relative overflow-hidden">
                 <img 
@@ -460,12 +465,12 @@ export function PhotosView() {
                 </div>
 
                 <div className="mt-auto grid grid-cols-2 gap-3 pt-8">
-                  <button className="btn-secondary w-full">
-                    <Download size={18} /> Download
-                  </button>
-                  <button className="btn-primary w-full">
-                    <Search size={18} /> Profile
-                  </button>
+                  <Button variant="secondary" fullWidth leftIcon={<Download size={18} />}>
+                    Download
+                  </Button>
+                  <Button variant="primary" fullWidth leftIcon={<Search size={18} />}>
+                    Profile
+                  </Button>
                 </div>
               </div>
             </motion.div>

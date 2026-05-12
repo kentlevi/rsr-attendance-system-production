@@ -12,6 +12,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Button } from "./Button";
 
 export interface AppNotification {
   id: string;
@@ -59,18 +60,22 @@ export function NotificationModal({
       maxWidth="max-w-[480px]"
       footer={
         <div className="flex items-center justify-between w-full">
-          <button 
+          <Button 
+            variant="ghost"
+            size="sm"
             onClick={onClearAll}
-            className="flex items-center gap-2 text-[14px] font-medium text-slate-400 hover:text-red-500 transition-colors"
+            className="text-slate-400 hover:text-red-500"
+            leftIcon={<Trash2 size={16} />}
           >
-            <Trash2 size={16} /> Clear All
-          </button>
-          <button 
+            Clear All
+          </Button>
+          <Button 
+            variant="primary"
+            className="px-8" 
             onClick={onClose}
-            className="px-6 py-2 rounded-xl bg-slate-900 text-white font-bold text-[16px] hover:bg-slate-800 transition-colors"
           >
             Close
-          </button>
+          </Button>
         </div>
       }
     >
@@ -80,12 +85,14 @@ export function NotificationModal({
           <span className="text-[16px] font-medium text-slate-500 uppercase tracking-wider">
             Recent Alerts
           </span>
-          <button 
+          <Button 
+            variant="ghost"
+            size="sm"
             onClick={onMarkAllAsRead}
-            className="text-[14px] font-medium text-[#0B7A4B] hover:underline"
+            className="text-[#0B7A4B] hover:underline p-0 h-auto font-medium"
           >
             Mark all as read
-          </button>
+          </Button>
         </div>
 
         {/* List */}
@@ -131,9 +138,13 @@ export function NotificationModal({
                     </p>
                   </div>
 
-                  <button className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all">
+                  <Button 
+                    variant="ghost"
+                    size="xs"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all h-8 w-8 min-w-0 rounded-full"
+                  >
                     <MoreVertical size={16} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))

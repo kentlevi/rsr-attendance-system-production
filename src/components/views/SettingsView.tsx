@@ -20,6 +20,7 @@ import {
   Trash2,
   ShieldCheck,
 } from "lucide-react";
+import { Button } from "../common/Button";
 
 export function SettingsView() {
   const { showToast } = useToast();
@@ -163,17 +164,19 @@ export function SettingsView() {
                       }
                     }}
                   />
-                  <button 
+                  <Button 
                     onClick={() => {
                       if (newSite.trim() && !settings.sites.includes(newSite.trim())) {
                         handleUpdate("sites", [...settings.sites, newSite.trim()]);
                         setNewSite("");
                       }
                     }}
-                    className="btn-secondary btn-xs bg-[#F1F5F9] hover:bg-[#E2E8F0]"
+                    variant="secondary"
+                    size="xs"
+                    className="bg-[#F1F5F9] hover:bg-[#E2E8F0]"
                   >
                     Add
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -396,21 +399,26 @@ export function SettingsView() {
                       
                       <div className="flex-1 min-w-[20px]" />
                       
-                      <button onClick={() => {
-                        handleUpdate("shiftTemplates", settings.shiftTemplates?.filter(x => x.id !== t.id));
-                      }} className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-center">
+                      <Button 
+                        onClick={() => {
+                          handleUpdate("shiftTemplates", settings.shiftTemplates?.filter(x => x.id !== t.id));
+                        }} 
+                        variant="ghost"
+                        size="xs"
+                        className="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors self-end sm:self-center h-auto w-auto"
+                      >
                         <XIcon size={18} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-              <button onClick={() => {
+              <Button onClick={() => {
                  const newId = 'shift_' + Date.now();
                  handleUpdate("shiftTemplates", [...(settings.shiftTemplates || []), { id: newId, name: 'New Shift', startTime: '18:00', endTime: '02:00', gracePeriodMins: 10, isNightShift: false }]);
-              }} className="btn-secondary btn-sm self-start mt-1">
+              }} variant="secondary" size="sm" className="self-start mt-1">
                  + Add Custom Shift
-              </button>
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 gap-6 pt-4 border-t border-border mt-2">
@@ -533,25 +541,19 @@ export function SettingsView() {
 
             <div className="flex flex-col gap-3 mt-2">
               <div className="flex items-center gap-4">
-                <button
+                <Button
                   onClick={handleTestSms}
-                  disabled={testSmsStatus === "sending"}
-                  className="btn-secondary"
+                  isLoading={testSmsStatus === "sending"}
+                  variant="secondary"
+                  leftIcon={testSmsStatus !== "sending" && <Send size={16} className="text-primary" />}
                 >
-                  {testSmsStatus === "sending" ? (
-                    <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
-                  ) : (
-                    <Send size={16} className="text-primary" />
-                  )}
-                  {testSmsStatus === "sending"
-                    ? "Sending"
-                    : testSmsStatus === "success"
-                      ? "Sent!"
-                      : testSmsStatus === "error"
-                        ? "Failed"
-                        : "Test SMS"}
-                </button>
-                <button
+                  {testSmsStatus === "success"
+                    ? "Sent!"
+                    : testSmsStatus === "error"
+                      ? "Failed"
+                      : "Test SMS"}
+                </Button>
+                <Button
                   onClick={() => {
                     showToast("Running AWOL Check", { loading: true });
                     import("../../services/AwolService").then(m => {
@@ -560,10 +562,11 @@ export function SettingsView() {
                       });
                     });
                   }}
-                  className="btn-primary"
+                  variant="primary"
+                  leftIcon={<ShieldCheck size={16} />}
                 >
-                  <ShieldCheck size={16} /> Run AWOL Check
-                </button>
+                  Run AWOL Check
+                </Button>
               </div>
               <div className="flex flex-col">
                 <span className="text-[16px] text-[#64748B]">
@@ -675,15 +678,17 @@ export function SettingsView() {
             </div>
 
             <div className="mt-2 pt-5 border-t border-border flex justify-end">
-              <button 
-                onClick={() => {
-                  showToast("Dry run: estimating records to delete...", { loading: true });
-                  setTimeout(() => showToast("Dry run complete: 0 old records found."), 2000);
-                }}
-                className="btn-secondary text-[#DC2626] hover:bg-red-50 hover:border-red-200"
-              >
-                <Trash2 size={16} /> Run Cleanup (Dry-Run)
-              </button>
+                <Button 
+                  onClick={() => {
+                    showToast("Dry run: estimating records to delete...", { loading: true });
+                    setTimeout(() => showToast("Dry run complete: 0 old records found."), 2000);
+                  }}
+                  variant="secondary"
+                  className="text-[#DC2626] hover:bg-red-50 hover:border-red-200"
+                  leftIcon={<Trash2 size={16} />}
+                >
+                  Run Cleanup (Dry-Run)
+                </Button>
             </div>
           </div>
         </div>

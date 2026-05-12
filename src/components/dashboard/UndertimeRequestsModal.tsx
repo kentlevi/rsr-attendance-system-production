@@ -4,6 +4,7 @@ import { UndertimeRequestModel } from "../../models/UndertimeRequest";
 import { employeeService } from "../../services/EmployeeService";
 import { Paperclip } from "lucide-react";
 import { DataTable } from "../common/DataTable";
+import { Button } from "../common/Button";
 
 interface UndertimeRequestsModalProps {
   isOpen: boolean;
@@ -139,18 +140,22 @@ export function UndertimeRequestsModal({
       accessor: (req: UndertimeRequestModel) => (
         req.data.status === 'Pending Review' ? (
           <div className="flex items-center justify-end gap-2">
-            <button 
+            <Button 
+              variant="secondary"
+              size="sm"
               onClick={() => onApprove?.(req.data.id)}
-              className="btn-secondary px-3 text-emerald-700 hover:bg-emerald-50"
+              className="px-3 text-emerald-700 hover:bg-emerald-50"
             >
               Approve
-            </button>
-            <button 
+            </Button>
+            <Button 
+              variant="secondary"
+              size="sm"
               onClick={() => onReject?.(req.data.id)}
-              className="btn-secondary px-3 text-red-700 hover:bg-red-50"
+              className="px-3 text-red-700 hover:bg-red-50"
             >
               Reject
-            </button>
+            </Button>
           </div>
         ) : null
       ),
