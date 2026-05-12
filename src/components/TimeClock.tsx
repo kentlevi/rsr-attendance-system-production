@@ -605,7 +605,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           <Button 
             onClick={() => handleTimeAction("Time Out")}
             disabled={isProcessing}
-            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
+            className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >
              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
                <LogOut size={18} className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -637,10 +637,30 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                 Please select an action below to proceed with manual PIN entry.
               </p>
               <div className="grid grid-cols-2 gap-3 w-full mt-4">
-                <Button onClick={() => setPendingAction("Time In")} className="h-12 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px]">Time In</Button>
-                <Button onClick={() => setPendingAction("Time Out")} variant="danger" className="h-12 rounded-[14px] bg-[#E03A2E] text-white border-none hover:bg-red-700">Time Out</Button>
-                <Button onClick={() => setPendingAction("Lunch Out")} variant="secondary" className="h-12 rounded-[14px]">Lunch Out</Button>
-                <Button onClick={() => setPendingAction("Lunch In")} variant="secondary" className="h-12 rounded-[14px]">Lunch In</Button>
+                <Button onClick={() => setPendingAction("Time In")} className="h-14 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px] flex items-center gap-2">
+                  <LogIn size={18} />
+                  <span>Time In</span>
+                </Button>
+                <Button onClick={() => setPendingAction("Time Out")} className="h-14 bg-[#0E8A54] hover:bg-[#0C7A4A] rounded-[14px] flex items-center gap-2">
+                  <LogOut size={18} />
+                  <span>Time Out</span>
+                </Button>
+                <Button onClick={() => setPendingAction("Lunch Out")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-warning/20 text-warning">
+                  <Utensils size={18} />
+                  <span>Lunch Out</span>
+                </Button>
+                <Button onClick={() => setPendingAction("Lunch In")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-info/20 text-info">
+                  <Utensils size={18} />
+                  <span>Lunch In</span>
+                </Button>
+                <Button onClick={() => setPendingAction("PM Break Out")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
+                  <Coffee size={18} />
+                  <span>Break Out</span>
+                </Button>
+                <Button onClick={() => setPendingAction("PM Break In")} variant="secondary" className="h-14 rounded-[14px] flex items-center gap-2 border-[#8B5CF6]/20 text-[#8B5CF6]">
+                  <Coffee size={18} />
+                  <span>Break In</span>
+                </Button>
               </div>
             </div>
           ) : (
