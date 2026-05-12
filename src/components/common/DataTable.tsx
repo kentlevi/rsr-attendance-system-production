@@ -24,6 +24,7 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void;
   className?: string;
   minHeight?: string;
+  getRowKey?: (item: T) => string | number;
 }
 
 export function DataTable<T>({
@@ -38,7 +39,8 @@ export function DataTable<T>({
   onPageSizeChange,
   onRowClick,
   className,
-  minHeight = "450px"
+  minHeight = "450px",
+  getRowKey
 }: DataTableProps<T>) {
   const totalPages = Math.ceil(totalItems / pageSize);
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -179,7 +181,7 @@ export function DataTable<T>({
                 ) : (
                 data.map((item, rowIdx) => (
                     <tr 
-                        key={rowIdx} 
+                        key={getRowKey ? getRowKey(item) : rowIdx} 
                         onClick={() => onRowClick?.(item)}
                         className={cn(
                             "hover:bg-slate-50/50 transition-colors group",

@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError } from '../lib/firebase';
 import { LeaveRequest, LeaveRequestModel } from '../models/LeaveRequest';
+import { notificationService } from './NotificationService';
+import { employeeService } from './EmployeeService';
 
 export class LeaveService {
   private requests: LeaveRequest[] = [];
@@ -80,6 +82,17 @@ export class LeaveService {
   async addRequest(request: Omit<LeaveRequest, 'id'>): Promise<void> {
     try {
       await addDoc(collection(db, this.collectionPath), request);
+      
+      // Notify via Telegram
+      const emp = employeeService.getEmployeeByIdSync(request.employeeId);
+      const empName = emp?.data.name || 'An employee';
+      await notificationService.sendTelegramNotification(
+        `<b>📝 New Leave Request</b>\n\n` +
+        `<b>Employee:</b> ${empName}\n` +
+        `<b>Type:</b> ${request.type}\n` +
+        `<b>Period:</b> ${request.startDate} to ${request.endDate}\n` +
+        `<b>Reason:</b> ${request.reason}`
+      );
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
     }

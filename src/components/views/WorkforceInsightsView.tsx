@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   AlertTriangle,
   Timer,
+  History,
   RefreshCw,
   X,
   UserCheck,
@@ -33,7 +34,6 @@ import { StatsCard } from "../common/StatsCard";
 import { DatePicker } from "../common/DatePicker";
 import { DataTable } from "../common/DataTable";
 import { Modal } from "../common/Modal";
-import { ExportPayrollModal } from "../common/ExportPayrollModal";
 import { UndertimeRequestsModal } from "../dashboard/UndertimeRequestsModal";
 import { Button } from "../common/Button";
 import {
@@ -42,6 +42,11 @@ import {
   Cell,
   ResponsiveContainer,
   Tooltip as RechartsTooltip,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
 import { useToast } from "../../context/ToastContext";
 
@@ -177,6 +182,24 @@ export function WorkforceInsightsView() {
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const trendData = useMemo(() => {
+    const data = [];
+    const logs = attendanceService.getAllLogs();
+    const totalStaff = employeeService.getAllEmployeesSync().length || 1;
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const count = logs.filter(l => l.data.date === dateStr).length;
+      data.push({
+        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        attendance: Math.round((count / totalStaff) * 100)
+      });
+    }
+    return data;
+  }, [attendanceLogs]);
+
   const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
 
   const EmptyCardState = ({
@@ -255,10 +278,8 @@ export function WorkforceInsightsView() {
   );
 
   const logsForDate = useMemo(() => {
-    return attendanceLogs.filter(
-      (log) => log.data.date === selectedDateDisplay,
-    );
-  }, [attendanceLogs, selectedDateDisplay]);
+    return attendanceLogs.filter((log) => log.data.date === selectedDate);
+  }, [attendanceLogs, selectedDate]);
 
   // Calculate Stats
   const stats = useMemo(() => {
@@ -570,14 +591,6 @@ export function WorkforceInsightsView() {
         >
           {isRefreshing ? "Refreshing" : "Refresh"}
         </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleExport}
-          leftIcon={<Download size={18} className="text-[#0B7A4B]" />}
-        >
-          Export Report
-        </Button>
       </div>
 
       {/* Stats Cards Row */}
@@ -727,6 +740,7 @@ export function WorkforceInsightsView() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+          getRowKey={(r) => r.id}
           emptyMessage="No attendance records found for the selected criteria."
           className="rounded-none border-none shadow-none"
           minHeight="500px"
@@ -808,67 +822,101 @@ export function WorkforceInsightsView() {
         </div>
 
         {/* Undertime Summary Card */}
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-4 overflow-hidden min-h-[384px]">
-          <div className="flex items-center justify-between gap-4">
-            <h3 className="text-[18px] font-medium text-[#1a1a1a]">
-              Undertime Summary
-            </h3>
+        <div className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-rose-100/50 transition-colors duration-500"></div>
+          
+          <div className="flex items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-sm border border-rose-100/50">
+                <Clock size={20} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-[19px] font-bold text-slate-900 tracking-tight">
+                Undertime Summary
+              </h3>
+            </div>
              {undertimeRequests.length > 0 && (
                <Button
                  variant="ghost"
                  size="sm"
                  onClick={() => setIsUndertimeModalOpen(true)}
-                 className="view-all-link"
+                 className="text-primary font-semibold hover:bg-emerald-50/50 rounded-xl px-4"
                >
                  View all
                </Button>
              )}
           </div>
+          
           {undertimeRequests.length > 0 ? (
-            <>
-              <div className="flex-1 flex flex-col items-center justify-center gap-8">
-                <div className="w-28 h-28 rounded-full border-[8px] border-[#F8FAFC] border-t-[#EF4444] border-r-[#EF4444] flex flex-col items-center justify-center relative shadow-lg shadow-rose-50 ring-1 ring-slate-100">
-                  <Clock
-                    className="text-[#EF4444] absolute -top-5 bg-white rounded-xl p-1.5 border border-border shadow-xl ring-2 ring-rose-50"
-                    size={40}
-                  />
-                  <span className="text-[32px] font-bold text-[#1a1a1a] leading-none">
-                    {stats.undertime}
-                  </span>
-                  <span className="text-[13px] text-text-secondary font-medium uppercase tracking-widest">
-                    Employees
-                  </span>
+            <div className="flex-1 flex flex-col gap-8 relative z-10">
+              <div className="flex flex-col items-center justify-center pt-2">
+                <div className="relative">
+                  {/* Decorative Outer Ring */}
+                  <div className="absolute inset-0 -m-3 rounded-full border border-slate-100/80"></div>
+                  
+                  <div className="w-32 h-32 rounded-full border-[10px] border-slate-50 border-t-rose-500 border-r-rose-500 flex flex-col items-center justify-center relative shadow-inner bg-white">
+                    {/* Floating Icon Label */}
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center">
+                      <div className="bg-rose-500 text-white rounded-xl p-2 shadow-lg shadow-rose-200 ring-4 ring-white transition-transform group-hover:scale-110 duration-300">
+                        <Users size={20} />
+                      </div>
+                    </div>
+                    
+                    <span className="text-[36px] font-black text-slate-900 leading-none tracking-tight">
+                      {stats.undertime}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.1em] mt-1">
+                      Employees
+                    </span>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 w-full">
-                  <div className="bg-[#F8FAFC] border border-border/60 rounded-2xl p-4 flex flex-col items-center gap-2 text-center transition-all cursor-default">
-                    <span className="text-[24px] font-bold text-[#1a1a1a]">
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 w-full">
+                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-100 group/item cursor-default border-b-2 border-b-transparent hover:border-b-amber-400">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500 mb-0.5">
+                    <History size={16} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[22px] font-bold text-slate-900">
                       {pendingUndertime}
                     </span>
-                    <span className="text-[12px] text-text-secondary font-semibold flex items-center gap-1.5 uppercase tracking-tight">
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                       Pending
                     </span>
                   </div>
-                  <div className="bg-[#F8FAFC] border border-border/60 rounded-2xl p-4 flex flex-col items-center gap-2 text-center transition-all cursor-default">
-                    <span className="text-[24px] font-bold text-[#1a1a1a]">
+                </div>
+
+                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-100 group/item cursor-default border-b-2 border-b-transparent hover:border-b-emerald-500">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500 mb-0.5">
+                    <CheckCircle2 size={16} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[22px] font-bold text-slate-900">
                       {approvedUndertime}
                     </span>
-                    <span className="text-[12px] text-text-secondary font-semibold flex items-center gap-1.5 uppercase tracking-tight">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                       Approved
                     </span>
                   </div>
-                  <div className="bg-[#F8FAFC] border border-border/60 rounded-2xl p-4 flex flex-col items-center gap-2 text-center transition-all cursor-default">
-                    <span className="text-[22px] font-bold text-[#1a1a1a] leading-none">
+                </div>
+
+                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-100 group/item cursor-default border-b-2 border-b-transparent hover:border-b-rose-500">
+                  <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500 mb-0.5">
+                    <Timer size={16} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[20px] font-bold text-slate-900 leading-none">
                       {totalUndertimeFormatted}
                     </span>
-                    <span className="text-[12px] text-text-secondary font-semibold uppercase tracking-tight">
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
                       Total Hours
                     </span>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <EmptyCardState
               icon={Clock}
@@ -929,11 +977,69 @@ export function WorkforceInsightsView() {
             ) : (
               <EmptyCardState
                 icon={Activity}
-                title="No live activity"
-                description="Clock-ins and site activity will show here as employees record attendance."
+                title="No activity today"
+                description="Recent clock-ins and outs will appear here."
               />
             )}
           </div>
+        </div>
+
+        {/* Weekly Trend Card */}
+        <div className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
+           <div className="flex items-center gap-3 relative z-10">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-sm border border-emerald-100/50">
+                <Activity size={20} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-[19px] font-bold text-slate-900 tracking-tight">
+                7-Day Trend
+              </h3>
+            </div>
+            
+            <div className="flex-1 w-full h-[240px] mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="colorAttend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    hide 
+                    domain={[0, 100]}
+                  />
+                  <RechartsTooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white border border-slate-100 shadow-xl rounded-xl p-3 flex flex-col gap-1">
+                            <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">{payload[0].payload.name}</span>
+                            <span className="text-[18px] font-black text-emerald-600">{payload[0].value}% Attendance</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="attendance" 
+                    stroke="#10b981" 
+                    strokeWidth={4}
+                    fillOpacity={1} 
+                    fill="url(#colorAttend)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
         </div>
       </div>
 
@@ -952,10 +1058,6 @@ export function WorkforceInsightsView() {
         activity={allActivityFeed}
       />
 
-      <ExportPayrollModal
-        isOpen={isPayrollModalOpen}
-        onClose={() => setIsPayrollModalOpen(false)}
-      />
     </div>
   );
 }

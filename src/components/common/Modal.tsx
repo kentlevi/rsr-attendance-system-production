@@ -52,11 +52,14 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
             className={`relative w-full h-fit flex flex-col min-h-[100dvh] sm:min-h-0 sm:h-auto sm:max-h-[85vh] ${maxWidth} bg-white rounded-3xl shadow-2xl overflow-hidden`}
           >
             {/* Header */}
             <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 bg-white sm:rounded-t-3xl">
-              <h3 className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
+              <h3 id="modal-title" className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
                 {title}
               </h3>
               <Button

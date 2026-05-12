@@ -13,6 +13,7 @@ import { TimePicker } from '../common/TimePicker';
 import { Button } from '../common/Button';
 import { useToast } from '../../context/ToastContext';
 import { FileLeaveModal } from './common/FileLeaveModal';
+import { notificationService } from '../../services/NotificationService';
 
 function getApprovalReason(log: AttendanceLogModel) {
   const reasons = [
@@ -110,6 +111,19 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             : undefined,
         }),
       );
+
+      // Notify via Telegram
+      const employee = employeeService.getEmployeeByIdSync(log.data.employeeId)?.data;
+      if (employee) {
+        await notificationService.sendTelegramNotification(
+          `<b>⚖️ Attendance Reviewed</b>\n\n` +
+          `<b>Employee:</b> ${employee.name}\n` +
+          `<b>Date:</b> ${log.data.date}\n` +
+          `<b>Status:</b> ${decision}\n` +
+          `<b>Reason:</b> ${getApprovalReason(log)}`
+        );
+      }
+
       showToast(`Attendance approval ${decision.toLowerCase()}.`, 'success');
     } catch (error) {
       console.error(error);
@@ -150,6 +164,16 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
           decidedBy: 'Admin',
         }),
       );
+
+      // Notify via Telegram
+      await notificationService.sendTelegramNotification(
+        `<b>📬 Leave Decision</b>\n\n` +
+        `<b>Employee:</b> ${employee.name}\n` +
+        `<b>Status:</b> ${decision}\n` +
+        `<b>Type:</b> ${request.data.type}\n` +
+        `<b>Period:</b> ${request.data.startDate} to ${request.data.endDate}`
+      );
+
       const { awolService } = await import('../../services/AwolService');
       await awolService.processAwolAlerts();
       await leaveService.updateRequest(request.data.id, {

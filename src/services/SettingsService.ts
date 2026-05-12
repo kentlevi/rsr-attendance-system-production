@@ -46,6 +46,8 @@ export interface SystemSettings {
   notificationGroup: string;
   telegramEnabled: boolean;
   telegramChatId: string;
+  telegramBotToken?: string;
+  facialRecognitionThreshold?: number;
   attendancePhotoUploadEnabled?: boolean;
   cloudRetentionDays?: number;
   photoRetentionDays?: number;
@@ -74,6 +76,8 @@ const defaultSettings: SystemSettings = {
   notificationGroup: "Attendance Alerts",
   telegramEnabled: false,
   telegramChatId: "",
+  telegramBotToken: "",
+  facialRecognitionThreshold: 0.65,
   attendancePhotoUploadEnabled: false,
   cloudRetentionDays: 90,
   photoRetentionDays: 30,

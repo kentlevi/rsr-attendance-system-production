@@ -188,6 +188,7 @@ export function UndertimeRequestsModal({
           data={filteredRequests}
           emptyMessage="No requests found."
           totalItems={filteredRequests.length}
+          getRowKey={(req) => req.data.id}
           minHeight="50vh"
         />
       </div>

@@ -565,6 +565,7 @@ export function StaffView() {
           currentPage={currentPage}
           onPageChange={setCurrentPage}
           onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+          getRowKey={(row) => row.id}
           emptyMessage="No employees found matching your criteria."
           onRowClick={(row) => setSelectedEmployeeId(row.id)}
           className="rounded-none border-none shadow-none"

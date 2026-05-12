@@ -1,31 +1,72 @@
-import React, { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { Select } from '../common/Select';
 import { DataTable } from '../common/DataTable';
+import { incidentService } from '../../services/IncidentService';
+import { employeeService } from '../../services/EmployeeService';
 
 export function ViolationsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState('All');
+  const [incidents, setIncidents] = useState(incidentService.getAll());
 
-  // Currently acts as a placeholder view since it had no real data table rendering before
-  const records: any[] = [];
-  
+  useEffect(() => {
+    const unsubscribe = incidentService.subscribe(() => {
+      setIncidents(incidentService.getAll());
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const records = useMemo(() => {
+    return incidents
+      .filter(i => i.data.type === 'Infraction')
+      .map(i => {
+        const emp = employeeService.getEmployeeByIdSync(i.data.employeeId);
+        return {
+          id: i.id,
+          employee: emp?.data.name || 'Unknown',
+          type: i.data.title,
+          severity: i.data.severity,
+          date: i.data.date,
+          status: i.data.acknowledged ? 'Acknowledged' : 'Pending'
+        };
+      })
+      .filter(r => {
+        const matchesSearch = r.employee.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             r.type.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSeverity = severityFilter === 'All' || r.severity === severityFilter;
+        return matchesSearch && matchesSeverity;
+      });
+  }, [incidents, searchTerm, severityFilter]);
+
   const columns = [
     {
       header: 'Employee',
       accessor: 'employee'
     },
     {
-      header: 'Violation Type',
+      header: 'Infraction',
       accessor: 'type'
     },
     {
       header: 'Severity',
-      accessor: 'severity'
+      accessor: (r: any) => (
+        <span className={
+          r.severity === 'High' ? 'text-red-600 font-bold' : 
+          r.severity === 'Medium' ? 'text-orange-600 font-medium' : 
+          'text-blue-600'
+        }>
+          {r.severity}
+        </span>
+      )
     },
     {
       header: 'Date',
       accessor: 'date'
+    },
+    {
+      header: 'Status',
+      accessor: 'status'
     }
   ];
 
@@ -55,9 +96,10 @@ export function ViolationsView() {
                   value={severityFilter}
                   onChange={(e) => setSeverityFilter(e.target.value)}
                   options={[
-                    { value: 'All', label: 'All Severity' },
-                    { value: 'Warning', label: 'Warning (Day 1/2)' },
-                    { value: 'Suspension', label: 'Suspension (Day 3+)' }
+                    { value: 'All', label: 'All Severities' },
+                    { value: 'Low', label: 'Low Severity' },
+                    { value: 'Medium', label: 'Medium Severity' },
+                    { value: 'High', label: 'High Severity' }
                   ]}
                   className="rounded-xl bg-[#F8FAFC]"
                 />
@@ -69,7 +111,8 @@ export function ViolationsView() {
           columns={columns}
           data={records}
           emptyMessage="No Violation Records"
-          totalItems={0}
+          totalItems={records.length}
+          getRowKey={(r) => r.id}
           minHeight="320px"
         />
       </div>

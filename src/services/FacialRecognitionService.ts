@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Human, Config } from '@vladmandic/human';
+import { settingsService } from './SettingsService';
 
 const humanConfig: Partial<Config> = {
   modelBasePath: '/models',
@@ -158,7 +159,7 @@ export class FacialRecognitionService {
   }
 
   async registerFace(employeeId: string, faceData: number[][]): Promise<string> {
-    const profileId = `${employeeId}-${Date.now()}`;
+    const profileId = employeeId; // Standardize ID to employeeId for de-duplication
     const newProfile = new FacialRecognitionProfile(
       profileId,
       employeeId,
@@ -167,12 +168,14 @@ export class FacialRecognitionService {
     );
 
     try {
+      // Overwrite existing profile for this employee
       await setDoc(doc(db, this.collectionPath, profileId), {
         id: newProfile.id,
         employeeId: newProfile.employeeId,
         faceDataEncodings: JSON.stringify(faceData),
         createdAt: newProfile.createdAt,
       });
+      
       // Update local cache
       this.profiles = [
         ...this.profiles.filter((profile) => profile.employeeId !== employeeId),
@@ -196,11 +199,12 @@ export class FacialRecognitionService {
     const descriptor = await this.extractFaceDescriptor(base64Image);
     if (!descriptor) return null;
 
+    const settings = settingsService.getSettings();
+    const threshold = settings.facialRecognitionThreshold || 0.65;
+
     let bestMatchEmployeeId: string | null = null;
-    let minSimilarity = 0.5; // Threshold for cosine similarity (1.0 is perfect match)
+    let minSimilarity = threshold; // Threshold for cosine similarity (1.0 is perfect match)
     
-    // DEBUG: We will collect all calculated similarities to show the user
-    let debugSimilarities: string[] = [];
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
@@ -241,19 +245,12 @@ export class FacialRecognitionService {
             similarity = 0;
           }
           
-          debugSimilarities.push(similarity.toFixed(4));
-          console.log(`Face match similarity for ${profile.employeeId}: ${similarity.toFixed(4)} (Threshold: ${minSimilarity})`);
-          
           if (similarity > minSimilarity) {
             // We want the HIGHEST similarity
             minSimilarity = similarity;
             bestMatchEmployeeId = profile.employeeId;
           }
       }
-    }
-
-    if (!bestMatchEmployeeId && debugSimilarities.length > 0) {
-       throw new Error(`DEBUG INFO: No match. Similarities calculated: ${debugSimilarities.join(', ')}. Threshold is > 0.50`);
     }
 
     return bestMatchEmployeeId;

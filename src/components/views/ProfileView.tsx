@@ -233,30 +233,32 @@ export default function ProfileView({
         <div className="flex flex-col gap-6">
           {/* Personal Information */}
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-[20px] font-bold text-[#1a1a1a]">Personal Information</h3>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
+              <h3 className="text-[22px] font-black text-slate-900 tracking-tight">Personal Information</h3>
               {!isEditing ? (
                 <Button 
                   onClick={() => setIsEditing(true)}
                   variant="secondary"
                   leftIcon={<Edit2 size={16} />}
+                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm px-6 rounded-xl font-bold"
                 >
                   Edit Profile
                 </Button>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <Button 
                     onClick={handleCancel}
                     variant="secondary"
-                    className="text-slate-600"
-                    leftIcon={<X size={16} />}
+                    className="bg-white border-slate-200 text-slate-500 hover:bg-slate-50 px-6 rounded-xl font-bold"
+                    leftIcon={<X size={18} strokeWidth={2.5} />}
                   >
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSave}
                     variant="primary"
-                    leftIcon={<Save size={16} />}
+                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg shadow-emerald-200 px-8 rounded-xl font-bold border-none"
+                    leftIcon={<Save size={18} strokeWidth={2.5} />}
                   >
                     Save Changes
                   </Button>

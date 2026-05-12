@@ -4,17 +4,41 @@ import { DatePicker } from '../common/DatePicker';
 import { DataTable } from '../common/DataTable';
 import { Button } from '../common/Button';
 import { employeeService } from '../../services/EmployeeService';
+import { attendanceService } from '../../services/AttendanceService';
+import { leaveService } from '../../services/LeaveService';
+import { incidentService } from '../../services/IncidentService';
+import { calculateEmployeePayrollSummary } from '../../lib/PayrollCalculator';
+import { useToast } from '../../context/ToastContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 export function PayrollView() {
+  const { showToast } = useToast();
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [searchQuery, setSearchQuery] = useState('');
   
   const employees = employeeService.getAllEmployeesSync();
   const filteredEmployees = employees.filter(emp => emp.data.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const generatePayslip = (emp: any) => {
+  const generatePayslip = (employee: any) => {
+    if (!dateRange.start || !dateRange.end) {
+      showToast("Please select a date range first.", "warning");
+      return;
+    }
+
+    const logs = attendanceService.getLogsByEmployeeId(employee.data.id);
+    const leaves = leaveService.getRequestsByEmployee(employee.data.id);
+    const incidents = incidentService.getIncidentsForEmployee(employee.data.id);
+    
+    const summary = calculateEmployeePayrollSummary(
+      employee.data,
+      logs,
+      leaves,
+      incidents,
+      dateRange.start,
+      dateRange.end
+    );
+
     const doc = new jsPDF() as any;
     
     // Add Company Header
@@ -25,40 +49,31 @@ export function PayrollView() {
     
     // Add Employee Data
     doc.setFontSize(10);
-    doc.text(`Employee Name: ${emp.data.name}`, 14, 40);
-    doc.text(`Employee ID: ${emp.data.employeeId || emp.data.id}`, 14, 46);
-    doc.text(`Department: ${emp.data.department}`, 14, 52);
-    doc.text(`Position: ${emp.data.position}`, 14, 58);
+    doc.text(`Employee Name: ${summary.employeeName}`, 14, 40);
+    doc.text(`Employee ID: ${employee.data.employeeId || employee.data.id}`, 14, 46);
+    doc.text(`Department: ${employee.data.department}`, 14, 52);
+    doc.text(`Position: ${employee.data.position}`, 14, 58);
     
-    const startPeriod = dateRange.start || 'Start of Period';
-    const endPeriod = dateRange.end || 'End of Period';
-    doc.text(`Pay Period: ${startPeriod} to ${endPeriod}`, 120, 40);
+    doc.text(`Pay Period: ${summary.startDate} to ${summary.endDate}`, 120, 40);
     
-    // Add Earnings & Deductions
-    const baseDailyRate = parseFloat(emp.data.dailyRate || '750');
-    const timeDiff = Math.abs(new Date(endPeriod).getTime() - new Date(startPeriod).getTime());
-    const totalDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) || 15;
-    // Calculate total days inside date range dynamically
-    const basicPay = baseDailyRate * totalDays;
-    
-    const tax = basicPay * 0.1;
-    const sss = 300;
-    const philhealth = 150;
-    const pagibig = 100;
-    const totalDeductions = tax + sss + philhealth + pagibig;
-    const netPay = basicPay - totalDeductions;
-    
+    // Calculate total earnings and deductions
+    const totalEarnings = summary.basicPay + Math.max(0, summary.grossAdjustment);
+    const baseDeductions = 550; // SSS, PH, PI
+    const totalDeductions = Math.abs(Math.min(0, summary.grossAdjustment)) + baseDeductions + summary.violationDeduction;
+    const netPay = summary.grossPay - baseDeductions;
+
     doc.autoTable({
       startY: 70,
       head: [['Earnings', 'Amount', 'Deductions', 'Amount']],
       body: [
-        ['Basic Pay', `P ${basicPay.toFixed(2)}`, 'Withholding Tax', `P ${tax.toFixed(2)}`],
-        ['', '', 'SSS Contribution', `P ${sss.toFixed(2)}`],
-        ['', '', 'PhilHealth', `P ${philhealth.toFixed(2)}`],
-        ['', '', 'Pag-IBIG', `P ${pagibig.toFixed(2)}`],
+        ['Basic Pay', `P ${summary.basicPay.toFixed(2)}`, 'SSS Contribution', `P 300.00`],
+        ['Overtime Pay', `P ${summary.overtimePay.toFixed(2)}`, 'PhilHealth', `P 150.00`],
+        ['Night Diff', `P ${summary.nightDifferential.toFixed(2)}`, 'Pag-IBIG', `P 100.00`],
+        ['', '', 'Late/Undertime', `P ${(summary.lateDeduction + summary.undertimeDeduction).toFixed(2)}`],
+        ['', '', 'Violation Fine', `P ${summary.violationDeduction.toFixed(2)}`],
       ],
       foot: [
-        ['Total Earnings', `P ${basicPay.toFixed(2)}`, 'Total Deductions', `P ${totalDeductions.toFixed(2)}`]
+        ['Total Earnings', `P ${totalEarnings.toFixed(2)}`, 'Total Deductions', `P ${totalDeductions.toFixed(2)}`]
       ]
     });
     
@@ -67,7 +82,7 @@ export function PayrollView() {
     doc.setFont("helvetica", "bold");
     doc.text(`Net Pay: P ${netPay.toFixed(2)}`, 14, finalY + 15);
     
-    doc.save(`${emp.data.name.replace(/\s+/g, '_')}_Payslip.pdf`);
+    doc.save(`${summary.employeeName.replace(/\s+/g, '_')}_Payslip.pdf`);
   };
 
   return (
@@ -160,6 +175,7 @@ export function PayrollView() {
                 }
               ]}
               data={filteredEmployees}
+              getRowKey={(emp: any) => emp.data.id}
               emptyMessage="No employees found for payroll."
               className="border-0 rounded-none h-full shadow-none"
               minHeight="400px"

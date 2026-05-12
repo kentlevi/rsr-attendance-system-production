@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   List,
-  DollarSign,
   Clock,
   Camera,
   Users,
@@ -26,16 +25,13 @@ import {
   Calendar,
   ChevronLeft,
   BarChart2,
-  Wallet,
   MapPin,
   Edit,
-  FileSpreadsheet,
   ShieldCheck,
   Info,
   MoreVertical,
   AlertTriangle,
   Timer,
-  Receipt,
   ClipboardList,
   ArrowDownRight,
   History,
@@ -87,7 +83,6 @@ import { SmsLogsView } from "./views/SmsLogsView";
 import { StraightDutyView } from "./views/StraightDutyView";
 import { IncidentsView } from "./views/IncidentsView";
 import { ViolationsView } from "./views/ViolationsView";
-import { PayrollView } from "./views/PayrollView";
 import ProfileView from "./views/ProfileView";
 import { NotificationModal, AppNotification } from "./common/NotificationModal";
 import { notificationService } from "../services/NotificationService";
@@ -343,7 +338,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     { id: "approvals", label: "Approvals", icon: ShieldCheck },
     { id: "logs", label: "Logs", icon: ClipboardList },
     { id: "workforce", label: "Workforce Insights", icon: BarChart2 },
-    // { id: "payroll", label: "Payroll", icon: FileSpreadsheet },
     { id: "photos", label: "Photos", icon: ImageIcon },
     { id: "duty", label: "Straight Duty", icon: Timer },
     { id: "incidents", label: "Incidents", icon: AlertTriangle },
@@ -383,8 +377,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               "Staff Management"
             ) : activeTab === "workforce" ? (
               "Workforce Insights"
-            ) : activeTab === "payroll" ? (
-              "Payroll & Payslips"
             ) : activeTab === "duty" ? (
               "Straight Duty"
             ) : activeTab === "incidents" ? (
@@ -408,7 +400,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             {activeTab === "approvals" && "Review and resolve attendance records that need admin approval."}
             {activeTab === "logs" && "View and manage employee attendance records"}
             {activeTab === "workforce" && "Automated insights and calculations based on attendance logs and company policies."}
-            {activeTab === "payroll" && "Manage payroll cut-offs, analyze earnings, and generate digital payslips."}
             {activeTab === "photos" && "Review and verify employee verification photos"}
             {activeTab === "duty" && "Manage straight duty records and schedules"}
             {activeTab === "incidents" && "Log performance merits, complaints, and accident reports"}
@@ -476,7 +467,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             {activeTab === "approvals" && <ApprovalsView isAssistant={isAssistant} />}
             {activeTab === "logs" && <LogsView isAssistant={isAssistant} />}
             {activeTab === "workforce" && <WorkforceInsightsView />}
-            {activeTab === "payroll" && <PayrollView />}
             {activeTab === "photos" && <PhotosView />}
             {activeTab === "duty" && <StraightDutyView isAssistant={isAssistant} />}
             {activeTab === "incidents" && <IncidentsView />}
@@ -494,7 +484,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                     if (tab.id === "approvals") subtitle = "Review attendance";
                     if (tab.id === "logs") subtitle = "View system logs";
                     if (tab.id === "workforce") subtitle = "Analytics & Reports";
-                    if (tab.id === "payroll") subtitle = "Generate payslips";
                     if (tab.id === "photos") subtitle = "Attendance photos";
                     if (tab.id === "duty") subtitle = "Straight duty records";
                     if (tab.id === "incidents") subtitle = "Employee incidents";
@@ -577,7 +566,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               activeTab !== "approvals" &&
               activeTab !== "logs" &&
               activeTab !== "workforce" &&
-              activeTab !== "payroll" &&
               activeTab !== "photos" &&
               activeTab !== "duty" &&
               activeTab !== "incidents" &&

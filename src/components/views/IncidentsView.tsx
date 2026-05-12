@@ -161,6 +161,8 @@ export function IncidentsView() {
              }
            ]}
            data={filteredIncidents}
+           getRowKey={(incident: any) => incident.id}
+           totalItems={filteredIncidents.length}
            emptyMessage="No incident reports found."
            className="border-0 rounded-none h-full shadow-none"
            minHeight="400px"
@@ -237,12 +239,12 @@ export function IncidentsView() {
 
                <div className="flex flex-col gap-2">
                   <label className="text-label">Title/Subject <span className="text-red-500">*</span></label>
-                  <input type="text" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Brief summary" className="control-field" />
+                  <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Brief summary" className="control-field" />
                </div>
-
-               <div className="flex flex-col gap-2">
-                  <label className="text-label">Description <span className="text-red-500">*</span></label>
-                  <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Detailed description..." className="control-field min-h-[120px] py-3 text-base resize-y"></textarea>
+ 
+                <div className="flex flex-col gap-2">
+                   <label className="text-label">Description <span className="text-red-500">*</span></label>
+                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Detailed description..." className="control-field min-h-[120px] py-3 text-base resize-y"></textarea>
                </div>
 
                <div className="pt-4 flex items-center justify-end gap-3 mt-4">

@@ -12,6 +12,8 @@ interface ValidateLeaveRequestInput {
   startDate: string;
   endDate: string;
   today?: string;
+  vlBalance?: number;
+  slBalance?: number;
 }
 
 const leavePolicies: Record<string, LeavePolicy> = {
@@ -49,6 +51,8 @@ export function validateLeaveRequest({
   startDate,
   endDate,
   today,
+  vlBalance,
+  slBalance,
 }: ValidateLeaveRequestInput) {
   if (!type || !startDate || !endDate) {
     return { valid: false, message: 'Please complete all required leave fields.' };
@@ -66,6 +70,9 @@ export function validateLeaveRequest({
     return { valid: false, message: 'End date cannot be earlier than start date.' };
   }
 
+  // Calculate duration in days (inclusive)
+  const requestedDays = Math.round((end - start) / 86400000) + 1;
+
   const policy = getLeavePolicy(type);
   const daysUntilStart = Math.floor((start - current) / 86400000);
 
@@ -76,7 +83,22 @@ export function validateLeaveRequest({
     };
   }
 
-  return { valid: true, message: '', policy };
+  // Credit Validation
+  if (type === 'sick' && typeof slBalance === 'number' && requestedDays > slBalance) {
+    return {
+      valid: false,
+      message: `Insufficient Sick Leave credits. Requested: ${requestedDays}, Available: ${slBalance}`,
+    };
+  }
+
+  if (type === 'vacation' && typeof vlBalance === 'number' && requestedDays > vlBalance) {
+    return {
+      valid: false,
+      message: `Insufficient Vacation Leave credits. Requested: ${requestedDays}, Available: ${vlBalance}`,
+    };
+  }
+
+  return { valid: true, message: '', policy, requestedDays };
 }
 
 function parseDateOnly(value: string) {

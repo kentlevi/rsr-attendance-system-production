@@ -10,6 +10,8 @@ import {
   onSnapshot
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { notificationService } from "./NotificationService";
+import { employeeService } from "./EmployeeService";
 
 export interface IncidentReport {
   id: string;
@@ -87,6 +89,19 @@ class IncidentService {
   async add(data: Omit<IncidentReport['data'], 'id'>) {
     try {
       const docRef = await addDoc(collection(db, this.collectionPath), data);
+      
+      // Notify via Telegram
+      const emp = employeeService.getEmployeeByIdSync(data.employeeId);
+      const empName = emp?.data.name || 'An employee';
+      await notificationService.sendTelegramNotification(
+        `<b>⚠️ New Incident Report</b>\n\n` +
+        `<b>Employee:</b> ${empName}\n` +
+        `<b>Type:</b> ${data.type}\n` +
+        `<b>Severity:</b> ${data.severity}\n` +
+        `<b>Title:</b> ${data.title}\n` +
+        `<b>Description:</b> ${data.description}`
+      );
+
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, this.collectionPath);

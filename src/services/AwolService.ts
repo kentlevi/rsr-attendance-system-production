@@ -4,6 +4,7 @@ import { leaveService } from './LeaveService';
 import { calculateAbsenceStreak } from '../lib/AbsenceRules';
 import { getEmployeeStatusTransitionUpdate } from '../lib/EmployeeStatusRules';
 import { authenticatedFetch } from '../lib/api';
+import { notificationService } from './NotificationService';
 
 class AwolService {
   async processAwolAlerts() {
@@ -76,6 +77,16 @@ class AwolService {
       });
       const data = await response.json();
       console.log(`AWOL SMS sent to ${employee.name}:`, data);
+
+      // Also notify Admin via Telegram for serious absences (3+ days)
+      if (dayOfAbsence >= 3) {
+        await notificationService.sendTelegramNotification(
+          `<b>🚨 AWOL Alert: Preventative Suspension</b>\n\n` +
+          `<b>Employee:</b> ${employee.name}\n` +
+          `<b>Absence Streak:</b> ${dayOfAbsence} days\n` +
+          `<b>Action:</b> Account suspended automatically.`
+        );
+      }
     } catch (e) {
       console.error(`Failed to send AWOL SMS to ${employee.name}`, e);
     }

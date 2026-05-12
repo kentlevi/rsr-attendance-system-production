@@ -1,0 +1,130 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import React from 'react';
+
+// Mock Services
+const showToast = vi.fn();
+const updateLog = vi.fn();
+const updateRequest = vi.fn();
+const updateEmployee = vi.fn();
+const getAllLogs = vi.fn();
+const getAllRequests = vi.fn();
+const getEmployeeByIdSync = vi.fn();
+
+vi.mock('../../context/ToastContext', () => ({
+  useToast: () => ({ showToast }),
+}));
+
+vi.mock('../../services/AttendanceService', () => ({
+  attendanceService: {
+    getAllLogs,
+    subscribe: vi.fn(() => () => {}),
+    updateLog,
+  },
+}));
+
+vi.mock('../../services/LeaveService', () => ({
+  leaveService: {
+    getAllRequests,
+    subscribe: vi.fn(() => () => {}),
+    updateRequest,
+  },
+}));
+
+vi.mock('../../services/EmployeeService', () => ({
+  employeeService: {
+    getEmployeeByIdSync,
+    updateEmployee,
+  },
+}));
+
+// Mock AwolService
+vi.mock('../../services/AwolService', () => ({
+  awolService: {
+    processAwolAlerts: vi.fn(async () => {}),
+  },
+}));
+
+const mockEmployee = {
+  id: 'emp-1',
+  name: 'John Doe',
+  vlBalance: 10,
+  slBalance: 5,
+  avatar: '',
+  department: 'IT',
+};
+
+const mockLeaveRequest = {
+  id: 'leave-1',
+  employeeId: 'emp-1',
+  type: 'vacation',
+  startDate: '2026-06-01',
+  endDate: '2026-06-03', // 3 days
+  status: 'Pending',
+  reason: 'Vacation time',
+};
+
+import { ApprovalsView } from '../components/views/ApprovalsView';
+
+describe('Leave Approval Deduction Flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllLogs.mockReturnValue([]);
+    getAllRequests.mockReturnValue([{ data: mockLeaveRequest }]);
+    getEmployeeByIdSync.mockReturnValue({ data: mockEmployee });
+  });
+
+  it('deducts leave credits from employee balance when leave is approved', async () => {
+    const user = userEvent.setup();
+    render(<ApprovalsView />);
+
+    // Find the Approve button for the leave request
+    // Note: ApprovalsView renders multiple tables, one for attendance and one for leaves
+    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    await user.click(approveBtn);
+
+    // Verify employee balance update
+    // 10 VL - 3 requested = 7 VL remaining
+    await waitFor(() => {
+      expect(updateEmployee).toHaveBeenCalledWith('emp-1', {
+        vlBalance: 7
+      });
+    });
+
+    // Verify leave request status update
+    expect(updateRequest).toHaveBeenCalledWith('leave-1', expect.objectContaining({
+      status: 'Approved'
+    }));
+
+    expect(showToast).toHaveBeenCalledWith(
+      expect.stringMatching(/Leave request approved/i),
+      'success'
+    );
+  });
+
+  it('prevents approval if balance has become insufficient since filing', async () => {
+    const user = userEvent.setup();
+    
+    // Mock employee with insufficient balance now (maybe used elsewhere)
+    getEmployeeByIdSync.mockReturnValue({ 
+        data: { ...mockEmployee, vlBalance: 1 } 
+    });
+
+    render(<ApprovalsView />);
+
+    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    await user.click(approveBtn);
+
+    await waitFor(() => {
+      expect(showToast).toHaveBeenCalledWith(
+        expect.stringContaining('Insufficient Vacation Leave balance'),
+        'warning'
+      );
+    });
+
+    // Should NOT update employee or request status
+    expect(updateEmployee).not.toHaveBeenCalled();
+    expect(updateRequest).not.toHaveBeenCalled();
+  });
+});

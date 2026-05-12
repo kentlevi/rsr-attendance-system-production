@@ -19,6 +19,9 @@ import {
   Download,
   Trash2,
   ShieldCheck,
+  MessageSquare,
+  Hash,
+  MapPin,
 } from "lucide-react";
 import { Button } from "../common/Button";
 
@@ -33,6 +36,8 @@ export function SettingsView() {
   >("idle");
   const [testSmsError, setTestSmsError] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showBotToken, setShowBotToken] = useState(false);
+  const [testTelegramStatus, setTestTelegramStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
   React.useEffect(() => {
     const unsubscribe = settingsService.subscribe(setSettings);
@@ -97,8 +102,25 @@ export function SettingsView() {
     } catch (err: any) {
       setTestSmsStatus("error");
       setTestSmsError(err.message || "Network error");
-      showToast("SMS Network Error", 5000);
+      showToast("SMS Service unavailable", 5000);
       setTimeout(() => setTestSmsStatus("idle"), 5000);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    setTestTelegramStatus("sending");
+    try {
+      const { notificationService } = await import("../../services/NotificationService");
+      await notificationService.sendTelegramNotification(
+        `<b>🔔 RSR System Test</b>\n\nThis is a test notification from the RSR Attendance System settings panel.\n\nDate: ${new Date().toLocaleString()}`
+      );
+      setTestTelegramStatus("success");
+      showToast("Telegram test message sent!");
+      setTimeout(() => setTestTelegramStatus("idle"), 3000);
+    } catch (err) {
+      setTestTelegramStatus("error");
+      showToast("Failed to send Telegram test", "error");
+      setTimeout(() => setTestTelegramStatus("idle"), 3000);
     }
   };
 
@@ -181,49 +203,67 @@ export function SettingsView() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-               <label className="text-label">
-                 Site Coordinates & Geofences
-               </label>
-               <div className="flex flex-col gap-3">
-                 {settings.sites.map(site => {
-                    const coords = settings.siteCoordinates?.[site] || { lat: 0, lng: 0, radius: 100 };
-                    return (
-                       <div key={site} className="flex gap-2 items-end">
-                          <div className="flex-1">
-                             <label className="text-[12px] text-text-secondary">Site</label>
-                             <input type="text" value={site} disabled className="control-field bg-slate-50 h-9 text-[14px]" />
-                          </div>
-                          <div className="w-24">
-                             <label className="text-[12px] text-text-secondary">Lat</label>
-                             <input type="number" step="any"
-                                value={coords.lat} 
-                                onChange={e => {
-                                   const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lat: parseFloat(e.target.value) || 0 } };
-                                   handleUpdate("siteCoordinates", newCoords);
-                                }} className="control-field h-9 text-[14px]" />
-                          </div>
-                          <div className="w-24">
-                             <label className="text-[12px] text-text-secondary">Lng</label>
-                             <input type="number" step="any"
-                                value={coords.lng} 
-                                onChange={e => {
-                                   const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lng: parseFloat(e.target.value) || 0 } };
-                                   handleUpdate("siteCoordinates", newCoords);
-                                }} className="control-field h-9 text-[14px]" />
-                          </div>
-                          <div className="w-24">
-                             <label className="text-[12px] text-text-secondary">Radius (m)</label>
-                             <input type="number" 
-                                value={coords.radius} 
-                                onChange={e => {
-                                   const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, radius: parseFloat(e.target.value) || 0 } };
-                                   handleUpdate("siteCoordinates", newCoords);
-                                }} className="control-field h-9 text-[14px]" />
-                          </div>
-                       </div>
-                    );
-                 })}
+            <div className="flex flex-col gap-4">
+               <div className="flex items-center gap-2">
+                 <MapPin size={18} className="text-[#0B7A4B]" />
+                 <label className="text-[15px] font-semibold text-[#1a1a1a]">
+                   Site Coordinates & Geofences
+                 </label>
+               </div>
+               
+               <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 overflow-hidden">
+                 <div className="grid grid-cols-[1fr_100px_100px_120px] gap-4 px-5 py-3 bg-slate-100/50 border-b border-slate-200/60">
+                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Site Name</span>
+                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Lat</span>
+                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Lng</span>
+                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Radius (m)</span>
+                 </div>
+                 
+                 <div className="flex flex-col">
+                   {settings.sites.map((site, idx) => {
+                     const coords = settings.siteCoordinates?.[site] || { lat: 0, lng: 0, radius: 100 };
+                     return (
+                        <div key={site} className={cn(
+                          "grid grid-cols-[1fr_100px_100px_120px] gap-4 px-5 py-4 items-center transition-colors hover:bg-white",
+                          idx !== settings.sites.length - 1 && "border-b border-slate-100"
+                        )}>
+                           <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400">
+                                <span className="text-[12px] font-bold">{site.charAt(0)}</span>
+                              </div>
+                              <span className="text-[14px] font-medium text-slate-700">{site}</span>
+                           </div>
+                           
+                           <input type="number" step="any"
+                              value={coords.lat} 
+                              onChange={e => {
+                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lat: parseFloat(e.target.value) || 0 } };
+                                 handleUpdate("siteCoordinates", newCoords);
+                              }} 
+                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                           />
+                           
+                           <input type="number" step="any"
+                              value={coords.lng} 
+                              onChange={e => {
+                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lng: parseFloat(e.target.value) || 0 } };
+                                 handleUpdate("siteCoordinates", newCoords);
+                              }} 
+                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                           />
+                           
+                           <input type="number" 
+                              value={coords.radius} 
+                              onChange={e => {
+                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, radius: parseFloat(e.target.value) || 0 } };
+                                 handleUpdate("siteCoordinates", newCoords);
+                              }} 
+                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center font-medium text-primary focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                           />
+                        </div>
+                     );
+                   })}
+                 </div>
                </div>
             </div>
 
@@ -583,43 +623,84 @@ export function SettingsView() {
         </div>
 
         {/* 4. Telegram Notification */}
-        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full bg-[#0B7A4B] text-white flex items-center justify-center text-[16px] font-medium">
-                4
+        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col p-7 transition-all hover:shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center shadow-sm border border-sky-100/50">
+                <MessageSquare size={24} strokeWidth={2.5} />
               </div>
-              <h2 className="text-[16px] font-medium text-[#1a1a1a]">
-                Telegram Notification
-              </h2>
+              <div className="flex flex-col">
+                <h2 className="text-[19px] font-bold text-slate-900 tracking-tight">
+                  Telegram Notification
+                </h2>
+                <p className="text-[13px] text-slate-500 font-medium">Configure automated alerts via Telegram Bot</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[16px] font-medium text-[#1a1a1a]">
-                Telegram Alerts Enabled
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-100">
+              <span className="text-[14px] font-bold text-slate-700">
+                Alerts Enabled
               </span>
               <Toggle enabled={settings.telegramEnabled} onChange={v => handleUpdate("telegramEnabled", v)} />
             </div>
           </div>
 
-          <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-4 items-center">
-              <label className="text-label">
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-6 items-center">
+              <label className="text-[14px] font-bold text-slate-600 uppercase tracking-wider">
                 Chat ID
               </label>
-              <input
-                type="text"
-                value={settings.telegramChatId || ""}
-                onChange={e => handleUpdate("telegramChatId", e.target.value)}
-                className="control-field"
-              />
+              <div className="relative group">
+                <input
+                  type="text"
+                  placeholder="Enter Telegram Chat ID"
+                  value={settings.telegramChatId || ""}
+                  onChange={e => handleUpdate("telegramChatId", e.target.value)}
+                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/30 px-4 text-[15px] font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 outline-none transition-all pr-12"
+                />
+                <Hash className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-sky-500 transition-colors" size={20} />
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 mt-2">
-              <div className="flex flex-col">
-                <span className="text-[16px] text-[#64748B]">
-                  Notifications for approval requests (e.g. leaves) will be sent to this Telegram Chat ID via Bot API.
-                </span>
+            <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-6 items-center">
+              <label className="text-[14px] font-bold text-slate-600 uppercase tracking-wider">
+                Bot Token
+              </label>
+              <div className="relative group">
+                <input
+                  type={showBotToken ? "text" : "password"}
+                  placeholder="Enter Telegram Bot Token"
+                  value={settings.telegramBotToken || ""}
+                  onChange={e => handleUpdate("telegramBotToken", e.target.value)}
+                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/30 px-4 text-[15px] font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 outline-none transition-all pr-12"
+                />
+                <button
+                  onClick={() => setShowBotToken(!showBotToken)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-sky-500 transition-colors"
+                >
+                  {showBotToken ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleTestTelegram}
+                isLoading={testTelegramStatus === "sending"}
+                variant="secondary"
+                className="bg-sky-50 text-sky-600 border-sky-100 hover:bg-sky-100"
+                leftIcon={testTelegramStatus !== "sending" && <Send size={16} />}
+              >
+                {testTelegramStatus === "success" ? "Sent!" : "Test Telegram"}
+              </Button>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/60 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 shrink-0">
+                <Info size={20} />
+              </div>
+              <p className="text-[14px] leading-relaxed text-slate-600 font-medium">
+                Approval requests for leaves and undertime will be dispatched to this Chat ID. Ensure your bot has permission to post in this chat.
+              </p>
             </div>
           </div>
         </div>
@@ -693,6 +774,52 @@ export function SettingsView() {
           </div>
         </div>
 
+        {/* 6. Biometric Recognition */}
+        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-6 h-6 rounded-full bg-[#0B7A4B] text-white flex items-center justify-center text-[16px] font-medium">
+              6
+            </div>
+            <h2 className="text-[16px] font-medium text-[#1a1a1a]">
+              Biometric Recognition
+            </h2>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <label className="text-label">
+                  Facial Recognition Threshold
+                </label>
+                <span className="text-[14px] font-bold text-[#0B7A4B] bg-[#F0FDF4] px-2 py-0.5 rounded-md">
+                  {(settings.facialRecognitionThreshold || 0.65).toFixed(2)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.4"
+                max="0.95"
+                step="0.01"
+                value={settings.facialRecognitionThreshold || 0.65}
+                onChange={e => handleUpdate("facialRecognitionThreshold", parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0B7A4B]"
+              />
+              <div className="flex justify-between text-[11px] text-text-secondary font-bold uppercase tracking-wider">
+                <span>More Lenient (0.40)</span>
+                <span>More Strict (0.95)</span>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 shrink-0">
+                <Info size={20} />
+              </div>
+              <p className="text-[14px] leading-relaxed text-amber-800 font-medium">
+                Adjusting this threshold affects matching accuracy. A value of <strong>0.65</strong> is recommended for most environments. Increase this if you experience false positives (wrong name detected).
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Footer Banner */}

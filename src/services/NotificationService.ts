@@ -77,10 +77,23 @@ export class NotificationService {
 
   async sendTelegramNotification(message: string) {
     const settings = settingsService.getSettings();
-    if (settings.telegramEnabled && settings.telegramChatId) {
+    if (settings.telegramEnabled && settings.telegramChatId && settings.telegramBotToken) {
       try {
-        console.log(`Telegram notification to ${settings.telegramChatId}: ${message}`);
-        // Telegram bot token removed for security
+        const url = `https://api.telegram.org/bot${settings.telegramBotToken}/sendMessage`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: settings.telegramChatId,
+            text: message,
+            parse_mode: 'HTML'
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Telegram API Error:", errorData);
+        }
       } catch (error) {
         console.error("Failed to send Telegram notification", error);
       }
