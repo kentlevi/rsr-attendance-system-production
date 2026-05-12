@@ -9,6 +9,10 @@ const createUserWithEmailAndPassword = vi.fn();
 const updatePassword = vi.fn();
 const signOut = vi.fn();
 const getAccount = vi.fn();
+const getDocs = vi.fn(() => Promise.resolve({ empty: true, docs: [] }));
+const collection = vi.fn();
+const query = vi.fn();
+const where = vi.fn();
 
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
@@ -23,6 +27,7 @@ vi.mock('../lib/firebase', () => ({
     currentUser: { uid: 'admin', email: 'admin@rsr.com' },
     signOut,
   },
+  db: {},
 }));
 
 vi.mock('firebase/auth', async () => {
@@ -34,6 +39,13 @@ vi.mock('firebase/auth', async () => {
     updatePassword,
   };
 });
+
+vi.mock('firebase/firestore', () => ({
+  collection,
+  query,
+  where,
+  getDocs,
+}));
 
 vi.mock('../services/AdminAccountService', () => ({
   adminAccountService: { getAccount },
@@ -56,6 +68,7 @@ describe('AdminLogin', () => {
 
     render(<AdminLogin onNavigate={onNavigate} />);
 
+    await user.type(screen.getByPlaceholderText('Enter admin email'), 'admin@rsr.com');
     await user.type(screen.getByPlaceholderText('Enter password'), 'password123');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
@@ -68,7 +81,7 @@ describe('AdminLogin', () => {
     expect(onNavigate).toHaveBeenCalledWith('admin');
   });
 
-  it('switches to assistant mode and uses the assistant email for sign-in', async () => {
+  it('signs in as an assistant when an assistant email is used', async () => {
     signInWithEmailAndPassword.mockResolvedValue({});
     getAccount.mockResolvedValue({ password: 'assistpw' });
     const onNavigate = vi.fn();
@@ -76,7 +89,7 @@ describe('AdminLogin', () => {
     const { default: AdminLogin } = await import('../components/AdminLogin');
 
     render(<AdminLogin onNavigate={onNavigate} />);
-    await user.click(screen.getByRole('button', { name: 'Assistant' }));
+    await user.type(screen.getByPlaceholderText('Enter admin email'), 'hr@rsr.com');
     await user.type(screen.getByPlaceholderText('Enter password'), 'assistpw');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
@@ -94,10 +107,11 @@ describe('AdminLogin', () => {
     const { default: AdminLogin } = await import('../components/AdminLogin');
 
     render(<AdminLogin onNavigate={vi.fn()} />);
+    await user.type(screen.getByPlaceholderText('Enter admin email'), 'admin@rsr.com');
     await user.type(screen.getByPlaceholderText('Enter password'), 'secret');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
-    expect(await screen.findByText('Email/Password Auth is disabled! Please enable it in Firebase Console.')).toBeInTheDocument();
+    expect(await screen.findByText(/Email\/Password Auth is disabled/i)).toBeInTheDocument();
   });
 
   it('falls back to creating the default Firebase user when the default password is used and the auth user does not exist', async () => {
@@ -109,6 +123,7 @@ describe('AdminLogin', () => {
     const { default: AdminLogin } = await import('../components/AdminLogin');
 
     render(<AdminLogin onNavigate={onNavigate} />);
+    await user.type(screen.getByPlaceholderText('Enter admin email'), 'admin@rsr.com');
     await user.type(screen.getByPlaceholderText('Enter password'), 'admin');
     await user.click(screen.getByRole('button', { name: 'Login' }));
 
