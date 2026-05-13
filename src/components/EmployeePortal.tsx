@@ -688,7 +688,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     const isFaceLogin = employeeLoginMode === "face";
 
     return (
-      <PageLayout onNavigate={onNavigate as any} className="items-center justify-center sm:justify-start py-6 sm:py-12 px-4 sm:px-6">
+      <PageLayout onNavigate={onNavigate as any} className="items-center justify-center sm:justify-start">
         <div className="w-full max-w-[420px] mx-auto bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 sm:p-10 border border-border/60 flex flex-col gap-6 sm:gap-8 min-h-[500px] sm:min-h-[600px]">
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="w-[68px] h-[68px] rounded-full bg-[#E8F3EE] flex items-center justify-center text-[#0B7A4B]">

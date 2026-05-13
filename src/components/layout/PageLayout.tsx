@@ -141,8 +141,11 @@ export function PageLayout({
       </header>
 
       {/* Main Content */}
+      {/* Page padding is centralised here so mobile spacing is identical across all
+          screens. Page components should NOT pass `px-*` / `py-*` via className —
+          override only flex / alignment / gap if needed. */}
       <main className={cn("flex-1 flex flex-col relative z-20 overflow-y-auto overflow-x-hidden", showMenu && "stable-scrollbar", className)}>
-        <div className="w-full max-w-[1200px] mx-auto flex-1 flex flex-col gap-6 sm:gap-10 px-2 sm:px-6 py-6 md:px-8 md:py-8">
+        <div className="w-full max-w-[1200px] mx-auto flex-1 flex flex-col gap-6 sm:gap-10 px-2 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
           {children}
         </div>
       </main>
