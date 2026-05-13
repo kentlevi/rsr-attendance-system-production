@@ -1,16 +1,20 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 
 // Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
-const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs } = vi.hoisted(() => ({
+const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs, getSyncSummary, savePunch, markSyncing, markSynced, markFailed } = vi.hoisted(() => ({
   showToast: vi.fn(),
   addLog: vi.fn(),
   updateLog: vi.fn(),
   refreshLogsByDates: vi.fn(),
   getAllLogs: vi.fn(),
+  getSyncSummary: vi.fn(),
+  savePunch: vi.fn(),
+  markSyncing: vi.fn(),
+  markSynced: vi.fn(),
+  markFailed: vi.fn(),
 }));
 
 vi.mock('../context/ToastContext', () => ({
@@ -27,6 +31,22 @@ vi.mock('../services/AttendanceService', () => ({
   },
 }));
 
+vi.mock('../services/LocalAttendanceService', () => ({
+  localAttendanceService: {
+    savePunch,
+    markSyncing,
+    markSynced,
+    markFailed,
+    getSyncSummary,
+  },
+}));
+
+vi.mock('../services/AttendancePhotoService', () => ({
+  attendancePhotoService: {
+    uploadPhoto: vi.fn(() => Promise.resolve('http://photo.url')),
+  },
+}));
+
 const mockEmployee = {
   id: 'emp-night',
   employeeId: 'EMP-NIGHT',
@@ -35,6 +55,8 @@ const mockEmployee = {
   dailyRate: '800',
   shiftTemplateId: 'night-shift',
   status: 'Active',
+  dateHired: '2026-01-01',
+  workLocation: 'Head Office',
 };
 
 vi.mock('../services/EmployeeService', () => ({
@@ -117,9 +139,18 @@ import TimeClock from '../components/TimeClock';
 describe('Night Shift Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     getAllLogs.mockReturnValue([]);
     refreshLogsByDates.mockResolvedValue([]);
+    getSyncSummary.mockResolvedValue({ pending: 0, syncing: 0, failed: 0, retryReady: 0, totalOpen: 0 });
+    savePunch.mockResolvedValue({ id: 'local-night' });
+    markSyncing.mockResolvedValue(undefined);
+    markSynced.mockResolvedValue(undefined);
+    markFailed.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'scrollTo', {
+      configurable: true,
+      value: vi.fn(),
+    });
   });
 
   it('calculates cross-day hours and night differential correctly', async () => {
@@ -140,6 +171,9 @@ describe('Night Shift Integration', () => {
     expect(addLogCall.employeeId).toBe('emp-night');
     expect(addLogCall.timeIn).toBe('10:00 PM');
     expect(addLogCall.date).toBe('2026-05-12');
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
 
     // Mock existing log for the next day's punch-out
     const existingLogId = 'log-123';
@@ -160,9 +194,10 @@ describe('Night Shift Integration', () => {
 
     // 2. Time Out at 6:00 AM (06:00) the next day
     const endDate = new Date('2026-05-13T06:00:00');
-    vi.setSystemTime(endDate);
-    
-    vi.advanceTimersByTime(1000);
+    await act(async () => {
+      vi.setSystemTime(endDate);
+      vi.advanceTimersByTime(1000);
+    });
 
     const timeOutBtn = screen.getByRole('button', { name: /Time Out/i });
     fireEvent.click(timeOutBtn);
@@ -175,7 +210,7 @@ describe('Night Shift Integration', () => {
     
     expect(updateLogCall.timeOut).toBe('06:00 AM');
     expect(updateLogCall.workHours).toBe('8.0h');
-    expect(updateLogCall.payrollNotes).toContain(expect.stringContaining('Night differential added'));
+    expect(updateLogCall.payrollNotes?.some((note: string) => note.includes('Night differential added'))).toBe(true);
     expect(updateLogCall.grossAdjustment).toBe('₱80.00');
   }, 60000);
 
@@ -195,14 +230,19 @@ describe('Night Shift Integration', () => {
     const addLogCall = addLog.mock.calls[0][0];
     expect(addLogCall.status).toBe('Late');
     expect(addLogCall.lateMinutes).toBe(20);
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
 
     // 2. Time Out at 6:00 AM the next day
     const existingLogId = 'log-late';
     getAllLogs.mockReturnValue([{ data: { ...addLogCall, id: existingLogId, location: 'Head Office' } }]);
     refreshLogsByDates.mockResolvedValue([{ data: { ...addLogCall, id: existingLogId, location: 'Head Office' } }]);
 
-    vi.setSystemTime(new Date('2026-05-13T06:00:00'));
-    vi.advanceTimersByTime(1000);
+    await act(async () => {
+      vi.setSystemTime(new Date('2026-05-13T06:00:00'));
+      vi.advanceTimersByTime(1000);
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Time Out/i }));
 
@@ -213,6 +253,7 @@ describe('Night Shift Integration', () => {
     const updateLogCall = updateLog.mock.calls[0][1];
     
     expect(updateLogCall.workHours).toBe('7.5h');
-    expect(updateLogCall.grossAdjustment).toBe('₱41.67');
+    expect(updateLogCall.undertimeMinutes).toBe(30);
+    expect(updateLogCall.grossAdjustment).toBe('-₱8.33');
   }, 60000);
 });

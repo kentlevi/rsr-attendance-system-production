@@ -112,16 +112,23 @@ export function calculatePayrollForTimeIn({
 }: TimeInInput): TimeInPayrollResult {
   const shift = getEmployeeShift(employee, settings);
   const shiftStart = parseTimeToMinutes(shift.shiftStartTime);
-  const timeInMinutes = parseTimeToMinutes(timeIn);
+  const rawTimeInMinutes = parseTimeToMinutes(timeIn);
+  let timeInMinutes = rawTimeInMinutes;
   const graceCutoff = shiftStart + shift.gracePeriodMins;
-  const approvalThreshold = parseTimeToMinutes(shift.shiftEndTime);
+  let approvalThreshold = parseTimeToMinutes(shift.shiftEndTime);
+  if (shift.isNightShift && approvalThreshold < shiftStart) {
+    approvalThreshold += 24 * 60;
+    if (timeInMinutes < shiftStart) {
+      timeInMinutes += 24 * 60;
+    }
+  }
   const notes: string[] = [];
   const scheduledSite = getScheduledSite(employee);
   const requiresApproval = timeInMinutes > approvalThreshold;
   const adjustedTimeIn = timeInMinutes <= graceCutoff ? formatMinutesToTime(shiftStart) : timeIn;
   const lunchStart = parseTimeToMinutes(settings.lunchBreakStart);
   const lunchEnd = parseTimeToMinutes(settings.lunchBreakEnd);
-  const shouldAutoDeductLunch = lunchEnd > lunchStart && timeInMinutes >= lunchEnd;
+  const shouldAutoDeductLunch = lunchEnd > lunchStart && rawTimeInMinutes >= lunchEnd;
   const lateMinutes = Math.max(0, timeInMinutes - graceCutoff);
   const lateDeductionAmount = lateMinutes * getEmployeeMinuteRate(employee);
   const awaySiteAllowanceAmount = getAwaySiteAllowance(employee, actualSite, settings);
@@ -306,7 +313,7 @@ export function calculatePayrollForTimeOut({
   const minuteRate = getEmployeeMinuteRate(employee);
   const undertimeDeductionAmount = undertimeMinutes * minuteRate;
   const lateDeductionAmount = parsePeso(existingPayroll?.lateDeduction);
-  const overtimePayAmount = (overtimeMinutes / 60) * settings.otAllowance;
+  const overtimePayAmount = (overtimeMinutes / 60) * Number(settings.otAllowance || 0);
   const flatOtAllowanceAmount = getFlatOtAllowanceAmount(timeInMinutes, timeOutMinutes, shiftStart, shift.isNightShift);
   const awaySiteAllowanceAmount = getAwaySiteAllowance(employee, actualSite, settings);
   const grossAdjustment = awaySiteAllowanceAmount + overtimePayAmount + flatOtAllowanceAmount + _ndAmount - lateDeductionAmount - undertimeDeductionAmount;
@@ -403,7 +410,7 @@ function getScheduledSite(employee: Employee) {
 function getAwaySiteAllowance(employee: Employee, actualSite: string, settings: SystemSettings) {
   const scheduledSite = getScheduledSite(employee);
   if (!actualSite || actualSite === '-' || actualSite === scheduledSite) return 0;
-  return settings.awaySiteAllowance || 0;
+  return Number(settings.awaySiteAllowance || 0);
 }
 
 function getFlatOtAllowanceAmount(timeInMinutes: number, actualTimeOutMinutes: number, shiftStart: number, isNightShift?: boolean) {

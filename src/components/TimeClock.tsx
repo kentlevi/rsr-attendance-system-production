@@ -252,7 +252,11 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       // Ensure we have the most recent data for this employee before proceeding
       const freshLogs = await attendanceService.refreshLogsByDates([todayStr], false, emp.id);
       const logs = freshLogs.length > 0 ? freshLogs : attendanceService.getAllLogs();
-      const existingLog = logs.find(l => l.data.employeeId === emp.id && l.data.date === todayStr);
+      const todayLog = logs.find(l => l.data.employeeId === emp.id && l.data.date === todayStr);
+      const openPreviousLog = [...logs]
+        .filter((log) => log.data.employeeId === emp.id && log.data.timeIn && log.data.timeIn !== '-' && (!log.data.timeOut || log.data.timeOut === '-'))
+        .sort((a, b) => String(b.data.date || '').localeCompare(String(a.data.date || '')))[0];
+      const existingLog = todayLog || openPreviousLog;
       const todayISO = new Date().toISOString().slice(0, 10);
 
       if (action === "Time In") {
