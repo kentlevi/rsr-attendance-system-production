@@ -18,20 +18,26 @@ const assetsDir = join(__dirname, '..', 'assets');
 const PRIMARY = '#0B7A4B';
 const SIZE = 1024;
 
+// RSR monogram. Letter-spacing widens the wordmark so it reads clearly at small
+// icon sizes; textLength keeps it inside the safe zone regardless of font metrics.
 const launcherSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <rect width="1024" height="1024" rx="180" fill="${PRIMARY}" />
-  <text x="512" y="720" font-family="Arial, Helvetica, sans-serif"
-        font-size="640" font-weight="900" text-anchor="middle" fill="white">R</text>
+  <text x="512" y="620" font-family="Arial Black, Helvetica, sans-serif"
+        font-size="340" font-weight="900" letter-spacing="-10"
+        text-anchor="middle" textLength="760" lengthAdjust="spacingAndGlyphs"
+        fill="white">RSR</text>
 </svg>
 `;
 
-// Foreground for adaptive icon: transparent background, "R" sized to fit Android's
+// Foreground for adaptive icon: transparent background, RSR sized to fit Android's
 // 66% safe zone (so the OS round/squircle mask doesn't clip it).
 const foregroundSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <text x="512" y="640" font-family="Arial, Helvetica, sans-serif"
-        font-size="450" font-weight="900" text-anchor="middle" fill="white">R</text>
+  <text x="512" y="580" font-family="Arial Black, Helvetica, sans-serif"
+        font-size="240" font-weight="900" letter-spacing="-8"
+        text-anchor="middle" textLength="560" lengthAdjust="spacingAndGlyphs"
+        fill="white">RSR</text>
 </svg>
 `;
 
