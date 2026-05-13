@@ -60,10 +60,11 @@ describe('Incident Reporting Flow', () => {
 
   it('renders existing incidents correctly', async () => {
     render(<IncidentsView />);
-    
-    expect(screen.getByText('John Incident')).toBeTruthy();
-    expect(screen.getByText('No Uniform')).toBeTruthy();
-    expect(screen.getByText('Infraction')).toBeTruthy();
+
+    // DataTable renders both mobile + desktop views in JSDOM, so each cell appears twice.
+    expect(screen.getAllByText('John Incident').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No Uniform').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Infraction').length).toBeGreaterThan(0);
   });
 
   it('successfully logs a new incident via the modal', async () => {
@@ -75,7 +76,7 @@ describe('Incident Reporting Flow', () => {
     await user.click(logBtn);
 
     // Fill Form
-    const selectTrigger = await screen.findByText(/Select Employee/i);
+    const selectTrigger = await screen.findByRole('button', { name: /Select Employee/i });
     await user.click(selectTrigger);
     const option = await screen.findByRole('button', { name: /John Incident/i });
     await user.click(option);
@@ -83,7 +84,7 @@ describe('Incident Reporting Flow', () => {
     const titleInput = screen.getByPlaceholderText(/Brief summary/i);
     await user.type(titleInput, 'Late arrival');
 
-    const descInput = screen.getByPlaceholderText(/Detailed description/i);
+    const descInput = screen.getByPlaceholderText(/detailed information/i);
     await user.type(descInput, 'Arrived 2 hours late without notice.');
 
     // Submit
@@ -109,14 +110,14 @@ describe('Incident Reporting Flow', () => {
     ]);
     
     render(<IncidentsView />);
-    
-    expect(screen.getByText('No Uniform')).toBeTruthy();
-    expect(screen.getByText('Merit Award')).toBeTruthy();
+
+    expect(screen.getAllByText('No Uniform').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Merit Award').length).toBeGreaterThan(0);
 
     const searchInput = screen.getByPlaceholderText(/Search incidents/i);
     await user.type(searchInput, 'Uniform');
 
     expect(screen.queryByText('Merit Award')).toBeNull();
-    expect(screen.getByText('No Uniform')).toBeTruthy();
+    expect(screen.getAllByText('No Uniform').length).toBeGreaterThan(0);
   });
 });

@@ -104,11 +104,12 @@ describe('Advanced Staff Controls Integration', () => {
     const user = userEvent.setup();
     render(<StaffView />);
 
-    // Open action menu (MoreVertical icon button)
-    const row = screen.getByText('John Doe').closest('tr');
+    // DataTable renders mobile + desktop layouts simultaneously. Use the desktop <tr> match.
+    const johnDoeMatches = screen.getAllByText('John Doe');
+    const row = johnDoeMatches.map(el => el.closest('tr')).find(Boolean);
     if (!row) throw new Error("Row not found");
-    const actionsBtn = within(row).getByRole('button', { name: /Actions/i });
-    
+    const actionsBtn = within(row as HTMLElement).getByRole('button', { name: /Actions/i });
+
     await user.click(actionsBtn);
 
     // Click "Deactivate" (since status is Active)

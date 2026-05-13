@@ -7,7 +7,7 @@ import {
   setDoc,
   Unsubscribe
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, handleFirestoreError, logFirestoreError, OperationType } from '../lib/firebase';
 import { Human, Config } from '@vladmandic/human';
 import { settingsService } from './SettingsService';
 import { cacheFaceProfiles, getCachedFaceProfiles } from '../lib/offlineCache';
@@ -61,7 +61,7 @@ export class FacialRecognitionService {
       });
       this.persistCache();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      logFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
   }
 
@@ -140,7 +140,7 @@ export class FacialRecognitionService {
       await this.persistCache();
     } catch (error) {
       console.error("Failed to load facial recognition profiles:", error);
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      logFirestoreError(error, OperationType.LIST, this.collectionPath);
       // Fall back to cache
       const hydrated = await this.hydrateFromCache();
       if (hydrated) {

@@ -259,7 +259,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         const isUpdating = isUpdatingId === log.data.id;
         const needsOfficialTimeOut = log.data.timeOut !== '-' && log.data.payrollReviewStatus === 'Pending Review';
         return (
-          <div className="flex items-center justify-end gap-2 relative">
+          <div className="flex items-center justify-end gap-2 relative w-full">
             {needsOfficialTimeOut ? (
               <TimePicker
                 value={officialTimeOutByLogId[log.data.id] || ''}
@@ -365,7 +365,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
       accessor: (request: LeaveRequestModel) => {
         const isUpdating = isUpdatingId === request.data.id;
         return (
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 w-full">
             <Button
               type="button"
               disabled={isUpdating}
@@ -398,7 +398,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-white px-2 py-4 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
               <ShieldAlert size={20} />
@@ -409,7 +409,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-white px-2 py-4 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <Clock size={20} />
@@ -422,7 +422,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-white px-2 py-4 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
               <Check size={20} />
@@ -435,7 +435,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
             </div>
           </div>
         </div>
-        <div className="rounded-2xl border border-border bg-white p-5">
+        <div className="rounded-2xl border border-border bg-white px-2 py-4 sm:p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
               <ShieldAlert size={20} />
@@ -448,7 +448,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-white p-4">
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-white px-2 py-3 sm:p-4">
         <Search size={18} className="shrink-0 text-text-muted" />
         <input
           value={searchQuery}
@@ -465,6 +465,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
         pageSize={10}
         totalItems={pendingLogs.length}
         className={cn('shadow-none')}
+        dense
       />
 
       <div className="flex flex-col gap-3">
@@ -491,6 +492,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
           totalItems={pendingLeaveRequests.length}
           className={cn('shadow-none')}
           minHeight="320px"
+          dense
         />
       </div>
 

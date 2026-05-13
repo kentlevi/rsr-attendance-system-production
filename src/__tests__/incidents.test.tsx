@@ -57,7 +57,7 @@ describe('Incidents Flow', () => {
     await user.click(option);
 
     await user.type(screen.getByPlaceholderText(/Brief summary/i), 'Equipment Damage');
-    await user.type(screen.getByPlaceholderText(/Detailed description/i), 'Broke a laptop screen');
+    await user.type(screen.getByPlaceholderText(/detailed information/i), 'Broke a laptop screen');
     
     // Type/Severity are already set to Infraction/Medium by default
 

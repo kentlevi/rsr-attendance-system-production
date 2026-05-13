@@ -45,6 +45,16 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
     }
     
     return matchesSearch && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    // Primary sort: Date descending
+    const dateA = new Date(a.data.date).getTime();
+    const dateB = new Date(b.data.date).getTime();
+    if (dateA !== dateB) return dateB - dateA;
+    
+    // Secondary sort: TimeIn descending
+    const timeA = a.data.timeIn || '00:00';
+    const timeB = b.data.timeIn || '00:00';
+    return timeB.localeCompare(timeA);
   });
 
   const columns = [
@@ -285,9 +295,9 @@ export function LogsView({ isAssistant }: { isAssistant?: boolean }) {
 
   return (
     <div className="w-full flex flex-col h-full gap-6 animate-in fade-in duration-500">
-      <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 shadow-sm flex flex-col overflow-hidden">
         {/* Filter Section */}
-        <div className="p-5 border-b border-border/60 flex flex-col gap-4">
+        <div className="px-2 py-4 sm:p-6 border-b border-border/60 flex flex-col gap-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex-1 max-w-[400px]">
               <div className="relative">

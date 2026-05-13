@@ -86,12 +86,12 @@ describe('Approvals Flow', () => {
     const user = userEvent.setup();
     render(<ApprovalsView />);
 
-    // Check if log is displayed
-    expect(screen.getByText('John Doe')).toBeDefined();
-    expect(screen.getByText('Pending attendance approval')).toBeDefined();
+    // DataTable renders mobile + desktop layouts simultaneously, so cells appear twice.
+    expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pending attendance approval').length).toBeGreaterThan(0);
 
-    // Click Approve
-    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    // Click Approve (first match — both layouts wire to the same handler)
+    const approveBtn = screen.getAllByRole('button', { name: /Approve/i })[0];
     await user.click(approveBtn);
 
     await waitFor(() => {
@@ -125,14 +125,11 @@ describe('Approvals Flow', () => {
     const user = userEvent.setup();
     render(<ApprovalsView />);
 
-    // Check if leave request is displayed
-    expect(screen.getByText('Sick Leave')).toBeDefined();
-    expect(screen.getByText('Flu')).toBeDefined();
+    // DataTable renders mobile + desktop layouts simultaneously, so cells appear twice.
+    expect(screen.getAllByText('Sick Leave').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Flu').length).toBeGreaterThan(0);
 
-    // Click Approve on the second table (Leave Approvals)
-    // There are multiple Approve buttons if both tables have data.
-    // Here we only have leave requests.
-    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    const approveBtn = screen.getAllByRole('button', { name: /Approve/i })[0];
     await user.click(approveBtn);
 
     await waitFor(() => {

@@ -130,7 +130,8 @@ describe('Workforce Insights View', () => {
     const modal = await screen.findByRole('dialog');
     expect(within(modal).getAllByText('John Doe')[0]).toBeDefined();
     
-    const approveBtn = within(modal).getByRole('button', { name: /Approve/i });
+    // DataTable inside modal renders mobile + desktop layouts, so the button appears twice.
+    const approveBtn = within(modal).getAllByRole('button', { name: /Approve/i })[0];
     await user.click(approveBtn);
 
     await waitFor(() => {

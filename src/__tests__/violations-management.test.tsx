@@ -64,10 +64,10 @@ describe('Violations Management Integration', () => {
     const user = userEvent.setup();
     render(<ViolationsView />);
 
-    // Check rendering
-    expect(screen.getByText('John Doe')).toBeDefined();
-    expect(screen.getByText('Unexcused Absence')).toBeDefined();
-    expect(screen.getByText('Jane Smith')).toBeDefined();
+    // DataTable renders mobile + desktop layouts, so cells appear in multiple places.
+    expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Unexcused Absence').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Jane Smith').length).toBeGreaterThan(0);
 
     // Filter by Severity
     const severitySelectTrigger = screen.getByRole('button', { name: /All Severities/i });
@@ -75,17 +75,17 @@ describe('Violations Management Integration', () => {
     const highOption = screen.getByRole('button', { name: /High Severity/i });
     await user.click(highOption);
 
-    expect(screen.getByText('John Doe')).toBeDefined();
+    expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
     expect(screen.queryByText('Jane Smith')).toBeNull();
 
-    // Search filter
+    // Reset filter
     await user.click(screen.getAllByRole('button', { name: /High Severity/i })[0]);
     await user.click(screen.getAllByRole('button', { name: /All Severities/i })[0]);
-    
-    const searchInput = screen.getByPlaceholderText(/Search by name or ID/i);
+
+    const searchInput = screen.getByPlaceholderText(/Search violations/i);
     await user.type(searchInput, 'Smith');
 
-    expect(screen.getByText('Jane Smith')).toBeDefined();
+    expect(screen.getAllByText('Jane Smith').length).toBeGreaterThan(0);
     expect(screen.queryByText('John Doe')).toBeNull();
   });
 });

@@ -54,7 +54,7 @@ describe('Straight Duty Flow', () => {
     const selectTrigger = await screen.findByText(/Choose/i);
     await user.click(selectTrigger);
 
-    const option = await screen.findByRole('button', { name: /John Doe/i });
+    const option = (await screen.findAllByRole('button', { name: /John Doe/i }))[0];
     await user.click(option);
 
     // Select Date (Custom DatePicker)
@@ -77,8 +77,9 @@ describe('Straight Duty Flow', () => {
     await user.click(submitBtn);
 
     expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/submitted/i), "success");
-    expect(screen.getByText('John Doe')).toBeDefined();
-    expect(screen.getByText('Pending')).toBeDefined();
+    // DataTable renders mobile + desktop layouts, so names/status appear in multiple places.
+    expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
   });
 
   it('allows an admin to approve a pending straight duty request', async () => {
@@ -99,7 +100,7 @@ describe('Straight Duty Flow', () => {
     await user.click(screen.getByRole('button', { name: /File Straight Duty/i }));
     await user.click(await screen.findByText(/Choose/i));
 
-    await user.click(await screen.findByRole('button', { name: /John Doe/i }));
+    await user.click((await screen.findAllByRole('button', { name: /John Doe/i }))[0]);
     
     // Pick date
     await user.click(screen.getByRole('button', { name: /Select date/i }));
@@ -116,10 +117,10 @@ describe('Straight Duty Flow', () => {
     );
 
     // Wait for the table to refresh and show the request
-    const approveBtn = await screen.findByRole('button', { name: /Approve/i });
+    const approveBtn = (await screen.findAllByRole('button', { name: /Approve/i }))[0];
     await user.click(approveBtn);
 
     expect(showToast).toHaveBeenCalledWith("Request approved.", "success");
-    expect(screen.getByText('Approved')).toBeDefined();
+    expect(screen.getAllByText('Approved').length).toBeGreaterThan(0);
   });
 });

@@ -10,7 +10,7 @@ import {
   type QueryConstraint,
   Unsubscribe
 } from 'firebase/firestore';
-import { db, OperationType, handleFirestoreError } from '../lib/firebase';
+import { db, OperationType, handleFirestoreError, logFirestoreError } from '../lib/firebase';
 import { UndertimeRequest, UndertimeRequestModel } from '../models/UndertimeRequest';
 
 export class UndertimeService {
@@ -18,6 +18,7 @@ export class UndertimeService {
   private collectionPath = "undertime";
   private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
+  private hasRetried = false;
 
   constructor() {
     // Eager subscription removed. Must call initializeForUser manually.
@@ -47,7 +48,11 @@ export class UndertimeService {
       } as UndertimeRequest));
       this.notifyListeners();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      const retry = this.hasRetried ? undefined : () => {
+        this.hasRetried = true;
+        this.initializeForUser(isAdmin, employeeId);
+      };
+      logFirestoreError(error, OperationType.LIST, this.collectionPath, retry);
     });
   }
 

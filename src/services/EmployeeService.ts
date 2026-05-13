@@ -13,7 +13,7 @@ import {
   onSnapshot,
   Unsubscribe
 } from "firebase/firestore";
-import { auth, db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { auth, db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
 import { Employee, EmployeeModel } from "../models/Employee";
 import { calculateLeaveReplenishment } from "../lib/LeaveReplenishmentRules";
 
@@ -53,7 +53,7 @@ class EmployeeService {
       this.notifyListeners();
       void this.processLeaveReplenishment();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      logFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
   }
 
@@ -108,7 +108,9 @@ class EmployeeService {
         return new EmployeeModel({ ...firstDoc.data(), id: firstDoc.id } as Employee);
       }
     } catch (e) {
-      handleFirestoreError(e, OperationType.GET, `${this.collectionPath}/email/${email}`);
+      // Don't throw — this is called during auth bootstrap where a permission-denied
+      // simply means "this user is not a recognized employee".
+      logFirestoreError(e, OperationType.GET, `${this.collectionPath}/email/${email}`);
     }
     return null;
   }

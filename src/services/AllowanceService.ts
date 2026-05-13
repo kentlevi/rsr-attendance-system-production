@@ -9,7 +9,7 @@ import {
   type QueryConstraint,
   Unsubscribe
 } from 'firebase/firestore';
-import { db, OperationType, handleFirestoreError } from '../lib/firebase';
+import { db, OperationType, handleFirestoreError, logFirestoreError } from '../lib/firebase';
 import { AllowanceRecord, AllowanceRecordModel } from '../models/AllowanceRecord';
 
 export class AllowanceService {
@@ -17,6 +17,7 @@ export class AllowanceService {
   private collectionPath = "allowances";
   private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
+  private hasRetried = false;
 
   constructor() {
     // Eager subscription removed. Must call initializeForUser manually.
@@ -46,7 +47,11 @@ export class AllowanceService {
       } as AllowanceRecord));
       this.notifyListeners();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      const retry = this.hasRetried ? undefined : () => {
+        this.hasRetried = true;
+        this.initializeForUser(isAdmin, employeeId);
+      };
+      logFirestoreError(error, OperationType.LIST, this.collectionPath, retry);
     });
   }
 

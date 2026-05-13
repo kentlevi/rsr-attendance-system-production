@@ -100,9 +100,8 @@ describe('Leave Approval Deduction Flow', () => {
     );
 
 
-    // Find the Approve button for the leave request
-    // Note: ApprovalsView renders multiple tables, one for attendance and one for leaves
-    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    // DataTable renders mobile + desktop layouts simultaneously, so each button appears twice.
+    const approveBtn = screen.getAllByRole('button', { name: /Approve/i })[0];
     await user.click(approveBtn);
 
     // Verify employee balance update
@@ -139,7 +138,7 @@ describe('Leave Approval Deduction Flow', () => {
     );
 
 
-    const approveBtn = screen.getByRole('button', { name: /Approve/i });
+    const approveBtn = screen.getAllByRole('button', { name: /Approve/i })[0];
     await user.click(approveBtn);
 
     await waitFor(() => {

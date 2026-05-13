@@ -55,7 +55,7 @@ export function Modal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
-            className={`relative w-full h-fit flex flex-col min-h-[100dvh] sm:min-h-0 sm:h-auto sm:max-h-[85vh] ${maxWidth} bg-white rounded-3xl shadow-2xl overflow-hidden`}
+            className={`relative w-full h-fit flex flex-col sm:max-h-[85vh] max-h-[90vh] ${maxWidth} bg-white rounded-3xl shadow-2xl overflow-hidden`}
           >
             {/* Header */}
             <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 bg-white sm:rounded-t-3xl">

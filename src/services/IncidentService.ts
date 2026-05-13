@@ -10,7 +10,7 @@ import {
   onSnapshot,
   where
 } from "firebase/firestore";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
 import { notificationService } from "./NotificationService";
 import { employeeService } from "./EmployeeService";
 
@@ -35,6 +35,7 @@ class IncidentService {
   private collectionPath = "incidents";
   private unsubscribe: (() => void) | null = null;
   private listeners: (() => void)[] = [];
+  private hasRetried = false;
 
   constructor() {
     // Eager subscription removed. Must call initializeForUser manually.
@@ -64,7 +65,11 @@ class IncidentService {
       }));
       this.notifyListeners();
     }, (error: any) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      const retry = this.hasRetried ? undefined : () => {
+        this.hasRetried = true;
+        this.initializeForUser(isAdmin, employeeId);
+      };
+      logFirestoreError(error, OperationType.LIST, this.collectionPath, retry);
     });
   }
 

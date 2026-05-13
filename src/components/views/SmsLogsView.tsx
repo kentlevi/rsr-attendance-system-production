@@ -285,7 +285,7 @@ export function SmsLogsView() {
         {/* Main Table Card */}
         <div className={cn("transition-all duration-300 flex flex-col bg-white rounded-2xl border border-border shadow-sm overflow-hidden", showDetails ? "flex-[2]" : "flex-1")}>
           {/* Internal Filters */}
-          <div className="p-5 border-b border-border/60 flex flex-col gap-4">
+          <div className="p-4 sm:p-5 border-b border-border/60 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-4 relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
@@ -349,7 +349,7 @@ export function SmsLogsView() {
         {/* Side Panel Details */}
         {activeDetails && (
           <div className="flex-1 bg-white border border-border rounded-2xl flex flex-col shadow-sm overflow-hidden animate-in slide-in-from-right-4 duration-300">
-            <div className="flex items-center justify-between p-5 border-b border-border/60">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border/60">
               <h3 className="text-[16px] font-medium text-[#1a1a1a]">
                 SMS Details
               </h3>
@@ -363,7 +363,7 @@ export function SmsLogsView() {
               </Button>
             </div>
 
-            <div className="p-6 flex flex-col gap-6">
+            <div className="p-4 sm:p-6 flex flex-col gap-6">
               <div className="flex flex-col gap-4 text-[16px]">
                 <div className="flex justify-between items-center text-[#1a1a1a]">
                   <div className="flex items-center gap-2 text-[#64748B] w-32">

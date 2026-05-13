@@ -37,6 +37,7 @@ import { Button } from "../common/Button";
 import { DataTable } from "../common/DataTable";
 import { AddEmployeeModal } from "./staff/AddEmployeeModal";
 import { EmployeeDetailsModal } from "./staff/EmployeeDetailsModal";
+import { ConfirmModal } from "../common/ConfirmModal";
 import Papa from "papaparse";
 import { cn } from "../../lib/utils";
 
@@ -125,23 +126,29 @@ export function StaffView() {
     setStatusFilter("");
   };
 
-  const handleDeleteEmployeeRecord = async (id: string, name?: string) => {
-    const label = name || "this employee";
-    if (
-      !window.confirm(
-        `Delete ${label}? This will permanently remove the employee record from Firebase.`,
-      )
-    ) {
-      return;
-    }
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    isOpen: boolean;
+    id: string;
+    name: string;
+  }>({ isOpen: false, id: "", name: "" });
 
-    await handleDeleteEmployee(id);
-    if (selectedEmployeeId === id) {
+  const handleDeleteEmployeeRecord = (id: string, name?: string) => {
+    setDeleteConfirmState({
+      isOpen: true,
+      id,
+      name: name || "this employee",
+    });
+  };
+
+  const confirmDelete = async () => {
+    await handleDeleteEmployee(deleteConfirmState.id);
+    if (selectedEmployeeId === deleteConfirmState.id) {
       setSelectedEmployeeId(null);
     }
-    if (editingEmployeeId === id) {
+    if (editingEmployeeId === deleteConfirmState.id) {
       setEditingEmployeeId(null);
     }
+    setDeleteConfirmState({ isOpen: false, id: "", name: "" });
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -382,8 +389,8 @@ export function StaffView() {
     .map(e => e.data);
 
   return (
-    <div className="w-full flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+    <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 px-0 sm:px-0">
         <StatsCard
           title="Total Employees"
           value={totalEmployees.toString()}
@@ -426,12 +433,12 @@ export function StaffView() {
         />
       </div>
 
-      <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col min-w-0 overflow-hidden">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 shadow-sm flex flex-col min-w-0 overflow-hidden">
         {/* Actions & Filters Section */}
-        <div className="p-6 border-b border-border/60 flex flex-col gap-6 bg-white">
+        <div className="px-2 py-4 sm:p-6 border-b border-border/60 flex flex-col gap-4 sm:gap-6 bg-white">
           <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[14px] font-bold text-text-secondary uppercase tracking-wider mr-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-[11px] sm:text-[14px] font-bold text-text-secondary uppercase tracking-wider mr-1 sm:mr-2">
                 Bulk Actions
               </span>
               <Button
@@ -550,7 +557,7 @@ export function StaffView() {
           </div>
         </div>
 
-        <div className="bg-slate-50/50 p-5 px-6 border-b border-border/60 flex items-center justify-between">
+        <div className="bg-slate-50/50 px-2 py-3 sm:p-6 border-b border-border/60 flex items-center justify-between">
           <div className="flex flex-col">
             <h3 className="text-[16px] font-bold text-[#1a1a1a] tracking-tight">
               Employee List ({filteredEmployees.length})
@@ -700,6 +707,18 @@ export function StaffView() {
               ? employees.find((e) => e.data.id === editingEmployeeId)?.data
               : null
           }
+        />
+      )}
+
+      {deleteConfirmState.isOpen && (
+        <ConfirmModal
+          isOpen={deleteConfirmState.isOpen}
+          onClose={() => setDeleteConfirmState({ ...deleteConfirmState, isOpen: false })}
+          onConfirm={confirmDelete}
+          title="Delete Employee Record"
+          message={`Are you sure you want to delete ${deleteConfirmState.name}? This action is permanent and will remove all their data from the system.`}
+          confirmText="Yes, Delete Record"
+          variant="danger"
         />
       )}
     </div>

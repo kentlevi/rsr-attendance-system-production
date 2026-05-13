@@ -24,7 +24,7 @@ export function StatsCard({
   className
 }: StatsCardProps) {
   return (
-    <Card className={cn("p-5 flex items-center gap-4 min-h-[110px] w-full", className)}>
+    <Card className={cn("p-4 sm:p-6 flex items-center gap-4 min-h-[110px] w-full", className)}>
       <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0", iconBg, iconColor)}>
         <Icon size={24} strokeWidth={2} />
       </div>

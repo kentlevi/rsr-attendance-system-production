@@ -4,6 +4,11 @@ import { employeeService } from './EmployeeService';
 import { settingsService } from './SettingsService';
 import { attendancePhotoService } from './AttendancePhotoService';
 import { LocalAttendancePunch, localAttendanceService } from './LocalAttendanceService';
+import { localUploadQueue, PendingUpload } from './LocalUploadQueue';
+import { pendingNotificationQueue, PendingNotification } from './PendingNotificationQueue';
+import { notificationService } from './NotificationService';
+import { ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
+import { storage } from '../lib/firebase';
 
 declare global {
   interface Window {
@@ -54,11 +59,33 @@ export class SyncService {
     try {
       await this.processNativeAndroidPunches();
       await this.processLocalAttendancePunches();
+      await this.processUploadQueue();
+      await this.processNotificationQueue();
     } catch (e) {
       console.error("SyncService: Error during sync process", e);
     } finally {
       this.isSyncing = false;
     }
+  }
+
+  async getAggregatedSyncSummary(): Promise<{
+    punches: number;
+    uploads: number;
+    notifications: number;
+    totalOpen: number;
+  }> {
+    const [punchSummary, uploadCount, notifCount] = await Promise.all([
+      localAttendanceService.getSyncSummary().catch(() => ({ totalOpen: 0 })),
+      localUploadQueue.getCount().catch(() => 0),
+      pendingNotificationQueue.getCount().catch(() => 0),
+    ]);
+    const punches = punchSummary.totalOpen || 0;
+    return {
+      punches,
+      uploads: uploadCount,
+      notifications: notifCount,
+      totalOpen: punches + uploadCount + notifCount,
+    };
   }
 
   private async processNativeAndroidPunches() {
@@ -221,9 +248,32 @@ export class SyncService {
       throw new Error(`Employee ${punch.employeeId} was not found for offline sync.`);
     }
 
-    const photoUrl = punch.photoDataUrl && settings.attendancePhotoUploadEnabled === true
-      ? await attendancePhotoService.uploadPhoto(punch.photoDataUrl, punch.employeeId, punch.action)
-      : null;
+    // Upload photo separately from the log write. If the photo fails it gets queued
+    // (via attendancePhotoService) but we still proceed with the attendance log so the
+    // punch isn't blocked. SyncService will reconcile the photo URL later via processUploadQueue.
+    let photoUrl: string | null = null;
+    if (punch.photoDataUrl && settings.attendancePhotoUploadEnabled === true) {
+      try {
+        photoUrl = await attendancePhotoService.uploadDirect(punch.photoDataUrl, punch.employeeId, punch.action);
+      } catch (e) {
+        console.warn(`SyncService: Photo upload failed for punch ${punch.id}; queueing photo for retry.`, e);
+        await localUploadQueue.enqueue({
+          kind: 'attendance-photo',
+          dataUrl: punch.photoDataUrl,
+          context: {
+            employeeId: punch.employeeId,
+            action: punch.action,
+            punchId: punch.id,
+            date: punch.date,
+            // logId will be patched in once we know it
+            field: punch.action === 'Time Out' ? 'imageOut' : 'imageIn',
+            queuedAt: new Date().toISOString(),
+            reason: e instanceof Error ? e.message : 'photo upload failed during sync',
+          },
+        });
+        photoUrl = null;
+      }
+    }
 
     if (punch.action === 'Time In') {
       const payroll = calculatePayrollForTimeIn({
@@ -335,6 +385,97 @@ export class SyncService {
       status: breakUpdate.requiresApproval ? 'Pending Approval' : existingLog.data.status,
       ...breakUpdate,
     });
+  }
+
+  private async processUploadQueue() {
+    const retryable = await localUploadQueue.getRetryable();
+    if (retryable.length === 0) return;
+
+    console.log(`SyncService: Draining ${retryable.length} pending uploads.`);
+
+    for (const upload of retryable) {
+      try {
+        await localUploadQueue.markUploading(upload.id);
+        await this.replayUpload(upload);
+        await localUploadQueue.remove(upload.id);
+      } catch (e) {
+        console.error(`SyncService: Upload ${upload.id} failed`, e);
+        await localUploadQueue.markFailed(upload.id, e);
+      }
+    }
+  }
+
+  private async replayUpload(upload: PendingUpload) {
+    const ctx = upload.context || {};
+
+    if (upload.kind === 'attendance-photo') {
+      if (!upload.dataUrl) throw new Error('Attendance photo upload missing dataUrl');
+      const url = await attendancePhotoService.uploadDirect(upload.dataUrl, ctx.employeeId, ctx.action);
+      // Patch the corresponding attendance log if we know which one
+      const logId = ctx.logId as string | undefined;
+      const field = (ctx.field as 'imageIn' | 'imageOut') || (ctx.action === 'Time Out' ? 'imageOut' : 'imageIn');
+      if (logId) {
+        await attendanceService.updateLog(logId, { [field]: url });
+      } else if (ctx.employeeId && ctx.date) {
+        // Try to find the log by employee + date
+        const log = attendanceService.getAllLogs().find(
+          (l) => l.data.employeeId === ctx.employeeId && l.data.date === ctx.date
+        );
+        if (log) {
+          await attendanceService.updateLog(log.data.id, { [field]: url });
+        }
+      }
+      return;
+    }
+
+    if (upload.kind === 'request-attachment' || upload.kind === 'profile-avatar' || upload.kind === 'incident-evidence') {
+      if (!upload.blob && !upload.dataUrl) {
+        throw new Error(`${upload.kind} upload missing payload`);
+      }
+      const path = upload.storagePath || `queued-uploads/${upload.kind}/${upload.id}`;
+      const fileRef = ref(storage, path);
+      if (upload.blob) {
+        await uploadBytes(fileRef, upload.blob, { contentType: upload.contentType || 'application/octet-stream' });
+      } else if (upload.dataUrl) {
+        await uploadString(fileRef, upload.dataUrl, 'data_url');
+      }
+      const url = await getDownloadURL(fileRef);
+      // Best-effort patch — leave to caller registration if context.onComplete is provided.
+      if (ctx.targetCollection && ctx.targetDocId && ctx.targetField) {
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        await updateDoc(doc(db, ctx.targetCollection, ctx.targetDocId), { [ctx.targetField]: url });
+      }
+      return;
+    }
+
+    throw new Error(`Unknown upload kind: ${upload.kind}`);
+  }
+
+  private async processNotificationQueue() {
+    const retryable = await pendingNotificationQueue.getRetryable();
+    if (retryable.length === 0) return;
+
+    console.log(`SyncService: Draining ${retryable.length} pending notifications.`);
+    for (const notif of retryable) {
+      try {
+        await pendingNotificationQueue.markSending(notif.id);
+        await this.replayNotification(notif);
+        await pendingNotificationQueue.remove(notif.id);
+      } catch (e) {
+        console.error(`SyncService: Notification ${notif.id} failed`, e);
+        await pendingNotificationQueue.markFailed(notif.id, e);
+      }
+    }
+  }
+
+  private async replayNotification(notif: PendingNotification) {
+    if (notif.kind === 'telegram') {
+      await notificationService.deliverTelegramDirect(notif.message);
+      return;
+    }
+    // SMS path could plug in a cloud-function call here once the endpoint exists.
+    throw new Error(`Unknown notification kind: ${notif.kind}`);
   }
 
   // Use this when the kiosk records a punch

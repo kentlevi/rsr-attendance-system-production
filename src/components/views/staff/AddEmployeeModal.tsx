@@ -593,19 +593,24 @@ export function AddEmployeeModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-label flex items-center justify-between">
-                    Fallback PIN (Optional)
+                    Fallback PIN (Required) <span className="text-[#DC2626]">*</span>
                   </label>
-                  <span className="text-[16px] text-text-secondary leading-tight mb-1">
-                    Used if facial recognition fails or is unavailable on a
-                    device.
+                  <span className="text-[13px] text-text-secondary leading-tight mb-1">
+                    Must be exactly 4 digits. Used for portal access.
                   </span>
                   <input
                     type="text"
                     name="pin"
                     value={formData.pin}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      if (val.length <= 4) {
+                        setFormData({ ...formData, pin: val });
+                      }
+                    }}
                     className="control-field px-4"
-                    placeholder="Enter PIN"
+                    placeholder="e.g. 1234"
+                    maxLength={4}
                   />
                 </div>
                 <div className="flex flex-col gap-2 justify-end">

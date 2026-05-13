@@ -7,7 +7,7 @@ import {
   getDocs,
   Unsubscribe
 } from "firebase/firestore";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
 
 export interface SmsLog {
   id: string;
@@ -47,7 +47,7 @@ class SmsService {
       } as SmsLog));
       this.notifyListeners();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      logFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
   }
 

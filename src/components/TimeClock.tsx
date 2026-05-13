@@ -191,7 +191,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     let userLng: number | undefined;
     let userDistance: number | undefined;
 
-    if (coords && coords.lat && coords.lng && coords.radius) {
+    if ((settings.geofencingEnabled ?? false) && coords && coords.lat && coords.lng && coords.radius) {
       // Perform geofence check
       let inGeofence = false;
       try {

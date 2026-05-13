@@ -81,7 +81,7 @@ export function NotificationModal({
     >
       <div className="flex flex-col">
         {/* Actions Bar */}
-        <div className="px-6 py-3 bg-slate-50/50 border-b border-border/60 flex items-center justify-between">
+        <div className="px-4 py-2 sm:px-6 sm:py-3 bg-slate-50/50 border-b border-border/60 flex items-center justify-between">
           <span className="text-[16px] font-medium text-slate-500 uppercase tracking-wider">
             Recent Alerts
           </span>
@@ -96,14 +96,14 @@ export function NotificationModal({
         </div>
 
         {/* List */}
-        <div className="max-h-[500px] overflow-y-auto">
+        <div className="flex flex-col">
           {notifications.length > 0 ? (
             notifications.map((notif) => (
               <div 
                 key={notif.id}
                 onClick={() => onNotificationClick?.(notif)}
                 className={cn(
-                  "px-6 py-5 border-b border-border/40 hover:bg-slate-50/80 transition-colors cursor-pointer relative group",
+                  "px-4 py-3 sm:px-6 sm:py-5 border-b border-border/40 hover:bg-slate-50/80 transition-colors cursor-pointer relative group",
                   !notif.isRead && "bg-[#0B7A4B]/[0.02]"
                 )}
               >

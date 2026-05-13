@@ -86,7 +86,7 @@ describe('Leave Credit Validation', () => {
     await user.type(datePickers[1], '2026-06-04');
 
     // Submit
-    const submitBtn = screen.getByRole('button', { name: /File Request/i });
+    const submitBtn = screen.getByRole('button', { name: /Submit Request/i });
     await user.click(submitBtn);
 
     await waitFor(() => {
@@ -115,7 +115,7 @@ describe('Leave Credit Validation', () => {
     await user.clear(datePickers[1]);
     await user.type(datePickers[1], '2026-06-02');
 
-    const submitBtn = screen.getByRole('button', { name: /File Request/i });
+    const submitBtn = screen.getByRole('button', { name: /Submit Request/i });
     await user.click(submitBtn);
 
     await waitFor(() => {

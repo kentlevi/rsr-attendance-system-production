@@ -284,7 +284,7 @@ export function DashboardView() {
 
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white rounded-2xl p-6 border border-border flex flex-col gap-8">
+        <div className="xl:col-span-2 bg-white rounded-2xl p-4 sm:p-6 border border-border flex flex-col gap-8">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-[16px] font-medium text-[#1a1a1a]">
               Attendance Overview
@@ -313,8 +313,8 @@ export function DashboardView() {
               Undertime
             </div>
           </div>
-          <div className="flex-1 min-h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="w-full h-[320px] mt-2">
+            <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
               <AreaChart
                 data={attendanceData}
                 margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
@@ -389,7 +389,7 @@ export function DashboardView() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-border flex flex-col gap-4 h-[400px]">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-border flex flex-col gap-4 h-[400px]">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-[16px] font-medium text-[#1a1a1a]">
               Pending Leave Requests
@@ -471,7 +471,7 @@ export function DashboardView() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-6 border border-border flex flex-col gap-4 h-[400px]">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-border flex flex-col gap-4 h-[400px]">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-[16px] font-medium text-[#1a1a1a]">
               Leave Balance Snapshot
@@ -529,7 +529,7 @@ export function DashboardView() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-border flex flex-col gap-4 h-[400px]">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-border flex flex-col gap-4 h-[400px]">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-[16px] font-medium text-[#1a1a1a]">
               Undertime Overview
@@ -605,7 +605,7 @@ export function DashboardView() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl p-6 border border-border flex flex-col gap-4 h-[400px]">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 border border-border flex flex-col gap-4 h-[400px]">
           <div className="flex items-center justify-between gap-4">
             <h3 className="text-[16px] font-medium text-[#1a1a1a]">
               Recent Activity

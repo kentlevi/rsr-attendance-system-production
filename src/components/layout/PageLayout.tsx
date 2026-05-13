@@ -1,8 +1,9 @@
-import React, { ReactNode } from 'react';
-import { Menu, WifiOff } from 'lucide-react';
+import React, { ReactNode, useEffect, useState } from 'react';
+import { Menu, WifiOff, CloudUpload } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../common/Button';
 import { useOnlineStatus } from '../../lib/useOnlineStatus';
+import { syncService } from '../../services/SyncService';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -26,6 +27,30 @@ export function PageLayout({
   className
 }: PageLayoutProps) {
   const isOnline = useOnlineStatus();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = async () => {
+      try {
+        const summary = await syncService.getAggregatedSyncSummary();
+        if (active) setPendingCount(summary.totalOpen);
+      } catch {
+        // ignore
+      }
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 10_000);
+    window.addEventListener('online', refresh);
+    window.addEventListener('offline', refresh);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener('online', refresh);
+      window.removeEventListener('offline', refresh);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex flex-col relative overflow-hidden font-sans">
       {/* Top Right Decoration */}
@@ -84,6 +109,15 @@ export function PageLayout({
                 <span className="hidden sm:inline">Offline</span>
               </div>
             )}
+            {pendingCount > 0 && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-[12px] sm:text-[13px] font-medium"
+                title={`${pendingCount} item${pendingCount === 1 ? '' : 's'} waiting to sync (punches, uploads, notifications).`}
+              >
+                <CloudUpload size={14} />
+                <span>{pendingCount}<span className="hidden sm:inline"> pending</span></span>
+              </div>
+            )}
             {headerRight ? (
               headerRight
             ) : showMenu ? (
@@ -108,7 +142,7 @@ export function PageLayout({
 
       {/* Main Content */}
       <main className={cn("flex-1 flex flex-col relative z-20 overflow-y-auto overflow-x-hidden", showMenu && "stable-scrollbar", className)}>
-        <div className="w-full max-w-[1200px] mx-auto flex-1 flex flex-col gap-10 px-6 py-6 md:px-8 md:py-8">
+        <div className="w-full max-w-[1200px] mx-auto flex-1 flex flex-col gap-6 sm:gap-10 px-2 sm:px-6 py-6 md:px-8 md:py-8">
           {children}
         </div>
       </main>

@@ -106,9 +106,9 @@ describe('Payroll Management Integration', () => {
     const user = userEvent.setup();
     render(<PayrollView />);
 
-    // Check if employee is in the table
-    expect(screen.getByText('John Doe')).toBeDefined();
-    expect(screen.getByText('₱ 1000')).toBeDefined();
+    // DataTable renders mobile + desktop layouts simultaneously, so cells appear twice.
+    expect(screen.getAllByText('John Doe').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('₱ 1000').length).toBeGreaterThan(0);
 
     // Set date range (simulated via service state if needed, but here it's local state)
     // We'll target the DatePickers by placeholder
@@ -120,8 +120,8 @@ describe('Payroll Management Integration', () => {
     await user.type(startInput, '2023-10-01');
     await user.type(endInput, '2023-10-15');
 
-    // Generate PDF
-    const generateBtn = screen.getByRole('button', { name: /Generate PDF/i });
+    // Generate PDF (mobile + desktop layouts each have a button; click the first)
+    const generateBtn = screen.getAllByRole('button', { name: /Generate PDF/i })[0];
     await user.click(generateBtn);
 
     // Verify PDF content calculation
@@ -158,7 +158,7 @@ describe('Payroll Management Integration', () => {
     const searchInput = screen.getByPlaceholderText(/Search employee/i);
     await user.type(searchInput, 'Alice');
 
-    expect(screen.getByText('Alice Smith')).toBeDefined();
+    expect(screen.getAllByText('Alice Smith').length).toBeGreaterThan(0);
     expect(screen.queryByText('Bob Wilson')).toBeNull();
   });
 });

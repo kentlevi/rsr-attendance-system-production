@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Hash,
   MapPin,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "../common/Button";
 
@@ -203,69 +204,111 @@ export function SettingsView() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4">
-               <div className="flex items-center gap-2">
-                 <MapPin size={18} className="text-[#0B7A4B]" />
-                 <label className="text-[15px] font-semibold text-[#1a1a1a]">
-                   Site Coordinates & Geofences
-                 </label>
-               </div>
-               
-               <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 overflow-hidden">
-                 <div className="grid grid-cols-[1fr_100px_100px_120px] gap-4 px-5 py-3 bg-slate-100/50 border-b border-slate-200/60">
-                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Site Name</span>
-                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Lat</span>
-                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Lng</span>
-                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Radius (m)</span>
-                 </div>
-                 
-                 <div className="flex flex-col">
+            <div className="flex flex-col gap-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm border border-emerald-100/50">
+                      <MapPin size={22} strokeWidth={2.5} />
+                    </div>
+                    <div className="flex flex-col">
+                      <h2 className="text-[17px] font-bold text-slate-900">Site Geofencing</h2>
+                      <p className="text-[12px] text-slate-500 font-medium">Define operational boundaries for each site</p>
+                    </div>
+                  </div>
+                  <Toggle 
+                    enabled={settings.geofencingEnabled ?? false} 
+                    onChange={v => handleUpdate("geofencingEnabled", v)} 
+                    label="Enable Geofencing"
+                  />
+                </div>
+                
+                {(settings.geofencingEnabled ?? false) && (
+                <div className="flex flex-col gap-3">
                    {settings.sites.map((site, idx) => {
-                     const coords = settings.siteCoordinates?.[site] || { lat: 0, lng: 0, radius: 100 };
+                     const coords = settings.siteCoordinates?.[site] || { lat: 0, lng: 0, radius: 100, address: "" };
                      return (
-                        <div key={site} className={cn(
-                          "grid grid-cols-[1fr_100px_100px_120px] gap-4 px-5 py-4 items-center transition-colors hover:bg-white",
-                          idx !== settings.sites.length - 1 && "border-b border-slate-100"
-                        )}>
-                           <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-400">
-                                <span className="text-[12px] font-bold">{site.charAt(0)}</span>
+                        <div key={site} className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-4 transition-all hover:bg-white hover:shadow-sm">
+                           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                              <div className="flex items-center gap-3 min-w-[140px]">
+                                 <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-primary shadow-xs">
+                                   <span className="text-[13px] font-black">{site.charAt(0)}</span>
+                                 </div>
+                                 <span className="text-[15px] font-bold text-slate-800">{site}</span>
                               </div>
-                              <span className="text-[14px] font-medium text-slate-700">{site}</span>
+                              
+                              <div className="flex-1 flex flex-col gap-2">
+                                 <div className="relative group">
+                                    <input 
+                                      type="text"
+                                      placeholder="Site address (e.g. 123 Main St, Manila)"
+                                      value={coords.address || ""} 
+                                      onChange={e => {
+                                         const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, address: e.target.value } };
+                                         handleUpdate("siteCoordinates", newCoords);
+                                      }} 
+                                      className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 pl-10 text-[14px] font-medium text-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
+                                    />
+                                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
+                                    
+                                    <button 
+                                      onClick={async () => {
+                                        if (!coords.address) {
+                                          showToast("Please enter an address first", "warning");
+                                          return;
+                                        }
+                                        showToast(`Locating ${site}...`, { loading: true });
+                                        try {
+                                          const { getGeminiModel } = await import("../../lib/gemini");
+                                          const model = getGeminiModel();
+                                          const prompt = `Geocode this address: "${coords.address}". Return ONLY a JSON object like {"lat": 14.5, "lng": 121.0}. No markdown. No text.`;
+                                          const result = await model.generateContent(prompt);
+                                          const text = result.response.text();
+                                          const json = JSON.parse(text.replace(/```json|```/g, ""));
+                                          if (json.lat && json.lng) {
+                                            const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lat: json.lat, lng: json.lng } };
+                                            handleUpdate("siteCoordinates", newCoords);
+                                            showToast(`Located ${site} successfully!`);
+                                          }
+                                        } catch (e) {
+                                          console.error(e);
+                                          showToast("Failed to locate. Check Gemini API key.", "error");
+                                        }
+                                      }}
+                                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 rounded-lg bg-primary text-white text-[12px] font-bold hover:bg-primary-dark transition-colors shadow-sm"
+                                    >
+                                      Locate
+                                    </button>
+                                 </div>
+                                 <div className="flex items-center gap-2 px-1">
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">Status:</span>
+                                    {coords.lat && coords.lng ? (
+                                      <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                                        <CheckCircle2 size={12} /> Pin Dropped ({coords.lat.toFixed(2)}, {coords.lng.toFixed(2)})
+                                      </span>
+                                    ) : (
+                                      <span className="text-[11px] font-semibold text-amber-500">Location not verified</span>
+                                    )}
+                                 </div>
+                              </div>
+                              
+                              <div className="flex flex-col gap-1 w-full sm:w-[100px]">
+                                 <label className="text-[11px] font-bold text-slate-400 uppercase px-1">Radius (M)</label>
+                                 <input type="number" 
+                                    value={coords.radius} 
+                                    onChange={e => {
+                                       const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, radius: parseFloat(e.target.value) || 0 } };
+                                       handleUpdate("siteCoordinates", newCoords);
+                                    }} 
+                                    className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-[14px] font-bold text-primary focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" 
+                                 />
+                              </div>
                            </div>
-                           
-                           <input type="number" step="any"
-                              value={coords.lat} 
-                              onChange={e => {
-                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lat: parseFloat(e.target.value) || 0 } };
-                                 handleUpdate("siteCoordinates", newCoords);
-                              }} 
-                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
-                           />
-                           
-                           <input type="number" step="any"
-                              value={coords.lng} 
-                              onChange={e => {
-                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, lng: parseFloat(e.target.value) || 0 } };
-                                 handleUpdate("siteCoordinates", newCoords);
-                              }} 
-                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
-                           />
-                           
-                           <input type="number" 
-                              value={coords.radius} 
-                              onChange={e => {
-                                 const newCoords = { ...settings.siteCoordinates, [site]: { ...coords, radius: parseFloat(e.target.value) || 0 } };
-                                 handleUpdate("siteCoordinates", newCoords);
-                              }} 
-                              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-center font-medium text-primary focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
-                           />
                         </div>
                      );
                    })}
-                 </div>
-               </div>
-            </div>
+                </div>
+                )}
+             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex flex-col gap-2">
@@ -817,6 +860,64 @@ export function SettingsView() {
               <p className="text-[14px] leading-relaxed text-amber-800 font-medium">
                 Adjusting this threshold affects matching accuracy. A value of <strong>0.65</strong> is recommended for most environments. Increase this if you experience false positives (wrong name detected).
               </p>
+            </div>
+          </div>
+        </div>
+        {/* 7. Gemini AI Configuration */}
+        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col p-7 transition-all hover:shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-sm border border-emerald-100/50">
+                <Sparkles size={24} strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-[19px] font-bold text-slate-900 tracking-tight">
+                  Gemini AI Configuration
+                </h2>
+                <p className="text-[13px] text-slate-500 font-medium">Configure Google Gemini for AI-driven insights</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-6 items-center">
+              <label className="text-[14px] font-bold text-slate-600 uppercase tracking-wider">
+                API Key
+              </label>
+              <div className="relative group">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  placeholder="Enter Gemini API Key"
+                  value={settings.geminiApiKey || ""}
+                  onChange={e => handleUpdate("geminiApiKey", e.target.value)}
+                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/30 px-4 text-[15px] font-medium text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all pr-12"
+                />
+                <button
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-emerald-500 transition-colors"
+                >
+                  {showApiKey ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200/60 flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100 shrink-0">
+                <Info size={20} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <p className="text-[14px] leading-relaxed text-slate-600 font-medium">
+                  This key is used for AI features like generating Workforce Insights and automated reporting.
+                </p>
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[13px] text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 transition-colors"
+                >
+                  Get your free API key from Google AI Studio
+                </a>
+              </div>
             </div>
           </div>
         </div>

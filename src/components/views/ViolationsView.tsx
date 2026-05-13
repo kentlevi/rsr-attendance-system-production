@@ -71,49 +71,42 @@ export function ViolationsView() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-[#1a1a1a]">Absence Violations</h2>
-          <p className="text-text-secondary text-sm">View lifetime absence violation records and suspensions.</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="relative w-full md:w-64">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 overflow-hidden shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
             <input 
               type="text" 
-              placeholder="Search by name or ID..." 
+              placeholder="Search violations..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="control-field w-full"
+              className="control-field w-full pl-10"
             />
           </div>
-          <div className="flex items-center gap-3">
-             <div className="relative w-48">
-                <Select
-                  value={severityFilter}
-                  onChange={(e) => setSeverityFilter(e.target.value)}
-                  options={[
-                    { value: 'All', label: 'All Severities' },
-                    { value: 'Low', label: 'Low Severity' },
-                    { value: 'Medium', label: 'Medium Severity' },
-                    { value: 'High', label: 'High Severity' }
-                  ]}
-                  className="rounded-xl bg-[#F8FAFC]"
-                />
-             </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value)}
+              options={[
+                { value: 'All', label: 'All Severities' },
+                { value: 'Low', label: 'Low Severity' },
+                { value: 'Medium', label: 'Medium Severity' },
+                { value: 'High', label: 'High Severity' }
+              ]}
+              className="h-10 sm:w-48 shadow-none"
+            />
           </div>
         </div>
 
         <DataTable
           columns={columns}
           data={records}
-          emptyMessage="No Violation Records"
+          emptyMessage="No violation records found."
           totalItems={records.length}
           getRowKey={(r) => r.id}
-          minHeight="320px"
+          minHeight="400px"
+          className="border-none shadow-none rounded-none"
         />
       </div>
     </div>

@@ -170,7 +170,7 @@ export function UndertimeRequestsModal({
       title={title}
       maxWidth="max-w-5xl"
     >
-      <div className="p-8 flex flex-col gap-6">
+      <div className="p-4 sm:p-6 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative w-full md:w-64">
             <input
@@ -187,9 +187,9 @@ export function UndertimeRequestsModal({
           columns={columns}
           data={filteredRequests}
           emptyMessage="No requests found."
-          totalItems={filteredRequests.length}
           getRowKey={(req) => req.data.id}
           minHeight="50vh"
+          dense
         />
       </div>
     </Modal>

@@ -208,28 +208,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     setIsNotificationModalOpen(false);
   };
 
-  // Lifted Profile State with Persistence
-  const [profileImage, setProfileImage] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedImage = localStorage.getItem(profileImageStorageKey);
-      return savedImage || adminAccount.avatar;
-    }
-    return adminAccount.avatar;
-  });
-
-  const [personalInfo, setPersonalInfo] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedInfo = localStorage.getItem(personalInfoStorageKey);
-      if (savedInfo) {
-        try {
-          return { ...adminAccount, ...JSON.parse(savedInfo) };
-        } catch (e) {
-          console.error("Error parsing saved profile info", e);
-        }
-      }
-    }
-    return adminAccount;
-  });
+  // Lifted Profile State
+  const [profileImage, setProfileImage] = useState(adminAccount.avatar);
+  const [personalInfo, setPersonalInfo] = useState(adminAccount);
 
   useEffect(() => {
     let isMounted = true;
@@ -240,8 +221,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         if (!isMounted) return;
         setPersonalInfo(profile);
         setProfileImage(profile.avatar);
-        localStorage.setItem(personalInfoStorageKey, JSON.stringify(profile));
-        localStorage.setItem(profileImageStorageKey, profile.avatar);
         sessionStorage.setItem("rsr_admin_account", JSON.stringify(profile));
       })
       .catch((error) => console.error("Error loading admin profile", error));
@@ -252,8 +231,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       (profile) => {
         setPersonalInfo(profile);
         setProfileImage(profile.avatar);
-        localStorage.setItem(personalInfoStorageKey, JSON.stringify(profile));
-        localStorage.setItem(profileImageStorageKey, profile.avatar);
         sessionStorage.setItem("rsr_admin_account", JSON.stringify(profile));
       },
     );
@@ -267,7 +244,6 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const handleAdminInfoUpdate = async (info: any) => {
     const nextProfile = { ...personalInfo, ...info, avatar: profileImage };
     setPersonalInfo(nextProfile);
-    localStorage.setItem(personalInfoStorageKey, JSON.stringify(nextProfile));
     sessionStorage.setItem("rsr_admin_account", JSON.stringify(nextProfile));
     await Promise.all([
       adminProfileService.updateProfile(adminLoginId, nextProfile),
@@ -295,8 +271,12 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     const nextProfile = { ...personalInfo, avatar: image };
     setProfileImage(image);
     setPersonalInfo(nextProfile);
-    localStorage.setItem(profileImageStorageKey, image);
-    localStorage.setItem(personalInfoStorageKey, JSON.stringify(nextProfile));
+    try {
+      localStorage.setItem(profileImageStorageKey, image);
+      localStorage.setItem(personalInfoStorageKey, JSON.stringify(nextProfile));
+    } catch (e) {
+      console.warn("Storage quota exceeded, image not persisted locally", e);
+    }
     sessionStorage.setItem("rsr_admin_account", JSON.stringify(nextProfile));
     await Promise.all([
       adminProfileService.updateProfile(adminLoginId, { avatar: image }),

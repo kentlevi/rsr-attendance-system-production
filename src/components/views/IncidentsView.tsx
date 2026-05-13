@@ -7,6 +7,7 @@ import { DatePicker } from '../common/DatePicker';
 import { Select } from '../common/Select';
 import { DataTable } from '../common/DataTable';
 import { Button } from '../common/Button';
+import { Modal } from '../common/Modal';
 
 export function IncidentsView() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -75,190 +76,163 @@ export function IncidentsView() {
   }).sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 h-full">
-      <div className="bg-white rounded-2xl p-6 border border-border flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <h2 className="text-[20px] font-bold text-[#1a1a1a]">Incident Reports</h2>
-            <p className="text-[14px] text-text-secondary">Log infractions, merits, and accidents.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-[300px]">
-             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="control-field pl-10 h-10 w-full" placeholder="Search incidents..." />
-             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 overflow-hidden shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="relative w-full sm:w-72">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input 
+              type="text" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              className="control-field pl-10 h-10 w-full" 
+              placeholder="Search incidents..." 
+            />
           </div>
           <Button 
             onClick={() => setIsModalOpen(true)} 
             variant="primary"
             size="sm"
-            className="whitespace-nowrap"
+            className="whitespace-nowrap w-full sm:w-auto"
             leftIcon={<Plus size={18} />}
           >
             Log Incident
           </Button>
         </div>
+
+        <DataTable
+          columns={[
+            {
+              header: "Date",
+              accessor: (incident: any) => (
+                <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
+                  {new Date(incident.data.date).toLocaleDateString()}
+                </span>
+              )
+            },
+            {
+              header: "Employee",
+              accessor: (incident: any) => getEmployeeName(incident.data.employeeId)
+            },
+            {
+              header: "Type / Severity",
+              accessor: (incident: any) => (
+                <div className="flex flex-wrap items-center gap-2">
+                   <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
+                      incident.data.type === 'Merit' ? 'bg-green-100 text-green-700' :
+                      incident.data.type === 'Accident' ? 'bg-red-100 text-red-700' :
+                      incident.data.type === 'Infraction' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
+                   }`}>
+                     {incident.data.type}
+                   </span>
+                   {incident.data.type !== 'Merit' && (
+                     <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
+                        incident.data.severity === 'High' ? 'bg-red-100 text-red-700' :
+                        incident.data.severity === 'Medium' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
+                     }`}>
+                       {incident.data.severity}
+                     </span>
+                   )}
+                </div>
+              )
+            },
+            {
+              header: "Title",
+              accessor: (incident: any) => (
+                <span className="max-w-[200px] truncate block" title={incident.data.title}>
+                  {incident.data.title}
+                </span>
+              )
+            },
+            {
+              header: "Status",
+              accessor: (incident: any) => (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap ${
+                  incident.data.acknowledged ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {incident.data.acknowledged ? <Check size={12} /> : <AlertTriangle size={12} />}
+                  {incident.data.acknowledged ? 'Acknowledged' : 'Pending'}
+                </span>
+              )
+            }
+          ]}
+          data={filteredIncidents}
+          getRowKey={(incident: any) => incident.id}
+          totalItems={filteredIncidents.length}
+          emptyMessage="No incident reports found."
+          className="border-none rounded-none shadow-none"
+          minHeight="450px"
+        />
       </div>
 
-      <div className="flex-1 bg-white border border-border rounded-2xl flex flex-col h-[500px]">
-         <DataTable
-           columns={[
-             {
-               header: "Date",
-               accessor: (incident: any) => (
-                 <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
-                   {new Date(incident.data.date).toLocaleDateString()}
-                 </span>
-               )
-             },
-             {
-               header: "Employee",
-               accessor: (incident: any) => getEmployeeName(incident.data.employeeId)
-             },
-             {
-               header: "Type / Severity",
-               accessor: (incident: any) => (
-                 <div className="flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
-                       incident.data.type === 'Merit' ? 'bg-green-100 text-green-700' :
-                       incident.data.type === 'Accident' ? 'bg-red-100 text-red-700' :
-                       incident.data.type === 'Infraction' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {incident.data.type}
-                    </span>
-                    {incident.data.type !== 'Merit' && (
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap overflow-hidden text-ellipsis ${
-                         incident.data.severity === 'High' ? 'bg-red-100 text-red-700' :
-                         incident.data.severity === 'Medium' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {incident.data.severity}
-                      </span>
-                    )}
-                 </div>
-               )
-             },
-             {
-               header: "Title",
-               accessor: (incident: any) => (
-                 <span className="max-w-[200px] truncate block" title={incident.data.title}>
-                   {incident.data.title}
-                 </span>
-               )
-             },
-             {
-               header: "Status",
-               accessor: (incident: any) => (
-                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium leading-none whitespace-nowrap ${
-                   incident.data.acknowledged ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-                 }`}>
-                   {incident.data.acknowledged ? <Check size={12} /> : <AlertTriangle size={12} />}
-                   {incident.data.acknowledged ? 'Acknowledged' : 'Pending'}
-                 </span>
-               )
-             }
-           ]}
-           data={filteredIncidents}
-           getRowKey={(incident: any) => incident.id}
-           totalItems={filteredIncidents.length}
-           emptyMessage="No incident reports found."
-           className="border-0 rounded-none h-full shadow-none"
-           minHeight="400px"
-         />
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-[600px] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between p-6 border-b border-border bg-[#F8FAFC]">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-xl shadow-sm border border-border">
-                  <FileText size={20} className="text-[#1a1a1a]" />
-                </div>
-                <div>
-                  <h3 className="text-[18px] font-bold text-[#1a1a1a]">Log Incident</h3>
-                  <p className="text-[14px] text-text-secondary mt-0.5">Create a new report or appraisal</p>
-                </div>
-              </div>
-              <Button 
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsModalOpen(false)} 
-                className="w-8 h-8 p-0 min-w-0 rounded-full text-[#64748B] hover:text-[#1a1a1a]"
-              >
-                <Plus size={20} className="rotate-45" />
-              </Button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                     <label className="text-label">Employee <span className="text-red-500">*</span></label>
-                     <Select 
-                        value={formData.employeeId} 
-                        onChange={e => setFormData({...formData, employeeId: e.target.value})}
-                     >
-                        <option value="">Select Employee</option>
-                        {employees.map(e => <option key={e.id} value={e.id}>{e.data.name}</option>)}
-                     </Select>
-                  </div>
-                  <div className="flex flex-col gap-2 relative z-50">
-                     <label className="text-label">Date <span className="text-red-500">*</span></label>
-                     <DatePicker
-                       value={formData.date}
-                       onChange={val => setFormData({ ...formData, date: val })}
-                       className="w-full"
-                     />
-                  </div>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                     <label className="text-label">Type <span className="text-red-500">*</span></label>
-                     <Select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})}>
-                        <option value="Infraction">Infraction</option>
-                        <option value="Accident">Accident</option>
-                        <option value="Merit">Performance Merit</option>
-                        <option value="Other">Other</option>
-                     </Select>
-                  </div>
-                  {formData.type !== 'Merit' && (
-                     <div className="flex flex-col gap-2">
-                        <label className="text-label">Severity <span className="text-red-500">*</span></label>
-                        <Select value={formData.severity} onChange={e => setFormData({...formData, severity: e.target.value as any})}>
-                           <option value="Low">Low</option>
-                           <option value="Medium">Medium</option>
-                           <option value="High">High</option>
-                        </Select>
-                     </div>
-                  )}
-               </div>
-
-               <div className="flex flex-col gap-2">
-                  <label className="text-label">Title/Subject <span className="text-red-500">*</span></label>
-                  <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Brief summary" className="control-field" />
-               </div>
- 
-                <div className="flex flex-col gap-2">
-                   <label className="text-label">Description <span className="text-red-500">*</span></label>
-                   <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Detailed description..." className="control-field min-h-[120px] py-3 text-base resize-y"></textarea>
-               </div>
-
-               <div className="pt-4 flex items-center justify-end gap-3 mt-4">
-                 <Button type="button" variant="secondary" className="px-6" onClick={() => setIsModalOpen(false)}>
-                   Cancel
-                 </Button>
-                 <Button type="submit" variant="primary" className="px-6" leftIcon={<Plus size={18} />}>
-                   Save Report
-                 </Button>
-               </div>
-            </form>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Log Incident"
+        maxWidth="max-w-2xl"
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button onClick={() => setIsModalOpen(false)} variant="secondary" className="flex-1">Cancel</Button>
+            <Button onClick={handleSubmit} variant="primary" className="flex-1" leftIcon={<Plus size={18} />}>Save Report</Button>
           </div>
+        }
+      >
+        <div className="p-5 sm:p-8 flex flex-col gap-6">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                 <label className="text-label pl-1">Employee <span className="text-red-500">*</span></label>
+                 <Select 
+                    value={formData.employeeId} 
+                    onChange={e => setFormData({...formData, employeeId: e.target.value})}
+                    className="h-11"
+                 >
+                    <option value="">Select Employee</option>
+                    {employees.map(e => <option key={e.id} value={e.id}>{e.data.name}</option>)}
+                 </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                 <label className="text-label pl-1">Date <span className="text-red-500">*</span></label>
+                 <DatePicker
+                   value={formData.date}
+                   onChange={val => setFormData({ ...formData, date: val })}
+                   className="w-full"
+                 />
+              </div>
+           </div>
+           
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                 <label className="text-label pl-1">Type <span className="text-red-500">*</span></label>
+                 <Select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} className="h-11">
+                    <option value="Infraction">Infraction</option>
+                    <option value="Accident">Accident</option>
+                    <option value="Merit">Performance Merit</option>
+                    <option value="Other">Other</option>
+                 </Select>
+              </div>
+              {formData.type !== 'Merit' && (
+                 <div className="flex flex-col gap-2">
+                    <label className="text-label pl-1">Severity <span className="text-red-500">*</span></label>
+                    <Select value={formData.severity} onChange={e => setFormData({...formData, severity: e.target.value as any})} className="h-11">
+                       <option value="Low">Low</option>
+                       <option value="Medium">Medium</option>
+                       <option value="High">High</option>
+                    </Select>
+                 </div>
+              )}
+           </div>
+
+           <div className="flex flex-col gap-2">
+              <label className="text-label pl-1">Title/Subject <span className="text-red-500">*</span></label>
+              <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Brief summary of incident" className="control-field h-11" />
+           </div>
+
+            <div className="flex flex-col gap-2">
+               <label className="text-label pl-1">Description <span className="text-red-500">*</span></label>
+               <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Provide detailed information about what happened..." className="control-field min-h-[140px] py-3 text-base resize-none"></textarea>
+           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { employeeService } from '../../services/EmployeeService';
 import { DataTable } from '../common/DataTable';
@@ -120,34 +120,30 @@ export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
   ];
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-[#1a1a1a]">Straight Duty Records</h2>
-          <p className="text-text-secondary text-sm">View and manage employee straight duty records and approvals.</p>
-        </div>
-        {isAssistant && (
-          <Button 
-            onClick={() => setIsModalOpen(true)}
-            variant="primary"
-            leftIcon={<Plus size={18} />}
-          >
-            File Straight Duty
-          </Button>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="relative w-full md:w-64">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 overflow-hidden shadow-sm">
+        <div className="p-4 sm:p-5 border-b border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="relative w-full sm:w-72">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
             <input 
               type="text" 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search..." 
-              className="control-field w-full"
+              placeholder="Search records..." 
+              className="control-field pl-10 w-full"
             />
           </div>
+          {isAssistant && (
+            <Button 
+              onClick={() => setIsModalOpen(true)}
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto"
+              leftIcon={<Plus size={18} />}
+            >
+              File Straight Duty
+            </Button>
+          )}
         </div>
         
         <DataTable
@@ -155,7 +151,8 @@ export function StraightDutyView({ isAssistant }: { isAssistant?: boolean }) {
           data={filteredRecords}
           emptyMessage="No straight duty records found."
           totalItems={filteredRecords.length}
-          minHeight="320px"
+          minHeight="400px"
+          className="border-none rounded-none shadow-none"
         />
       </div>
 

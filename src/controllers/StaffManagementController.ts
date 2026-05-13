@@ -23,7 +23,6 @@ export function useStaffManagementController() {
   useEffect(() => {
     // Determine admin status from current auth
     const isAdmin = !!(auth.currentUser?.email?.includes('@rsr.com') || 
-                      auth.currentUser?.email === 'skaelex1@gmail.com' ||
                       auth.currentUser?.email === 'admin@example.com');
 
     employeeService.initializeForUser(isAdmin, auth.currentUser?.uid);

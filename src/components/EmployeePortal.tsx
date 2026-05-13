@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCircle, Clock, Calendar, ChevronLeft, LogOut, Bell, Briefcase, IdCard, BarChart3, CalendarPlus, Hourglass, ClockAlert, X, ChevronRight, Upload, LayoutDashboard, User, Paperclip, LockKeyhole, ScanFace, Eye, EyeOff } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { cn } from '../lib/utils';
+import { cn, getFirebasePassword } from '../lib/utils';
 import Webcam from 'react-webcam';
 import { Modal } from './common/Modal';
 import { Select } from './common/Select';
@@ -64,6 +64,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
   const [isFaceScanning, setIsFaceScanning] = useState(false);
   const [showEmployeePin, setShowEmployeePin] = useState(false);
   const [isTimeDetailsOpen, setIsTimeDetailsOpen] = useState(false);
+  const [selectedWeekOffset, setSelectedWeekOffset] = useState(0);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isUndertimeModalOpen, setIsUndertimeModalOpen] = useState(false);
   const [isRequestsModalOpen, setIsRequestsModalOpen] = useState(false);
@@ -248,10 +249,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       }
 
       const auth = getAuth();
-      let firebasePin = pin;
-      if (firebasePin.length < 6) {
-        firebasePin = firebasePin.padEnd(6, '0');
-      }
+      const firebasePin = getFirebasePassword(pin);
 
       try {
         await signInWithEmailAndPassword(auth, emailToUse, firebasePin);
@@ -271,10 +269,23 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
       if (!auth.currentUser) throw new Error("Not logged in");
       
-      emp = await employeeService.getEmployeeById(auth.currentUser.uid);
+      // Try to get employee by UID first (most secure/direct)
+      let finalEmp = await employeeService.getEmployeeById(auth.currentUser.uid);
 
-      if (!emp) {
-        // Since we are bypassing backend, create a dummy employee for them to test
+      // If not found by UID, try using the employee we found earlier by Email/ID
+      if (!finalEmp && emp) {
+        finalEmp = emp;
+        // Optional: Link the UID to this record for future direct lookups.
+        // This is a best-effort write — a permission failure here must NOT block login.
+        try {
+          await employeeService.updateEmployee(emp.data.id, { firebaseUid: auth.currentUser.uid });
+        } catch (linkErr) {
+          console.warn('Could not link firebaseUid to employee record (non-fatal):', linkErr);
+        }
+      }
+
+      if (!finalEmp) {
+        // Only create a new record if absolutely no match was found
         const newEmp = {
            loginId: loginId,
            name: `Employee ${loginId.split('@')[0]}`,
@@ -282,18 +293,21 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
            role: 'Employee',
            department: 'Engineering',
            status: 'Active',
-           dateHired: new Date().toISOString()
+           dateHired: new Date().toISOString(),
+           firebaseUid: auth.currentUser.uid
         };
         const { doc, setDoc } = await import('firebase/firestore');
         const { db } = await import('../lib/firebase');
         await setDoc(doc(db, 'employees', auth.currentUser.uid), newEmp);
-        emp = await employeeService.getEmployeeById(auth.currentUser.uid);
+        finalEmp = await employeeService.getEmployeeById(auth.currentUser.uid);
       }
 
-      if (!emp) {
+      if (!finalEmp) {
         showToast("Employee record not found for this account.", "error");
         return;
       }
+
+      emp = finalEmp;
 
       const access = canEmployeeAccessPortal(emp.data);
       if (!access.allowed) {
@@ -317,12 +331,17 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
   };
 
   // Calculate specific analytics based on logs
-  const getWeeklyTimeData = () => {
-    // Generate empty week (last 7 days)
+  const getWeeklyTimeData = (weeksAgo: number = 0) => {
+    // Generate the selected week (Sunday → Saturday). weeksAgo=0 is the current week.
+    // Future days within the week remain at 0 hours.
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const today = new Date();
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - today.getDay() - weeksAgo * 7); // Day 0 = Sunday
+
     const summary = Array(7).fill(0).map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
+      const d = new Date(sunday);
+      d.setDate(sunday.getDate() + i);
       return {
         dateStr: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         name: days[d.getDay()],
@@ -339,7 +358,18 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
     return summary;
   };
-  const weeklyData = getWeeklyTimeData();
+  const weeklyData = getWeeklyTimeData(selectedWeekOffset);
+
+  // Build the dropdown options for the last 12 weeks.
+  const weekOptions = Array.from({ length: 12 }, (_, i) => {
+    const week = getWeeklyTimeData(i);
+    return {
+      value: String(i),
+      label: i === 0
+        ? `This week (${week[0]?.dateStr} – ${week[6]?.dateStr})`
+        : `${week[0]?.dateStr} – ${week[6]?.dateStr}`,
+    };
+  });
   const totalWeeklyHours = weeklyData.reduce((sum, day) => sum + day.hours, 0);
 
   const getWeeklyOvertime = () => {
@@ -1083,7 +1113,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
              </div>
 
              <div className="flex-1 w-full h-[160px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={160}>
                   <BarChart data={weeklyData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                      <XAxis dataKey="name" axisLine={{stroke: '#E2E8F0'}} tickLine={false} tick={{ fontSize: 13, fill: '#1a1a1a', fontWeight: 500 }} dy={10} />
@@ -1311,8 +1341,8 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     </div>
                  </div>
                ) : (
-                 <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-                   <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+                 <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+                   <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
                      <div className="flex flex-col gap-1">
                        <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Payslips</h2>
                        <p className="text-[16px] text-text-secondary">View and download your recent payslips.</p>
@@ -1329,23 +1359,24 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
             ) : activeTab === "my-time" ? (
               <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 pb-12">
-               <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-                 <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+               <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+                 <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
                    <div className="flex flex-col gap-1">
                      <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Time – Weekly Details</h2>
                      <p className="text-[16px] text-text-secondary">Review your daily attendance logs and total hours.</p>
                    </div>
                  </div>
-        <div className="p-6 flex flex-col gap-6">
-          {/* Date Selector */}
-          <div className="flex items-center gap-4">
-            <Calendar size={22} className="text-primary" />
-            <span className="font-medium text-text-primary text-[16px]">
-              {weeklyData[6]?.dateStr} – {weeklyData[0]?.dateStr}
-            </span>
-             <Button variant="icon-sm" className="rounded-full">
-               <ChevronRight size={20} />
-             </Button>
+        <div className="p-4 sm:p-6 flex flex-col gap-6">
+          {/* Week Selector */}
+          <div className="flex items-center gap-3">
+            <Calendar size={22} className="text-primary flex-shrink-0" />
+            <div className="w-full sm:w-80">
+              <Select
+                value={String(selectedWeekOffset)}
+                onChange={(e) => setSelectedWeekOffset(Number(e.target.value))}
+                options={weekOptions}
+              />
+            </div>
           </div>
 
           {/* Table */}
@@ -1397,7 +1428,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                 className: 'text-[16px] text-right'
               }
             ]}
-            data={[...weeklyData].reverse()}
+            data={weeklyData}
             emptyMessage="No time logs found for this week."
             totalItems={weeklyData.length}
             minHeight="300px"
@@ -1437,14 +1468,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "file-leave" ? (
           <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6 pb-12">
-            <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+            <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
+              <div className="hidden sm:flex items-center justify-between gap-6 p-4 sm:p-6 border-b border-border">
                 <div className="flex flex-col gap-1">
                   <h2 className="text-[20px] font-bold text-[#1a1a1a]">Apply for Leave</h2>
                   <p className="text-[16px] text-text-secondary">Submit a new request for time off.</p>
                 </div>
               </div>
-        <div className="px-6 pb-6 pt-2">
+        <div className="p-4 sm:p-6">
           <form className="flex flex-col gap-4">
             {/* Conversational UI */}
             <div className="flex flex-col gap-1.5 p-4 bg-primary/5 rounded-xl border border-primary/20">
@@ -1615,14 +1646,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "undertime" ? (
       <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+          <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">Submit Undertime</h2>
               <p className="text-[16px] text-text-secondary">Report early out or undertime hours.</p>
             </div>
           </div>
-        <div className="px-6 pb-6 pt-2">
+        <div className="p-4 sm:px-6 sm:pb-6 sm:pt-2">
           <form className="flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
@@ -1757,14 +1788,14 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "leave-status" ? (
       <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+          <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Requests</h2>
               <p className="text-[16px] text-text-secondary">Track the status of your leave and undertime requests.</p>
             </div>
           </div>
-        <div className="px-6 pb-6 pt-2">
+        <div className="p-4 sm:px-6 sm:pb-6 sm:pt-2">
           <div className="flex flex-col gap-3 pb-6">
             <h4 className="text-[16px] font-medium text-[#1a1a1a]">Leave Requests</h4>
             {leaves.length > 0 ? (
@@ -1857,15 +1888,16 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "notifications" ? (
       <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white rounded-2xl border border-border p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-6 pb-6 border-b border-border">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+          <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">Notifications</h2>
               <p className="text-[16px] text-text-secondary">Stay updated with alerts and messages.</p>
             </div>
           </div>
+          <div className="p-4 sm:p-0 sm:mt-6">
           {notifications.length > 0 ? (
-            <div className="flex flex-col gap-4 mt-6">
+            <div className="flex flex-col gap-4">
               {notifications.map((n, i) => (
                 <div 
                   key={i} 
@@ -1889,6 +1921,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
           ) : (
             <div className="text-[16px] text-text-secondary italic">No notifications found.</div>
           )}
+          </div>
         </div>
       </div>
     ) : activeTab === "profile" ? (

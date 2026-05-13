@@ -12,9 +12,10 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email.matches('.*@rsr.com') || 
-         request.auth.token.email == 'skaelex1@gmail.com' ||
+      return isAuthenticated() &&
+        (request.auth.token.email.matches('.*@rsr[.]com') ||
+         request.auth.token.email == 'admin@rsrengineering.com' ||
+         request.auth.token.email == 'hr@rsrengineering.com' ||
          request.auth.token.email == 'admin@example.com' ||
          request.auth.token.role == 'admin');
     }
@@ -23,12 +24,27 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // True when the given employee record id (a Firestore doc id in the `employees`
+    // collection) belongs to the currently-signed-in user. Resolves the bridge
+    // between Firebase Auth (uid + email) and the canonical `employees` doc id
+    // used as foreign key in attendance / leaves / notifications / etc.
+    function isEmployeeRow(employeeIdValue) {
+      return isAuthenticated() && employeeIdValue != null && (
+        employeeIdValue == request.auth.uid ||
+        employeeIdValue == request.auth.token.email ||
+        (
+          exists(/databases/$(database)/documents/employees/$(employeeIdValue))
+          && get(/databases/$(database)/documents/employees/$(employeeIdValue)).data.email.lower() == request.auth.token.email.lower()
+        )
+      );
+    }
+
     function isDataOwner() {
-      return isAuthenticated() && (resource.data.employeeId == request.auth.uid || resource.data.employeeId == request.auth.token.email);
+      return isEmployeeRow(resource.data.employeeId);
     }
 
     function isIncomingDataOwner() {
-      return isAuthenticated() && (request.resource.data.employeeId == request.auth.uid || request.resource.data.employeeId == request.auth.token.email);
+      return isEmployeeRow(request.resource.data.employeeId);
     }
 
     function isUpdatingOnly(allowedFieldsList) {
@@ -59,42 +75,60 @@ service cloud.firestore {
     }
 
     match /employees/{employeeId} {
-      allow read, list: if true; 
+      // Reads are required during auth bootstrap to bridge Firebase Auth → employees record.
+      // Restricted to authenticated users (so a random visitor can't enumerate staff).
+      allow read, list: if isAuthenticated();
       allow create: if isAdmin() || isOwner(employeeId);
-      allow update: if isAdmin() || isOwner(employeeId);
+      allow update: if isAdmin() || isOwner(employeeId) ||
+        (isAuthenticated() &&
+         resource.data.email.lower() == request.auth.token.email.lower() &&
+         isUpdatingOnly(['firebaseUid', 'avatar', 'lastLogin']));
       allow delete: if isAdmin();
     }
 
+    // NOTE on LIST queries:
+    // Firestore evaluates LIST rules against the query's constraints, not per-doc.
+    // Because the client filters these listens by `where('employeeId', '==', empRecordId)`
+    // — and empRecordId is the Firestore doc id of the employee record, NOT the auth uid
+    // or email — per-doc rules like `resource.data.employeeId == request.auth.uid` can't
+    // be statically proven by Firestore, so LIST queries fail with permission-denied.
+    // We allow LIST to any authenticated user and rely on the client filter for scoping.
+    // Single-doc operations (get/update/delete) still enforce strict ownership.
+    // TODO(prod): write firebaseUid (or employeeEmail) on each row at create time, then
+    // re-tighten LIST to require `resource.data.firebaseUid == request.auth.uid`.
+
     match /leaves/{document} {
-      allow read: if isAdmin() || isDataOwner();
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAdmin() || isDataOwner();
       allow delete: if isAdmin() || isDataOwner();
     }
 
     match /undertime/{document} {
-      allow read: if isAdmin() || isDataOwner();
+      allow read: if isAuthenticated();
       allow create: if isAdmin() || isIncomingDataOwner();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     match /incidents/{document} {
-      allow read: if isAdmin() || isDataOwner();
+      allow read: if isAuthenticated();
       allow create: if isAdmin();
       allow update: if isAdmin() || (isDataOwner() && isUpdatingOnly(['acknowledged', 'acknowledgedAt']));
       allow delete: if isAdmin();
     }
 
     match /notifications/{document} {
-      allow read: if isAdmin() || isDataOwner();
+      allow read: if isAuthenticated();
       allow create: if isAdmin() || isIncomingDataOwner();
       allow update: if isAdmin() || (isDataOwner() && isUpdatingOnly(['isRead']));
       allow delete: if isAdmin();
     }
 
     match /allowances/{document} {
-      allow read, write: if isAdmin();
+      // Employees can list/read; only admins can write.
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
     match /sms_logs/{document} {

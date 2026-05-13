@@ -88,7 +88,7 @@ export function PayrollView() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95">
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-0 sm:px-0">
         <div className="bg-white rounded-2xl p-6 border border-border shadow-sm">
           <div className="flex items-center gap-4 mb-4">
             <div className="w-12 h-12 rounded-xl bg-[#E8F3EE] flex items-center justify-center text-[#0B7A4B]">
@@ -117,8 +117,8 @@ export function PayrollView() {
       </div>
       
       {/* Table */}
-      <div className="bg-white border text-[#1a1a1a] border-border rounded-2xl overflow-hidden shadow-sm flex flex-col items-center justify-start flex-1 shrink-0 pb-12 w-full h-[600px] overflow-y-auto">
-         <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white border-b border-border/50 gap-4">
+      <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 shadow-sm flex flex-col min-w-0 overflow-hidden">
+         <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between p-4 sm:p-6 bg-white border-b border-border/50 gap-4">
             <h2 className="text-[20px] font-bold text-[#1a1a1a]">Generate Payslips</h2>
             <div className="flex items-center gap-4 w-full md:w-auto">
                <div className="relative w-full md:w-[320px]">

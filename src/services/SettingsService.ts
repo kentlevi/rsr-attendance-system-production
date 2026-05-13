@@ -8,6 +8,7 @@ import {
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
 
 export interface SiteCoordinate {
+  address?: string;
   lat: number;
   lng: number;
   radius: number;
@@ -52,6 +53,8 @@ export interface SystemSettings {
   cloudRetentionDays?: number;
   photoRetentionDays?: number;
   logoDataUrl?: string;
+  geminiApiKey?: string;
+  geofencingEnabled?: boolean;
 }
 
 const defaultSettings: SystemSettings = {
@@ -81,6 +84,8 @@ const defaultSettings: SystemSettings = {
   attendancePhotoUploadEnabled: false,
   cloudRetentionDays: 90,
   photoRetentionDays: 30,
+  geminiApiKey: "",
+  geofencingEnabled: false,
 };
 
 export class SettingsService {

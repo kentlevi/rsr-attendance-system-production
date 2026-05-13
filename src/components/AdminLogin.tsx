@@ -245,7 +245,6 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
                 className={`control-field h-12 px-4 pr-12 ${
                   loginError ? "border-red-300 focus:border-red-500 focus:ring-red-100" : "border-border"
                 }`}
-                autoFocus
               />
               <Button
                 type="button"

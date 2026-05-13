@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wand2, Paperclip, Loader2, X } from 'lucide-react';
+import { Paperclip, X, Upload } from 'lucide-react';
 import { leaveService } from '../../../services/LeaveService';
 import { validateLeaveRequest } from '../../../lib/LeaveRules';
 import { useToast } from '../../../context/ToastContext';
@@ -114,23 +114,29 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
       title="File Leave Request"
       maxWidth="max-w-2xl"
       footer={
-        <div className="flex gap-3 w-full">
-          <Button variant="secondary" className="px-8 flex-1" onClick={onClose} disabled={isSubmitting}>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 w-full">
+          <Button
+            variant="secondary"
+            className="w-full sm:w-auto text-text-secondary"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button 
+          <Button
             variant="primary"
-            className="px-10 flex-1" 
+            className="w-full sm:w-auto"
             onClick={handleSubmit}
             isLoading={isSubmitting}
             disabled={!employeeId || !leaveForm.startDate || !leaveForm.endDate}
           >
-            File Request
+            {isSubmitting ? "Submitting" : "Submit Request"}
           </Button>
         </div>
       }
     >
-      <div className="p-6 md:p-8 flex flex-col gap-8">
+      <div className="p-6 flex flex-col gap-4">
+        {/* Employee Selector (admin-only) */}
         <Select
           label="Select Employee *"
           value={employeeId}
@@ -139,35 +145,41 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
           placeholder="-- Choose an employee --"
         />
 
-        <div className="bg-indigo-50/50 rounded-2xl border border-indigo-100 p-5 flex flex-col gap-3">
-          <label className="text-[13px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-2">
-            <Wand2 size={16} /> Optional: Try AI Leave Writer
+        {/* Smart Fill (AI) */}
+        <div className="flex flex-col gap-1.5 p-4 bg-primary/5 rounded-xl border border-primary/20">
+          <label className="block text-[12px] font-medium text-primary">
+            Smart Fill (AI)
           </label>
-          <div className="flex flex-col md:flex-row gap-3">
-            <input 
-              type="text" 
-              placeholder="e.g., Sick leave tomorrow having a fever" 
-              className="flex-1 control-field border-indigo-200 focus:ring-indigo-500 text-[16px]"
+          <p className="text-[12px] text-text-secondary leading-snug">
+            Type a request naturally and our AI will fill out the form for you. (e.g., "Sick leave tomorrow because I have a fever")
+          </p>
+          <div className="flex gap-2">
+            <textarea
               value={leaveAiText}
               onChange={(e) => setLeaveAiText(e.target.value)}
+              placeholder="Describe the leave request"
+              className="control-field flex-1 p-2.5 text-[14px] resize-none"
+              rows={1}
             />
-            <Button 
-              variant="secondary"
-              className="bg-indigo-50 border-indigo-200"
+            <Button
+              variant="primary"
+              size="sm"
               onClick={handleParseLeaveText}
               isLoading={isParsingLeave}
               disabled={!leaveAiText.trim()}
-              leftIcon={!isParsingLeave && <Wand2 size={18} className="text-indigo-600" />}
+              className="px-4 text-[12px] flex-shrink-0"
             >
-              <span className="font-semibold text-indigo-700">{isParsingLeave ? "Parsing..." : "Auto-fill"}</span>
+              {isParsingLeave ? "Parsing" : "Auto-fill"}
             </Button>
           </div>
-          <p className="text-[14px] text-indigo-700/80 font-medium">Type a natural sentence and the AI will try to populate the form below.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Leave Type */}
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-border/50">
+          <label className="block text-[16px] font-medium text-[#1a1a1a]">
+            Leave Type <span className="text-[#DC2626]">*</span>
+          </label>
           <Select
-            label="Leave Type *"
             value={leaveForm.type}
             onChange={(e) => setLeaveForm({ ...leaveForm, type: e.target.value })}
             options={[
@@ -175,70 +187,108 @@ export function FileLeaveModal({ isOpen, onClose }: FileLeaveModalProps) {
               { value: 'sick', label: 'Sick Leave' },
               { value: 'unpaid', label: 'Unpaid Leave' }
             ]}
+            placeholder="Select Leave Type"
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Dates */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-label pl-1">Start Date <span className="text-[#DC2626]">*</span></label>
-            <DatePicker 
+            <label className="block text-[16px] font-medium text-[#1a1a1a]">
+              Start Date <span className="text-[#DC2626]">*</span>
+            </label>
+            <DatePicker
               value={leaveForm.startDate}
               onChange={(val) => setLeaveForm({ ...leaveForm, startDate: val })}
-              placeholder="Select date"
+              placeholder="Start Date"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-label pl-1">End Date <span className="text-[#DC2626]">*</span></label>
-            <DatePicker 
+            <label className="block text-[16px] font-medium text-[#1a1a1a]">
+              End Date <span className="text-[#DC2626]">*</span>
+            </label>
+            <DatePicker
               value={leaveForm.endDate}
               onChange={(val) => setLeaveForm({ ...leaveForm, endDate: val })}
-              placeholder="Select date"
+              placeholder="End Date"
             />
           </div>
         </div>
 
+        {/* Total Days */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-label pl-1">Reason</label>
-          <textarea 
-            rows={3} 
-            className="control-field py-3 text-[16px] resize-none"
-            placeholder="Provide a brief explanation for your leave request..."
-            value={leaveForm.reason}
-            onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+          <label className="block text-[16px] font-medium text-[#1a1a1a]">
+            Total Days
+          </label>
+          <input
+            type="text"
+            value={`${leaveForm.startDate && leaveForm.endDate ? Math.max(1, Math.ceil((new Date(leaveForm.endDate).getTime() - new Date(leaveForm.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0} day(s)`}
+            readOnly
+            className="control-field rounded-lg bg-[#F8FAFC] text-[#64748B] cursor-not-allowed"
           />
         </div>
 
-        {leaveForm.type === 'sick' && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-label pl-1">Medical Certificate (Optional)</label>
-            <div className="flex items-center gap-4">
-              <label className="inline-flex items-center">
-                <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleAttachmentSelect(e.target.files?.[0])} />
-                <Button 
-                  as="div" 
-                  variant="secondary" 
-                  className="h-12 cursor-pointer"
-                  leftIcon={<Paperclip size={18} />}
-                >
-                  Choose File
-                </Button>
-              </label>
-              {leaveAttachment && (
-                <div className="flex items-center gap-2 bg-[#F8FAFC] px-4 py-2 rounded-xl border border-border">
-                  <span className="text-sm font-medium text-[#1a1a1a] truncate max-w-[200px]">{leaveAttachment.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => setLeaveAttachment(null)}
-                    className="text-text-muted hover:text-red-500 p-1 h-auto w-auto"
-                  >
-                    <X size={16} />
-                  </Button>
-                </div>
-              )}
-            </div>
+        {/* Reason */}
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-[16px] font-medium text-[#1a1a1a]">
+            Reason <span className="text-[#DC2626]">*</span>
+          </label>
+          <textarea
+            value={leaveForm.reason}
+            onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })}
+            placeholder="Enter reason for leave"
+            className="control-field h-[100px] rounded-lg p-3 resize-none"
+            maxLength={500}
+          />
+          <div className="text-right text-[12px] text-[#64748B] font-medium">
+            {leaveForm.reason.length} / 500
           </div>
-        )}
+        </div>
+
+        {/* Attachment */}
+        <div className="flex flex-col gap-1.5">
+          <label className="block text-[16px] font-medium text-[#1a1a1a]">
+            Attachment{" "}
+            <span className="text-[#64748B] font-normal">
+              {leaveForm.type === 'sick' ? '(Medical Certificate, Optional)' : '(Optional)'}
+            </span>
+          </label>
+          <label className="border border-dashed border-[#CBD5E1] rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-[#F8FAFC] hover:border-primary/50 transition-all cursor-pointer">
+            <input
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              className="sr-only"
+              onChange={(e) => handleAttachmentSelect(e.target.files?.[0])}
+            />
+            <div className="flex items-center justify-center text-[12px]">
+              <Upload size={16} className="text-primary mr-2" />
+              <span className="text-[#1a1a1a]">
+                <span className="text-primary font-semibold">Click to upload</span>{" "}
+                or drag and drop
+              </span>
+            </div>
+            <span className="text-[12px] text-[#64748B]">
+              JPG, PNG, PDF (Max. 5MB)
+            </span>
+          </label>
+          {leaveAttachment && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-[#F8FAFC] px-3 py-2 text-[12px]">
+              <div className="flex items-center gap-2 min-w-0 text-text-secondary">
+                <Paperclip size={14} className="text-primary shrink-0" />
+                <span className="truncate">{leaveAttachment.name}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => setLeaveAttachment(null)}
+                className="h-7 w-7 p-0 min-w-0"
+                aria-label="Remove leave attachment"
+              >
+                <X size={14} />
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </Modal>
   );

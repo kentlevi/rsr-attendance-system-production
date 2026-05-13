@@ -95,3 +95,11 @@ export function downloadCSV(data: any[], filename: string) {
     document.body.removeChild(link);
   }
 }
+
+export function getFirebasePassword(pin: string): string {
+  if (!pin) return "";
+  // Firebase Auth requires at least 6 characters.
+  // We pad with zeros to ensure consistency.
+  return pin.padEnd(6, '0');
+}
+

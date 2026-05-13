@@ -11,7 +11,7 @@ import {
   type QueryConstraint,
   Unsubscribe
 } from 'firebase/firestore';
-import { db, OperationType, handleFirestoreError, trackFirestoreUsage } from '../lib/firebase';
+import { db, OperationType, handleFirestoreError, logFirestoreError, trackFirestoreUsage } from '../lib/firebase';
 import { AttendanceLog, AttendanceLogModel } from '../models/AttendanceLog';
 
 const LIVE_ATTENDANCE_WINDOW_DAYS = 31;
@@ -63,7 +63,7 @@ export class AttendanceService {
       } as AttendanceLog));
       this.notifyListeners();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      logFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
   }
 

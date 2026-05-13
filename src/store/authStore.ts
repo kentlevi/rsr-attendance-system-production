@@ -35,33 +35,65 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (user) {
         try {
             const idTokenResult = await user.getIdTokenResult();
-            const isAdminEmail = user.email === 'admin@rsr.com' || 
-                                user.email === 'hr@rsr.com' || 
-                                user.email === 'skaelex1@gmail.com';
-                                
+            const isAdminEmail = user.email === 'admin@rsr.com' ||
+                                user.email === 'hr@rsr.com' ||
+                                user.email === 'admin@rsrengineering.com' ||
+                                user.email === 'hr@rsrengineering.com';
+
+            let employeeId: string | undefined;
+
             if (idTokenResult.claims.role === 'admin' || isAdminEmail) {
                 isAdmin = true;
-            } else if (idTokenResult.claims.role === 'employee' || user.email?.includes('@rsrengineering.com')) {
+            } else if (idTokenResult.claims.role === 'employee') {
                 isEmployee = true;
-            } else {
-                isAdmin = false;
-                isEmployee = false;
+            } else if (user.email) {
+                // Look up the user's email in the employees collection. This makes any
+                // registered employee able to sign in via the employee portal regardless
+                // of email domain (e.g. gmail.com), without needing a backend to set
+                // Firebase Auth custom claims.
+                try {
+                    const empModel = await employeeService.getEmployeeByEmail(user.email);
+                    if (empModel) {
+                        isEmployee = true;
+                        employeeId = empModel.data.id;
+                    }
+                } catch (lookupErr) {
+                    console.warn('Employee lookup by email failed; treating user as unauthenticated.', lookupErr);
+                }
             }
-            
-            attendanceService.initializeForUser(isAdmin, user.uid);
-            leaveService.initializeForUser(isAdmin, user.uid);
-            employeeService.initializeForUser(isAdmin, user.uid);
-            incidentService.initializeForUser(isAdmin, user.uid);
-            settingsService.initializeForUser(isAdmin, user.uid);
-            notificationService.initializeForUser(isAdmin, user.uid);
-            smsService.initializeForUser(isAdmin);
-            allowanceService.initializeForUser(isAdmin, user.uid);
-            undertimeService.initializeForUser(isAdmin, user.uid);
 
-            if (isAdmin) {
-               facialRecognitionService.initializeForAdmin();
+            // Only subscribe to data the user is authorized for. For users that are
+            // neither admin nor employee we stop all subscriptions so we don't trigger
+            // permission-denied storms.
+            if (isAdmin || isEmployee) {
+                const scopeId = employeeId || user.uid;
+                attendanceService.initializeForUser(isAdmin, scopeId);
+                leaveService.initializeForUser(isAdmin, scopeId);
+                employeeService.initializeForUser(isAdmin, scopeId);
+                incidentService.initializeForUser(isAdmin, scopeId);
+                settingsService.initializeForUser(isAdmin, scopeId);
+                notificationService.initializeForUser(isAdmin, scopeId);
+                smsService.initializeForUser(isAdmin);
+                allowanceService.initializeForUser(isAdmin, scopeId);
+                undertimeService.initializeForUser(isAdmin, scopeId);
+
+                if (isAdmin) {
+                   facialRecognitionService.initializeForAdmin();
+                } else {
+                   facialRecognitionService.stopSubscription();
+                }
             } else {
-               facialRecognitionService.stopSubscription();
+                console.warn('Signed-in user is neither admin nor a registered employee. Skipping subscriptions.', user.email);
+                attendanceService.stopSubscription();
+                leaveService.stopSubscription();
+                employeeService.stopSubscription();
+                facialRecognitionService.stopSubscription();
+                incidentService.stopSubscription();
+                settingsService.stopSubscription();
+                notificationService.stopSubscription();
+                smsService.stopSubscription();
+                allowanceService.stopSubscription();
+                undertimeService.stopSubscription();
             }
         } catch(e) {
             console.error("Failed to read token claims", e);

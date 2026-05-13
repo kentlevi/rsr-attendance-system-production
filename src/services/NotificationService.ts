@@ -13,15 +13,18 @@ import {
   type QueryConstraint,
   Unsubscribe
 } from "firebase/firestore";
-import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
 import { AppNotification } from "../components/common/NotificationModal";
 import { settingsService } from "./SettingsService";
+import { pendingNotificationQueue } from "./PendingNotificationQueue";
+import { isOffline } from "../lib/useOnlineStatus";
 
 export class NotificationService {
   private notifications: AppNotification[] = [];
   private collectionPath = "notifications";
   private unsubscribe: Unsubscribe | null = null;
   private listeners: (() => void)[] = [];
+  private hasRetried = false;
 
   constructor() {
     // Eager subscription removed. Must call initializeForUser manually.
@@ -60,7 +63,11 @@ export class NotificationService {
 
       this.notifyListeners();
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      const retry = this.hasRetried ? undefined : () => {
+        this.hasRetried = true;
+        this.initializeForUser(isAdmin, employeeId);
+      };
+      logFirestoreError(error, OperationType.LIST, this.collectionPath, retry);
     });
   }
 
@@ -77,26 +84,42 @@ export class NotificationService {
 
   async sendTelegramNotification(message: string) {
     const settings = settingsService.getSettings();
-    if (settings.telegramEnabled && settings.telegramChatId && settings.telegramBotToken) {
-      try {
-        const url = `https://api.telegram.org/bot${settings.telegramBotToken}/sendMessage`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: settings.telegramChatId,
-            text: message,
-            parse_mode: 'HTML'
-          })
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Telegram API Error:", errorData);
-        }
-      } catch (error) {
-        console.error("Failed to send Telegram notification", error);
-      }
+    if (!settings.telegramEnabled || !settings.telegramChatId || !settings.telegramBotToken) {
+      return;
+    }
+
+    if (isOffline()) {
+      await pendingNotificationQueue.enqueue({ kind: 'telegram', message });
+      return;
+    }
+
+    try {
+      await this.deliverTelegramDirect(message);
+    } catch (error) {
+      console.error("Failed to send Telegram notification — queuing for retry", error);
+      await pendingNotificationQueue.enqueue({ kind: 'telegram', message });
+    }
+  }
+
+  /** Direct send used by SyncService when replaying the queue. Throws on failure. */
+  async deliverTelegramDirect(message: string): Promise<void> {
+    const settings = settingsService.getSettings();
+    if (!settings.telegramEnabled || !settings.telegramChatId || !settings.telegramBotToken) {
+      return;
+    }
+    const url = `https://api.telegram.org/bot${settings.telegramBotToken}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: settings.telegramChatId,
+        text: message,
+        parse_mode: 'HTML',
+      }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Telegram API error: ${response.status} ${JSON.stringify(errorData)}`);
     }
   }
 

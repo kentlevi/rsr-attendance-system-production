@@ -648,7 +648,7 @@ export function WorkforceInsightsView() {
       {/* Main Content Area */}
       <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
         {/* Internal Filters Header */}
-        <div className="p-6 border-b border-border/60 bg-white">
+        <div className="p-4 sm:p-6 border-b border-border/60 bg-white">
           <div className="flex flex-col xl:flex-row items-center gap-4">
             <div className="flex-1 flex gap-3 w-full">
               <DatePicker 
@@ -713,7 +713,7 @@ export function WorkforceInsightsView() {
         </div>
 
         {/* List Header */}
-        <div className="bg-slate-50/50 p-5 px-6 border-b border-border/60 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="bg-slate-50/50 p-4 sm:p-6 border-b border-border/60 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex flex-col">
             <h3 className="text-[16px] font-bold text-[#1a1a1a] tracking-tight">
               Attendance Overview ({selectedDateDisplay})
@@ -750,7 +750,7 @@ export function WorkforceInsightsView() {
       {/* Bottom Insights Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Attendance Distribution Card */}
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-4 overflow-hidden min-h-[384px]">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4 sm:p-6 flex flex-col gap-4 overflow-hidden min-h-[384px]">
           <h3 className="text-[18px] font-medium text-[#1a1a1a]">
             Attendance Distribution
           </h3>

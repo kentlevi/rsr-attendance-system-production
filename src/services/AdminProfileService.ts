@@ -1,5 +1,5 @@
 import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { db, handleFirestoreError, logFirestoreError, OperationType } from "../lib/firebase";
 
 export interface AdminProfile {
   fullName: string;
@@ -37,7 +37,7 @@ class AdminProfileService {
         }
       },
       (error) => {
-        handleFirestoreError(error, OperationType.GET, `${this.collectionPath}/${username}`);
+        logFirestoreError(error, OperationType.GET, `${this.collectionPath}/${username}`);
       },
     );
   }
@@ -52,17 +52,15 @@ class AdminProfileService {
       await this.updateProfile(username, fallback);
       return fallback;
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `${this.collectionPath}/${username}`);
+      logFirestoreError(error, OperationType.GET, `${this.collectionPath}/${username}`);
       return fallback;
     }
   }
 
   async updateProfile(username: string, updates: Partial<AdminProfile>): Promise<void> {
-    try {
-      await setDoc(this.getProfileRef(username), updates, { merge: true });
-    } catch (error) {
+    await setDoc(this.getProfileRef(username), updates, { merge: true }).catch((error) => {
       handleFirestoreError(error, OperationType.UPDATE, `${this.collectionPath}/${username}`);
-    }
+    });
   }
 }
 

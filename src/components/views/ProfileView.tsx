@@ -132,13 +132,21 @@ export default function ProfileView({
             </div>
 
             <div className="px-6 pb-6 -mt-16 flex flex-col items-center relative z-10">
-              <div className="relative group">
-                <div className="w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg">
+              <div 
+                className="relative group cursor-pointer" 
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to change profile picture"
+              >
+                <div className="w-32 h-32 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg relative transition-all group-hover:shadow-xl group-hover:border-emerald-50">
                   <img
                     src={profileImage || undefined}
                     alt="Profile"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera size={28} className="text-white drop-shadow-md" />
+                  </div>
                 </div>
                 <input 
                   type="file" 
@@ -147,14 +155,11 @@ export default function ProfileView({
                   className="hidden" 
                   accept="image/*"
                 />
-                <Button 
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white border border-border flex items-center justify-center text-[#1a1a1a] hover:bg-slate-50 transition-all p-0 h-8 w-8 min-w-[32px]"
+                <div 
+                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-white border border-border flex items-center justify-center text-[#1a1a1a] shadow-md transition-all group-hover:bg-emerald-50 group-hover:border-emerald-200 group-hover:text-emerald-600"
                 >
-                  <Camera size={16} />
-                </Button>
+                  <Camera size={18} />
+                </div>
               </div>
 
               <div className="mt-4 text-center">
@@ -233,14 +238,14 @@ export default function ProfileView({
         <div className="flex flex-col gap-6">
           {/* Personal Information */}
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-100">
-              <h3 className="text-[22px] font-black text-slate-900 tracking-tight">Personal Information</h3>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-border/60">
+              <h3 className="text-[20px] font-bold text-[#1a1a1a] tracking-tight">Personal Information</h3>
               {!isEditing ? (
                 <Button 
                   onClick={() => setIsEditing(true)}
                   variant="secondary"
                   leftIcon={<Edit2 size={16} />}
-                  className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm px-6 rounded-xl font-bold"
+                  className="px-6 rounded-xl font-bold h-10"
                 >
                   Edit Profile
                 </Button>
@@ -249,7 +254,7 @@ export default function ProfileView({
                   <Button 
                     onClick={handleCancel}
                     variant="secondary"
-                    className="bg-white border-slate-200 text-slate-500 hover:bg-slate-50 px-6 rounded-xl font-bold"
+                    className="px-6 rounded-xl font-bold h-10"
                     leftIcon={<X size={18} strokeWidth={2.5} />}
                   >
                     Cancel
@@ -257,7 +262,7 @@ export default function ProfileView({
                   <Button 
                     onClick={handleSave}
                     variant="primary"
-                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 shadow-lg shadow-emerald-200 px-8 rounded-xl font-bold border-none"
+                    className="px-8 rounded-xl font-bold h-10 shadow-sm"
                     leftIcon={<Save size={18} strokeWidth={2.5} />}
                   >
                     Save Changes
@@ -378,9 +383,8 @@ export default function ProfileView({
                     <option value="Other">Other</option>
                   </Select>
                 ) : (
-                  <div className="px-4 h-11 rounded-xl bg-slate-50/50 border border-border flex items-center text-[16px] font-medium text-[#1a1a1a] justify-between">
+                  <div className="px-4 h-11 rounded-xl bg-slate-50/50 border border-border flex items-center text-[16px] font-medium text-[#1a1a1a]">
                     {personalInfo.gender}
-                    <ChevronRight size={16} className="text-[#64748B] rotate-90" />
                   </div>
                 )}
               </div>

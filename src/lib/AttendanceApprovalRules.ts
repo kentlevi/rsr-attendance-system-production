@@ -68,6 +68,11 @@ export function applyAttendanceApprovalDecision(
 }
 
 export function needsAttendanceApproval(log: AttendanceLogLike) {
+  // If it's already been decided, it doesn't need to be in the "Pending" list anymore
+  if (log.data.attendanceApprovalStatus === 'Approved' || log.data.attendanceApprovalStatus === 'Rejected') {
+    return false;
+  }
+
   return (
     log.data.status === 'Pending Approval' ||
     log.data.payrollReviewStatus === 'Pending Review' ||
