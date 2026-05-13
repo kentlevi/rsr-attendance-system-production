@@ -123,7 +123,7 @@ describe('Workforce Insights View', () => {
     const headerRow = undertimeHeader.closest('.flex.items-center.justify-between');
     if (!headerRow) throw new Error("Undertime header row not found");
     
-    const viewAllBtn = within(headerRow).getByRole('button', { name: /View all/i });
+    const viewAllBtn = within(headerRow as HTMLElement).getByRole('button', { name: /View all/i });
     await user.click(viewAllBtn);
 
     // Now in Modal
