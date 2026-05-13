@@ -15,7 +15,8 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   isLoading?: boolean;
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
+  emptyDescription?: React.ReactNode;
   pageSize?: number;
   currentPage?: number;
   totalItems?: number;
@@ -33,6 +34,7 @@ export function DataTable<T>({
   data,
   isLoading = false,
   emptyMessage = "No records found.",
+  emptyDescription = "Try adjusting your filters or search terms.",
   pageSize = 10,
   currentPage = 1,
   totalItems = 0,
@@ -185,7 +187,7 @@ export function DataTable<T>({
                 </div>
                 <p className="font-semibold text-lg text-text-secondary tracking-tight">{emptyMessage}</p>
                 <p className="text-sm text-text-muted text-center leading-relaxed">
-                  Try adjusting your filters or search terms.
+                  {emptyDescription}
                 </p>
               </div>
             ) : (

@@ -125,7 +125,7 @@ export default function ProfileView({
       <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6">
         {/* Left Card: Summary */}
         <div className="flex flex-col gap-6">
-          <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col overflow-hidden">
+          <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm flex flex-col overflow-hidden">
             {/* Cover Image/Pattern Area */}
             <div className="h-32 bg-gradient-to-br from-[#0B7A4B] to-[#16A34A] relative">
               <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
@@ -237,7 +237,7 @@ export default function ProfileView({
         {/* Right Content: Forms */}
         <div className="flex flex-col gap-6">
           {/* Personal Information */}
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
+          <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-border/60">
               <h3 className="text-[20px] font-bold text-[#1a1a1a] tracking-tight">Personal Information</h3>
               {!isEditing ? (
@@ -415,7 +415,7 @@ export default function ProfileView({
           </div>
 
           {/* Account Security */}
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
+          <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm p-4 sm:p-6">
             <h3 className="text-[20px] font-bold text-[#1a1a1a] mb-2">Account Security</h3>
             <p className="text-[16px] text-[#64748B] mb-8">Manage your account security settings and login preferences.</p>
 

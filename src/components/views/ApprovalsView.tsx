@@ -277,7 +277,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
               variant="secondary"
               size="sm"
               className="text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50"
-              leftIcon={<Check size={15} />}
+              leftIcon={<Check size={16} />}
             >
               Approve
             </Button>
@@ -288,7 +288,7 @@ export function ApprovalsView({ isAssistant }: { isAssistant?: boolean }) {
               variant="secondary"
               size="sm"
               className="text-red-700 hover:border-red-200 hover:bg-red-50"
-              leftIcon={<X size={15} />}
+              leftIcon={<X size={16} />}
             >
               Reject
             </Button>

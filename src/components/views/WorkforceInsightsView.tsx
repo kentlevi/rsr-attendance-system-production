@@ -822,7 +822,7 @@ export function WorkforceInsightsView() {
         </div>
 
         {/* Undertime Summary Card */}
-        <div className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
+        <div className="bg-white sm:rounded-2xl sm:border border-border/60 sm:shadow-sm p-5 sm:p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-rose-100/50 transition-colors duration-500"></div>
           
           <div className="flex items-center justify-between gap-4 relative z-10">
@@ -985,7 +985,7 @@ export function WorkforceInsightsView() {
         </div>
 
         {/* Weekly Trend Card */}
-        <div className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
+        <div className="bg-white sm:rounded-2xl sm:border border-border/60 sm:shadow-sm p-5 sm:p-7 flex flex-col gap-6 overflow-hidden min-h-[400px] relative transition-all hover:shadow-md group">
            <div className="flex items-center gap-3 relative z-10">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-sm border border-emerald-100/50">
                 <Activity size={20} strokeWidth={2.5} />

@@ -1328,7 +1328,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                     </div>
                  </div>
                ) : (
-                 <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+                 <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
                    <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
                      <div className="flex flex-col gap-1">
                        <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Payslips</h2>
@@ -1346,7 +1346,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
             ) : activeTab === "my-time" ? (
               <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 pb-12">
-               <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+               <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
                  <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
                    <div className="flex flex-col gap-1">
                      <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Time – Weekly Details</h2>
@@ -1633,7 +1633,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "undertime" ? (
       <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
           <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">Submit Undertime</h2>
@@ -1775,7 +1775,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "leave-status" ? (
       <div className="max-w-[1200px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
           <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">My Requests</h2>
@@ -1875,7 +1875,7 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     </div>
     ) : activeTab === "notifications" ? (
       <div className="max-w-[800px] mx-auto w-full flex flex-col gap-6 pb-12">
-        <div className="bg-white sm:rounded-2xl sm:border border-border sm:p-6 sm:shadow-sm">
+        <div className="bg-white sm:rounded-2xl sm:border border-border sm:shadow-sm">
           <div className="hidden sm:flex items-center justify-between gap-6 pb-6 border-b border-border">
             <div className="flex flex-col gap-1">
               <h2 className="text-[20px] font-bold text-[#1a1a1a]">Notifications</h2>
