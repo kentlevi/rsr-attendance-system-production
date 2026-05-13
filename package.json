@@ -12,7 +12,9 @@
     "lint": "node node_modules/typescript/bin/tsc --noEmit",
     "test": "node node_modules/tsx/dist/cli.mjs src/lib/AbsenceRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/RequestApprovalRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/LeaveRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/LeaveReplenishmentRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/EmployeeStatusRules.test.ts && node node_modules/tsx/dist/cli.mjs src/lib/PayrollRules.test.ts && node node_modules/vitest/vitest.mjs run --configLoader runner",
     "coverage": "node node_modules/vitest/vitest.mjs run --coverage --configLoader runner",
-    "test:ci": "npm run lint && npm run test && npm run build && npm run coverage"
+    "test:ci": "npm run lint && npm run test && npm run build && npm run coverage",
+    "assets:from-favicon": "node scripts/generate-app-icon.mjs",
+    "assets:generate": "capacitor-assets generate --android"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
@@ -51,6 +53,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
