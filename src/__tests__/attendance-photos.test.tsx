@@ -1,27 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock Services - use vi.hoisted() so showToast is available when vi.mock() is hoisted
-const { showToast } = vi.hoisted(() => ({
+// Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { showToast, getAllLogs, getAllEmployeesSync } = vi.hoisted(() => ({
   showToast: vi.fn(),
+  getAllLogs: vi.fn(() => []),
+  getAllEmployeesSync: vi.fn(() => []),
 }));
+
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
 }));
 
 vi.mock('../services/AttendanceService', () => ({
   attendanceService: {
-    getAllLogs: vi.fn(() => []),
-    subscribe: vi.fn(() => vi.fn()),
+    getAllLogs,
+    subscribe: vi.fn(() => () => {}),
+    updateLog: vi.fn(),
   }
 }));
 
 vi.mock('../services/EmployeeService', () => ({
   employeeService: {
-    getAllEmployeesSync: vi.fn(() => []),
-    subscribe: vi.fn(() => vi.fn()),
+    getAllEmployeesSync,
+    subscribe: vi.fn(() => () => {}),
   }
 }));
 
@@ -41,6 +45,8 @@ import { employeeService } from '../services/EmployeeService';
 describe('Attendance Photos Audit Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(attendanceService.getAllLogs).mockReturnValue([]);
+    vi.mocked(employeeService.getAllEmployeesSync).mockReturnValue([]);
   });
 
   it('renders photo grid and handles expansion', async () => {
@@ -59,7 +65,7 @@ describe('Attendance Photos Audit Integration', () => {
     ];
 
     const mockEmployees = [
-      { id: 'emp-1', data: { name: 'John Doe' } }
+      { id: 'emp-1', data: { id: 'emp-1', name: 'John Doe' } },
     ];
 
     vi.mocked(attendanceService.getAllLogs).mockReturnValue(mockLogs as any);
@@ -69,40 +75,49 @@ describe('Attendance Photos Audit Integration', () => {
     render(<PhotosView />);
 
     // Check if photo item exists
-    expect(screen.getByText('John Doe')).toBeDefined();
+    await waitFor(async () => {
+       const elements = await screen.findAllByText('John Doe');
+       expect(elements.length).toBeGreaterThan(0);
+    }, { timeout: 10000 });
     expect(screen.getByText('Time In')).toBeDefined();
-    
-    // Check for the image (using alt or src)
+
+    // Check for the image
     const img = screen.getByRole('img');
     expect(img.getAttribute('src')).toBe('https://example.com/photo-in.jpg');
 
-    // Click to expand
-    // The photo item itself is clickable (the container)
-    // We can find the button with "ZoomIn" icon or just click the image
-    await user.click(img);
+    // Open modal via the ZoomIn button (the photo card's expand button)
+    // The button is positioned over the image; jsdom doesn't run hover styles
+    // so just grab all buttons and pick the one matching the photo
+    const photoCard = img.closest('div.relative.group');
+    expect(photoCard).not.toBeNull();
+    const zoomBtn = within(photoCard as HTMLElement).getAllByRole('button')[0];
+    await user.click(zoomBtn);
 
-    // Check if modal opened
-    // The modal shows "John Doe" and "Attendance Photo Details"
-    expect(screen.getByText(/Attendance Photo Details/i)).toBeDefined();
-    expect(screen.getByText('Main Office')).toBeDefined();
+    // Modal shows "Punch Timestamp" and the location (appears in both card and modal)
+    await waitFor(() => {
+      expect(screen.getByText(/Punch Timestamp/i)).toBeDefined();
+    });
+    expect(screen.getAllByText('Main Office').length).toBeGreaterThan(0);
 
-    // Close modal
-    const closeBtn = screen.getByRole('button', { name: /close/i });
-    await user.click(closeBtn);
+    // Close modal — find the X button inside the modal (the one containing the lucide-x icon)
+    const buttons = screen.getAllByRole('button');
+    const closeBtn = buttons.find((b) => b.querySelector('.lucide-x'));
+    expect(closeBtn).toBeDefined();
+    await user.click(closeBtn!);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Attendance Photo Details/i)).toBeNull();
+      expect(screen.queryByText(/Punch Timestamp/i)).toBeNull();
     });
   });
 
   it('filters photos by employee', async () => {
      const mockLogs = [
-      { id: '1', data: { employeeId: 'emp-1', imageIn: 'url1', date: '2023-10-27' } },
-      { id: '2', data: { employeeId: 'emp-2', imageIn: 'url2', date: '2023-10-27' } },
+      { id: '1', data: { id: '1', employeeId: 'emp-1', imageIn: 'url1', date: '2023-10-27' } },
+      { id: '2', data: { id: '2', employeeId: 'emp-2', imageIn: 'url2', date: '2023-10-27' } },
     ];
     const mockEmployees = [
-      { id: 'emp-1', data: { name: 'Alice' } },
-      { id: 'emp-2', data: { name: 'Bob' } },
+      { id: 'emp-1', data: { id: 'emp-1', name: 'Alice' } },
+      { id: 'emp-2', data: { id: 'emp-2', name: 'Bob' } },
     ];
 
     vi.mocked(attendanceService.getAllLogs).mockReturnValue(mockLogs as any);
@@ -111,15 +126,26 @@ describe('Attendance Photos Audit Integration', () => {
     const user = userEvent.setup();
     render(<PhotosView />);
 
-    // The Select component uses a native <select> or text trigger
-    const empSelectTrigger = await screen.findByText(/All Employees/i);
+    // Initially both Alice and Bob are present in the photo grid
+    await waitFor(() => {
+      expect(screen.getByText('Alice')).toBeDefined();
+      expect(screen.getByText('Bob')).toBeDefined();
+    });
+
+    // Open the employee Select dropdown
+    const empSelectTrigger = screen.getByText(/All Employees/i);
     await user.click(empSelectTrigger);
 
-    // After clicking, the options are rendered in a portal (body)
-    const aliceOption = screen.getByRole('button', { name: /Alice/i });
+    // Click the Alice option (rendered in a portal)
+    const aliceOption = await screen.findByRole('button', { name: /^Alice$/i });
     await user.click(aliceOption);
 
-    expect(screen.getByText('Alice')).toBeDefined();
-    expect(screen.queryByText('Bob')).toBeNull();
+    // After filtering, Bob should no longer appear
+    await waitFor(() => {
+      expect(screen.queryByText('Bob')).toBeNull();
+    }, { timeout: 10000 });
+    expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
+    // Alice should still be visible (in the photo card and/or the select trigger)
+    expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
   });
 });

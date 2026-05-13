@@ -107,8 +107,13 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     setIdentifiedEmpName(null);
     setIdentifiedEmpId(null);
 
+    const isCurrentlyOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isCurrentlyOffline) {
+      showToast(`You are offline. Attempting ${action} with cached data...`, "warning");
+    }
+
     const photo = capture();
-    
+
     if (!photo) {
       showToast("Could not capture photo. Please check your camera.", "error");
       setIsProcessing(false);
@@ -117,15 +122,17 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
     let empId: string | null = overrideEmpId || null;
     let timeoutId: any;
-    
+
     if (!empId) {
       try {
         const { facialRecognitionService } = await import('../services/FacialRecognitionService');
-        
+
+        // Shorter timeout when offline since we only read from cache
+        const timeoutMs = isCurrentlyOffline ? 8000 : 15000;
         const timeoutPromise = new Promise<null>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), 15000);
+          timeoutId = setTimeout(() => reject(new Error("Facial recognition timed out. Please try again.")), timeoutMs);
         });
-        
+
         empId = await Promise.race([
           facialRecognitionService.verifyFace(photo),
           timeoutPromise
@@ -134,15 +141,30 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         if (timeoutId) clearTimeout(timeoutId);
 
         if (!empId) {
-           showToast("Face not recognized. Please enroll first or use PIN Override.", "error");
+           const msg = isCurrentlyOffline
+             ? "Face not recognized (offline mode). Please use PIN Override."
+             : "Face not recognized. Please enroll first or use PIN Override.";
+           showToast(msg, "error");
            setIsProcessing(false);
+           // Auto-open PIN modal so user can proceed offline
+           if (isCurrentlyOffline) {
+             setPendingAction(action);
+             setIsPinModalOpen(true);
+           }
            return;
         }
       } catch (error: any) {
          if (timeoutId) clearTimeout(timeoutId);
          console.error("Facial recognition error:", error);
-         showToast(error.message || "An error occurred during facial recognition. Please try again.", "error");
+         const msg = isCurrentlyOffline
+           ? "Offline face recognition failed. Please use PIN Override."
+           : (error.message || "An error occurred during facial recognition. Please try again.");
+         showToast(msg, "error");
          setIsProcessing(false);
+         if (isCurrentlyOffline) {
+           setPendingAction(action);
+           setIsPinModalOpen(true);
+         }
          return;
       }
     }
@@ -277,7 +299,38 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
       await refreshPendingSyncCount();
 
       if (!navigator.onLine) {
-        showToast(`${emp.name}, ${action} saved locally and will sync when internet returns.`, "warning");
+        // Update local in-memory log so subsequent offline punches see this one
+        const optimisticLog = {
+          id: `local-${localPunch.id}`,
+          employeeId: emp.id,
+          date: todayStr,
+          timeIn: action === 'Time In' ? timeStr : (existingLog?.data.timeIn || '-'),
+          timeOut: action === 'Time Out' ? timeStr : (existingLog?.data.timeOut || '-'),
+          workHours: '-',
+          overtime: '-',
+          status: 'Pending Sync',
+          location: selectedSite,
+          ...(action === 'Lunch Out' && { lunchOut: timeStr }),
+          ...(action === 'Lunch In' && { lunchIn: timeStr }),
+          ...(action === 'PM Break Out' && { breakOut: timeStr }),
+          ...(action === 'PM Break In' && { breakIn: timeStr }),
+        };
+        try {
+          if (existingLog) {
+            (attendanceService as any).logs = (attendanceService as any).logs.map((l: any) =>
+              l.id === existingLog.data.id ? { ...l, ...optimisticLog, id: l.id } : l
+            );
+          } else {
+            (attendanceService as any).logs = [...((attendanceService as any).logs || []), optimisticLog];
+          }
+          (attendanceService as any).notifyListeners?.();
+        } catch {
+          // Non-critical: optimistic update failed
+        }
+        showToast(
+          `${emp.name}, ${action} at ${timeStr} saved locally and will sync when internet returns.`,
+          "warning"
+        );
         return;
       }
 

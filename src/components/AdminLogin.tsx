@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User } from 'lucide-react';
+import { Eye, EyeOff, User, WifiOff } from 'lucide-react';
 import { PageLayout } from './layout/PageLayout';
 import { auth } from '../lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useToast } from '../context/ToastContext';
 import { Button } from './common/Button';
+import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { cacheAdminCredential, verifyCachedAdminCredential } from '../lib/offlineCache';
 
 interface AdminLoginProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -17,10 +19,11 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { showToast } = useToast();
+  const isOnline = useOnlineStatus();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       setLoginError("Please enter both email and password.");
       return;
@@ -30,7 +33,29 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
     setLoginError("");
 
     const emailToUse = email.trim();
-    
+
+    // ---- Offline login path ----
+    if (!isOnline) {
+      try {
+        const cached = await verifyCachedAdminCredential(emailToUse, password);
+        if (!cached) {
+          setLoginError("Offline login failed. Use credentials you have logged in with online before.");
+          setIsLoggingIn(false);
+          return;
+        }
+        sessionStorage.setItem("rsr_admin_login_id", cached.username);
+        sessionStorage.setItem("rsr_admin_offline_session", "1");
+        showToast("Logged in (offline mode). Changes will sync when online.", "warning");
+        onNavigate('admin');
+      } catch (err) {
+        console.error('Offline login error', err);
+        setLoginError("Offline login failed.");
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
     let firebasePassword = password;
     if (firebasePassword.length < 6) {
       firebasePassword = firebasePassword.padEnd(6, '0');
@@ -143,6 +168,15 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
         });
       }
 
+      // Cache credentials for future offline logins (fire-and-forget; non-blocking)
+      cacheAdminCredential({
+        email: emailToUse,
+        username: usernameToUse,
+        password: password.trim(),
+        role: isAssistant ? 'Assistant' : 'Administrator',
+      }).catch((err) => console.warn('Failed to cache admin credentials:', err));
+      sessionStorage.removeItem("rsr_admin_offline_session");
+
       showToast("Login successful!", "success");
       onNavigate('admin');
     } catch (error: any) {
@@ -171,6 +205,12 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
           </div>
           <h1 className="text-[28px] font-bold text-text-primary">System Access</h1>
           <p className="text-[16px] text-text-secondary text-center">Sign in using your master password.</p>
+          {!isOnline && (
+            <div className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[13px] font-medium">
+              <WifiOff size={14} />
+              <span>Offline mode — using cached credentials</span>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-6">

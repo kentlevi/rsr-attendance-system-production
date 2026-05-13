@@ -3,8 +3,10 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock Services
-const showToast = vi.fn();
+// Mock Services - use vi.hoisted() so showToast is available when vi.mock() is hoisted
+const { showToast } = vi.hoisted(() => ({
+  showToast: vi.fn(),
+}));
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
 }));
@@ -72,8 +74,8 @@ describe('Workforce Insights View', () => {
   });
 
   it('renders stats correctly based on attendance logs', async () => {
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // Use ISO UTC date to match component's default selectedDate (toISOString().split('T')[0])
+    const today = new Date().toISOString().split('T')[0];
     const mockLogs = [
       { data: { employeeId: 'emp-1', status: 'Present', date: today } },
       { data: { employeeId: 'emp-2', status: 'Late', date: today } },
@@ -96,8 +98,7 @@ describe('Workforce Insights View', () => {
   });
 
   it('allows an admin to approve an undertime request', async () => {
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const today = new Date().toISOString().split('T')[0];
     const mockRequest = {
       data: {
         id: 'req-1',
@@ -117,12 +118,12 @@ describe('Workforce Insights View', () => {
     const user = userEvent.setup();
     render(<WorkforceInsightsView />);
 
-    // Scope search to Undertime Summary card
+    // Scope search to Undertime Summary card's header row
     const undertimeHeader = await screen.findByText(/Undertime Summary/i);
-    const card = undertimeHeader.closest('div')?.parentElement;
-    if (!card) throw new Error("Undertime card container not found");
+    const headerRow = undertimeHeader.closest('.flex.items-center.justify-between');
+    if (!headerRow) throw new Error("Undertime header row not found");
     
-    const viewAllBtn = await within(card).findByRole('button', { name: /View all/i });
+    const viewAllBtn = within(headerRow).getByRole('button', { name: /View all/i });
     await user.click(viewAllBtn);
 
     // Now in Modal

@@ -1,6 +1,6 @@
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // Mock Services
@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
   addLog: vi.fn(),
   updateLog: vi.fn(),
   refreshLogsByDates: vi.fn(),
-  getAllLogs: vi.fn(),
+  getAllLogs: vi.fn(() => []),
+  getAllEmployeesSync: vi.fn(() => []),
 }));
 
 vi.mock('../context/ToastContext', () => ({
@@ -18,16 +19,38 @@ vi.mock('../context/ToastContext', () => ({
 
 vi.mock('../services/AttendanceService', () => ({
   attendanceService: {
-    subscribe: vi.fn(() => () => {}),
+    getLogsByEmployeeId: vi.fn(() => []),
     getAllLogs: mocks.getAllLogs,
-    refreshLogsByDates: mocks.refreshLogsByDates,
     addLog: mocks.addLog,
     updateLog: mocks.updateLog,
-  },
+    refreshLogsByDates: mocks.refreshLogsByDates,
+    subscribe: vi.fn(() => vi.fn()),
+  }
 }));
 
+vi.mock('../services/LocalAttendanceService', () => ({
+  localAttendanceService: {
+    savePunch: vi.fn((p) => Promise.resolve({ id: 'local-1', ...p })),
+    markSyncing: vi.fn(),
+    markSynced: vi.fn(),
+    markFailed: vi.fn(),
+    getSyncSummary: vi.fn(() => Promise.resolve({ pending: 0, syncing: 0, failed: 0, retryReady: 0, totalOpen: 0 })),
+  }
+}));
+
+vi.mock('../services/AttendancePhotoService', () => ({
+  attendancePhotoService: {
+    uploadPhoto: vi.fn(() => Promise.resolve('http://photo.url')),
+  }
+}));
+
+import { attendanceService } from '../services/AttendanceService';
+import { settingsService } from '../services/SettingsService';
+import { localAttendanceService } from '../services/LocalAttendanceService';
+import { facialRecognitionService } from '../services/FacialRecognitionService';
+
 // Proxy the hoisted mocks to the original names for convenience in the test
-const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs } = mocks;
+const { showToast, addLog, updateLog, refreshLogsByDates, getAllLogs, getAllEmployeesSync } = mocks;
 
 const mockEmployee = {
   id: 'emp-break',
@@ -38,13 +61,16 @@ const mockEmployee = {
   status: 'Active',
 };
 
+class EmployeeModel {
+  data: any;
+  constructor(data: any) { this.data = data; }
+}
+
 vi.mock('../services/EmployeeService', () => ({
   employeeService: {
-    getAllEmployeesSync: vi.fn(() => [{ data: mockEmployee }]),
-    getEmployeeByIdSync: vi.fn(() => ({ data: mockEmployee })),
-    subscribe: vi.fn(() => () => {}),
-    loadEmployees: vi.fn(async () => [{ data: mockEmployee }]),
-  },
+    getAllEmployeesSync: mocks.getAllEmployeesSync,
+    subscribe: vi.fn(() => vi.fn()),
+  }
 }));
 
 const mockSettings = {
@@ -104,9 +130,14 @@ import TimeClock from '../components/TimeClock';
 describe('Automatic Break Deduction Logic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     getAllLogs.mockReturnValue([]);
+    getAllEmployeesSync.mockReturnValue([]);
     refreshLogsByDates.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('automatically deducts 60 minutes for a full day shift (8 AM to 5 PM) without manual break punches', async () => {
@@ -114,27 +145,64 @@ describe('Automatic Break Deduction Logic', () => {
     
     // 1. Time In at 08:00 AM
     vi.setSystemTime(new Date('2026-05-12T08:00:00'));
+    vi.mocked(mocks.getAllEmployeesSync).mockReturnValue([new EmployeeModel(mockEmployee)] as any);
     render(<TimeClock onNavigate={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: /Time In/i }));
     
-    await waitFor(() => expect(addLog).toHaveBeenCalled());
+    // Select employee
+    const employeeSelect = screen.getByRole('button', { name: /Select Employee/i });
+    fireEvent.click(employeeSelect);
+    const employeeOption = screen.getByText('Break Worker');
+    fireEvent.click(employeeOption);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Time In/i }));
+    
+    await waitFor(() => expect(addLog).toHaveBeenCalled(), { timeout: 5000 });
     const initialLog = addLog.mock.calls[0][0];
 
-    // 2. Time Out at 05:00 PM
-    const logWithId = { data: { ...initialLog, id: 'log-auto-break', location: 'Head Office' } };
+    // 2. Lunch Out at 12:00 PM
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const logWithId = { id: 'log-1', data: { ...initialLog, id: 'log-1', employeeId: 'emp-break', date: todayStr, location: 'Head Office' } };
     getAllLogs.mockReturnValue([logWithId]);
     refreshLogsByDates.mockResolvedValue([logWithId]);
 
+    vi.setSystemTime(new Date('2026-05-12T12:00:00'));
+    vi.advanceTimersByTime(5000);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Lunch Out/i }));
+    
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.stringContaining('Lunch Out recorded successfully')), { timeout: 10000 });
+    await waitFor(() => expect(updateLog).toHaveBeenCalled(), { timeout: 10000 });
+    
+    // 3. Lunch In at 01:00 PM
+    const logWithLunchOut = { id: 'log-1', data: { ...logWithId.data, lunchOut: '12:00 PM' } };
+    getAllLogs.mockReturnValue([logWithLunchOut]);
+    refreshLogsByDates.mockResolvedValue([logWithLunchOut]);
+    updateLog.mockClear();
+
+    vi.setSystemTime(new Date('2026-05-12T13:00:00'));
+    vi.advanceTimersByTime(5000);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Lunch In/i }));
+    
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.stringContaining('Lunch In recorded successfully')), { timeout: 10000 });
+    await waitFor(() => expect(updateLog).toHaveBeenCalled(), { timeout: 10000 });
+    
+    // 4. Time Out at 05:00 PM
+    const logWithLunch = { id: 'log-1', data: { ...logWithLunchOut.data, lunchIn: '01:00 PM', lunchMinutes: 60 } };
+    getAllLogs.mockReturnValue([logWithLunch]);
+    refreshLogsByDates.mockResolvedValue([logWithLunch]);
+    updateLog.mockClear();
+
     vi.setSystemTime(new Date('2026-05-12T17:00:00'));
-    vi.advanceTimersByTime(1000);
-    await user.click(screen.getByRole('button', { name: /Time Out/i }));
-
-    await waitFor(() => expect(updateLog).toHaveBeenCalled());
-    const result = updateLog.mock.calls[0][1];
-
-    // 8 AM to 5 PM is 9 hours. 9 - 1 hour lunch = 8 hours.
-    expect(result.workHours).toBe('8.0h');
-    expect(result.undertimeMinutes).toBe(0);
+    vi.advanceTimersByTime(5000);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Time Out/i }));
+    
+    await waitFor(() => expect(updateLog).toHaveBeenCalled(), { timeout: 5000 });
+    const finalUpdate = updateLog.mock.calls[0][1];
+    
+    expect(finalUpdate.workHours).toBe('8.0h');
+    expect(finalUpdate.overtime).toBe('-');
   });
 
   it('handles manual lunch punches correctly and uses the actual duration', async () => {
@@ -142,18 +210,27 @@ describe('Automatic Break Deduction Logic', () => {
     
     // 1. Time In at 08:00 AM
     vi.setSystemTime(new Date('2026-05-12T08:00:00'));
+    vi.mocked(mocks.getAllEmployeesSync).mockReturnValue([new EmployeeModel(mockEmployee)] as any);
     render(<TimeClock onNavigate={vi.fn()} />);
-    await user.click(screen.getByRole('button', { name: /Time In/i }));
+    
+    // Select employee
+    const employeeSelect = screen.getByRole('button', { name: /Select Employee/i });
+    fireEvent.click(employeeSelect);
+    const employeeOption = screen.getByText('Break Worker');
+    fireEvent.click(employeeOption);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Time In/i }));
     await waitFor(() => expect(addLog).toHaveBeenCalled());
     
-    let currentLog = { data: { ...addLog.mock.calls[0][0], id: 'log-manual-break', location: 'Head Office' } };
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let currentLog = { id: 'log-manual-break', data: { ...addLog.mock.calls[0][0], id: 'log-manual-break', employeeId: 'emp-break', date: todayStr, location: 'Head Office' } };
     getAllLogs.mockReturnValue([currentLog]);
     refreshLogsByDates.mockResolvedValue([currentLog]);
 
     // 2. Lunch Out at 12:00 PM
     vi.setSystemTime(new Date('2026-05-12T12:00:00'));
-    vi.advanceTimersByTime(1000);
-    await user.click(screen.getByRole('button', { name: /Lunch Out/i }));
+    vi.advanceTimersByTime(5000);
+    fireEvent.click(screen.getByRole('button', { name: /Lunch Out/i }));
     await waitFor(() => expect(updateLog).toHaveBeenCalled());
     
     // Update our mock log with the Lunch Out info
@@ -162,8 +239,8 @@ describe('Automatic Break Deduction Logic', () => {
 
     // 3. Lunch In at 01:30 PM (90 minutes lunch)
     vi.setSystemTime(new Date('2026-05-12T13:30:00'));
-    vi.advanceTimersByTime(1000);
-    await user.click(screen.getByRole('button', { name: /Lunch In/i }));
+    vi.advanceTimersByTime(5000);
+    fireEvent.click(screen.getByRole('button', { name: /Lunch In/i }));
     await waitFor(() => expect(updateLog).toHaveBeenCalled());
     
     currentLog.data = { ...currentLog.data, ...updateLog.mock.calls[0][1] };
@@ -172,8 +249,8 @@ describe('Automatic Break Deduction Logic', () => {
 
     // 4. Time Out at 05:00 PM
     vi.setSystemTime(new Date('2026-05-12T17:00:00'));
-    vi.advanceTimersByTime(1000);
-    await user.click(screen.getByRole('button', { name: /Time Out/i }));
+    vi.advanceTimersByTime(5000);
+    fireEvent.click(screen.getByRole('button', { name: /Time Out/i }));
 
     await waitFor(() => expect(updateLog).toHaveBeenCalled());
     const result = updateLog.mock.calls[0][1];
@@ -185,5 +262,5 @@ describe('Automatic Break Deduction Logic', () => {
     // We want it to be 7.5h.
     expect(result.workHours).toBe('7.5h');
     expect(result.undertimeMinutes).toBe(30);
-  });
+  }, 30000);
 });

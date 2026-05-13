@@ -1,7 +1,8 @@
 import React, { ReactNode } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, WifiOff } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../common/Button';
+import { useOnlineStatus } from '../../lib/useOnlineStatus';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -22,8 +23,9 @@ export function PageLayout({
   onMenuClick,
   onLogoClick,
   headerRight,
-  className 
+  className
 }: PageLayoutProps) {
+  const isOnline = useOnlineStatus();
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex flex-col relative overflow-hidden font-sans">
       {/* Top Right Decoration */}
@@ -72,7 +74,16 @@ export function PageLayout({
             {title}
           </div>
 
-          <div className="flex justify-end shrink-0">
+          <div className="flex justify-end shrink-0 items-center gap-2">
+            {!isOnline && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[12px] sm:text-[13px] font-medium"
+                title="You are offline. Changes will sync when connection returns."
+              >
+                <WifiOff size={14} />
+                <span className="hidden sm:inline">Offline</span>
+              </div>
+            )}
             {headerRight ? (
               headerRight
             ) : showMenu ? (

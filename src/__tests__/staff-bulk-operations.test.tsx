@@ -20,7 +20,7 @@ vi.mock('../context/ToastContext', () => ({
   ToastProvider: ({ children }: any) => <>{children}</>,
 }));
 
-vi.mock('../../controllers/StaffManagementController', () => ({
+vi.mock('../controllers/StaffManagementController', () => ({
   useStaffManagementController: () => ({
     employees: [
         { data: { id: '1', name: 'Existing One', employeeId: 'EMP-001', department: 'HR', status: 'Active' } }
@@ -39,7 +39,7 @@ vi.mock('../../controllers/StaffManagementController', () => ({
   }),
 }));
 
-vi.mock('../common/StatsCard', () => ({
+vi.mock('../components/common/StatsCard', () => ({
   StatsCard: () => <div data-testid="stats-card" />,
 }));
 
@@ -72,6 +72,9 @@ vi.mock('../services/FacialRecognitionService', () => ({
   facialRecognitionService: {
     verifyFace: vi.fn(),
     enrollFace: vi.fn(),
+    initializeForAdmin: vi.fn(),
+    stopSubscription: vi.fn(),
+    subscribe: vi.fn(() => () => {}),
   },
 }));
 

@@ -5,10 +5,11 @@ describe('Night Shift Payroll Calculation', () => {
   const mockSettings: any = {
     shiftStartTime: '08:00 AM',
     shiftEndTime: '05:00 PM',
-    lunchBreakStart: '12:00 PM',
-    lunchBreakEnd: '01:00 PM',
-    pmBreakStart: '05:00 PM',
-    pmBreakEnd: '06:00 PM',
+    // Night shifts don't use day-shift breaks; set to same time to avoid deduction from standardWorkMinutes
+    lunchBreakStart: '00:00',
+    lunchBreakEnd: '00:00',
+    pmBreakStart: '00:00',
+    pmBreakEnd: '00:00',
     gracePeriodMins: 15,
     otAllowance: 100,
     shiftTemplates: [
@@ -16,7 +17,7 @@ describe('Night Shift Payroll Calculation', () => {
         id: 'night-template',
         name: 'Night Shift',
         startTime: '10:00 PM',
-        endTime: '06:00 AM',
+        endTime: '07:00 AM',
         isNightShift: true,
         nightDifferentialRate: 0.10, // 10%
         gracePeriodMins: 15
@@ -30,6 +31,10 @@ describe('Night Shift Payroll Calculation', () => {
     workLocation: 'Site A'
   };
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('calculates 10% night differential for a full 8-hour night shift', () => {
     // 10 PM to 6 AM = 8 hours
     // Hourly rate = 800 / 8 = 100
@@ -39,7 +44,19 @@ describe('Night Shift Payroll Calculation', () => {
       actualSite: 'Site A',
       timeIn: '10:00 PM',
       timeOut: '06:00 AM',
-      settings: mockSettings
+      settings: {
+        ...mockSettings,
+        lunchBreakStart: '00:00',
+        lunchBreakEnd: '00:00',
+        pmBreakStart: '00:00',
+        pmBreakEnd: '00:00',
+        shiftTemplates: [
+          {
+            ...mockSettings.shiftTemplates[0],
+            endTime: '06:00 AM'
+          }
+        ]
+      }
     });
 
     expect(result.workHours).toBe('8.0h');
@@ -59,7 +76,13 @@ describe('Night Shift Payroll Calculation', () => {
       actualSite: 'Site A',
       timeIn: '10:00 PM',
       timeOut: '07:00 AM',
-      settings: mockSettings
+      settings: {
+        ...mockSettings,
+        lunchBreakStart: '12:00',
+        lunchBreakEnd: '13:00',
+        pmBreakStart: '15:00',
+        pmBreakEnd: '15:00',
+      }
     });
 
     expect(result.workHours).toBe('8.0h');

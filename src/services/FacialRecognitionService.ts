@@ -10,6 +10,8 @@ import {
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Human, Config } from '@vladmandic/human';
 import { settingsService } from './SettingsService';
+import { cacheFaceProfiles, getCachedFaceProfiles } from '../lib/offlineCache';
+import { isOffline } from '../lib/useOnlineStatus';
 
 const humanConfig: Partial<Config> = {
   modelBasePath: '/models',
@@ -52,14 +54,42 @@ export class FacialRecognitionService {
         return {
           ...data,
           id: snapshotDoc.id,
-          faceDataEncodings: typeof data.faceDataEncodings === 'string' 
-            ? JSON.parse(data.faceDataEncodings) 
+          faceDataEncodings: typeof data.faceDataEncodings === 'string'
+            ? JSON.parse(data.faceDataEncodings)
             : data.faceDataEncodings,
         } as FacialRecognitionProfile;
       });
+      this.persistCache();
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
     });
+  }
+
+  private async persistCache(): Promise<void> {
+    try {
+      await cacheFaceProfiles(
+        this.profiles.map((p) => ({
+          id: p.id,
+          employeeId: p.employeeId,
+          faceDataEncodings: Array.isArray(p.faceDataEncodings) ? p.faceDataEncodings : [],
+          createdAt: p.createdAt,
+        }))
+      );
+    } catch (e) {
+      console.warn('Failed to persist face profile cache', e);
+    }
+  }
+
+  private async hydrateFromCache(): Promise<boolean> {
+    const cached = await getCachedFaceProfiles();
+    if (cached.length === 0) return false;
+    this.profiles = cached.map((c) => ({
+      id: c.id,
+      employeeId: c.employeeId,
+      faceDataEncodings: c.faceDataEncodings,
+      createdAt: c.createdAt,
+    })) as FacialRecognitionProfile[];
+    return true;
   }
 
   public stopSubscription() {
@@ -85,6 +115,16 @@ export class FacialRecognitionService {
   }
 
   async loadProfiles(): Promise<FacialRecognitionProfile[]> {
+    if (isOffline()) {
+      const hydrated = await this.hydrateFromCache();
+      if (hydrated) {
+        console.log(`Offline: loaded ${this.profiles.length} cached face profiles.`);
+      } else {
+        console.warn('Offline and no cached face profiles available.');
+      }
+      return this.profiles;
+    }
+
     try {
       console.log("Fetching facial recognition profiles...");
       const querySnapshot = await getDocs(collection(db, this.collectionPath));
@@ -97,9 +137,15 @@ export class FacialRecognitionService {
         } as FacialRecognitionProfile;
       });
       console.log(`Loaded ${this.profiles.length} profiles.`);
+      await this.persistCache();
     } catch (error) {
       console.error("Failed to load facial recognition profiles:", error);
       handleFirestoreError(error, OperationType.LIST, this.collectionPath);
+      // Fall back to cache
+      const hydrated = await this.hydrateFromCache();
+      if (hydrated) {
+        console.log(`Fell back to ${this.profiles.length} cached face profiles after network failure.`);
+      }
     }
 
     return this.profiles;
@@ -181,6 +227,7 @@ export class FacialRecognitionService {
         ...this.profiles.filter((profile) => profile.employeeId !== employeeId),
         newProfile,
       ];
+      await this.persistCache();
       return profileId;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `${this.collectionPath}/${profileId}`);

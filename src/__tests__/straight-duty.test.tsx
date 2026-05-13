@@ -89,7 +89,11 @@ describe('Straight Duty Flow', () => {
 
     const user = userEvent.setup();
     // Render as Admin
-    const { rerender } = render(<StraightDutyView isAssistant={true} />);
+    const { rerender } = render(
+      <ToastProvider>
+        <StraightDutyView isAssistant={true} />
+      </ToastProvider>
+    );
 
     // First file a request as assistant
     await user.click(screen.getByRole('button', { name: /File Straight Duty/i }));
@@ -105,7 +109,11 @@ describe('Straight Duty Flow', () => {
     await user.click(screen.getByRole('button', { name: /Submit Request/i }));
 
     // Re-render as Admin (to see the action buttons)
-    rerender(<StraightDutyView isAssistant={false} />);
+    rerender(
+      <ToastProvider>
+        <StraightDutyView isAssistant={false} />
+      </ToastProvider>
+    );
 
     // Wait for the table to refresh and show the request
     const approveBtn = await screen.findByRole('button', { name: /Approve/i });

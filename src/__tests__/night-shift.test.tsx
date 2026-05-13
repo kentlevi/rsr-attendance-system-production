@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { calculatePayrollForTimeIn, calculatePayrollForTimeOut } from '../lib/PayrollRules';
 
@@ -123,8 +123,6 @@ describe('Night Shift Integration', () => {
   });
 
   it('calculates cross-day hours and night differential correctly', async () => {
-    const user = userEvent.setup({ delay: null });
-    
     // 1. Time In at 10:00 PM (22:00)
     const startDate = new Date('2026-05-12T22:00:00');
     vi.setSystemTime(startDate);
@@ -132,7 +130,7 @@ describe('Night Shift Integration', () => {
     render(<TimeClock onNavigate={vi.fn()} />);
     
     const timeInBtn = screen.getByRole('button', { name: /Time In/i });
-    await user.click(timeInBtn);
+    fireEvent.click(timeInBtn);
     
     await waitFor(() => {
       expect(addLog).toHaveBeenCalled();
@@ -164,44 +162,31 @@ describe('Night Shift Integration', () => {
     const endDate = new Date('2026-05-13T06:00:00');
     vi.setSystemTime(endDate);
     
-    // We don't need to re-render, but TimeClock has internal state for currentTime
-    // which is updated via setInterval. Since we used useFakeTimers, we might need to advance.
     vi.advanceTimersByTime(1000);
 
     const timeOutBtn = screen.getByRole('button', { name: /Time Out/i });
-    await user.click(timeOutBtn);
+    fireEvent.click(timeOutBtn);
 
     await waitFor(() => {
       expect(updateLog).toHaveBeenCalledWith(existingLogId, expect.anything());
-    });
+    }, { timeout: 10000 });
 
     const updateLogCall = updateLog.mock.calls[0][1];
-    
-    // Assertions on the calculated payroll data
-    // 10pm to 6am is 8 hours.
-    // Base rate is 800/day = 100/hr.
-    // Night diff is 10% of 800 = 80.
-    // Total gross adjustment should be roughly 80 (since it's a full night shift)
     
     expect(updateLogCall.timeOut).toBe('06:00 AM');
     expect(updateLogCall.workHours).toBe('8.0h');
     expect(updateLogCall.payrollNotes).toContain(expect.stringContaining('Night differential added'));
-    
-    // Check night diff amount
-    // hourlyRate = 100. 8 hours * 100 * 0.1 = 80.
     expect(updateLogCall.grossAdjustment).toBe('₱80.00');
-  });
+  }, 60000);
 
   it('handles "Late" clock-in for night shift across midnight', async () => {
-    const user = userEvent.setup({ delay: null });
-    
     // 1. Time In at 10:30 PM (22:30) - Should be 20 mins late (grace is 10 mins)
     const startDate = new Date('2026-05-12T22:30:00');
     vi.setSystemTime(startDate);
     
     render(<TimeClock onNavigate={vi.fn()} />);
     
-    await user.click(screen.getByRole('button', { name: /Time In/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Time In/i }));
     
     await waitFor(() => {
       expect(addLog).toHaveBeenCalled();
@@ -219,20 +204,15 @@ describe('Night Shift Integration', () => {
     vi.setSystemTime(new Date('2026-05-13T06:00:00'));
     vi.advanceTimersByTime(1000);
 
-    await user.click(screen.getByRole('button', { name: /Time Out/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Time Out/i }));
 
     await waitFor(() => {
       expect(updateLog).toHaveBeenCalledWith(existingLogId, expect.anything());
-    });
+    }, { timeout: 10000 });
 
     const updateLogCall = updateLog.mock.calls[0][1];
     
-    // Work hours: 10:30pm to 6am is 7.5 hours.
-    // Late deduction: 20 mins late. 800/8/60 = 1.666/min. 20 * 1.666 = 33.33.
-    // Night diff: 7.5 hours * 100 * 0.1 = 75.00.
-    // Gross adjustment: 75.00 - 33.33 = 41.67.
-    
     expect(updateLogCall.workHours).toBe('7.5h');
     expect(updateLogCall.grossAdjustment).toBe('₱41.67');
-  });
+  }, 60000);
 });

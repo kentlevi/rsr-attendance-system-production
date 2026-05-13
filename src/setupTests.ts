@@ -74,3 +74,44 @@ vi.mock('recharts', () => ({
   Tooltip: () => null,
   Legend: () => null,
 }));
+
+// Global mock for Firebase
+vi.mock('firebase/app', () => ({
+  initializeApp: vi.fn(() => ({})),
+  getApp: vi.fn(() => ({})),
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({
+    currentUser: null,
+    onAuthStateChanged: vi.fn((cb) => {
+      cb(null);
+      return () => {};
+    }),
+  })),
+}));
+
+vi.mock('firebase/firestore', () => ({
+  getFirestore: vi.fn(() => ({})),
+  initializeFirestore: vi.fn(() => ({})),
+  persistentLocalCache: vi.fn(),
+  persistentMultipleTabManager: vi.fn(),
+  doc: vi.fn(),
+  getDoc: vi.fn(),
+  getDocs: vi.fn(),
+  setDoc: vi.fn(),
+  updateDoc: vi.fn(),
+  deleteDoc: vi.fn(),
+  collection: vi.fn(),
+  query: vi.fn(),
+  where: vi.fn(),
+  onSnapshot: vi.fn(() => () => {}),
+  getDocFromServer: vi.fn(),
+}));
+
+vi.mock('firebase/storage', () => ({
+  getStorage: vi.fn(() => ({})),
+  ref: vi.fn(),
+  uploadBytes: vi.fn(),
+  getDownloadURL: vi.fn(),
+}));

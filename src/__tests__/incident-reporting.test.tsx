@@ -75,15 +75,15 @@ describe('Incident Reporting Flow', () => {
     await user.click(logBtn);
 
     // Fill Form
-    const selectTrigger = screen.getByRole('button', { name: /Select Employee/i });
+    const selectTrigger = await screen.findByText(/Select Employee/i);
     await user.click(selectTrigger);
-    const option = screen.getByRole('button', { name: /John Incident/i });
+    const option = await screen.findByRole('button', { name: /John Incident/i });
     await user.click(option);
 
-    const titleInput = screen.getByLabelText(/Title\/Subject/i);
+    const titleInput = screen.getByPlaceholderText(/Brief summary/i);
     await user.type(titleInput, 'Late arrival');
 
-    const descInput = screen.getByLabelText(/Description/i);
+    const descInput = screen.getByPlaceholderText(/Detailed description/i);
     await user.type(descInput, 'Arrived 2 hours late without notice.');
 
     // Submit

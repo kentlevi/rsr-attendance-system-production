@@ -44,12 +44,12 @@ export function PhotosView() {
   // Flatten logs into distinct photo items
   const allPhotos = useMemo(() => {
     return logs.flatMap(log => {
-      const emp = employees.find(e => e.id === log.data.employeeId);
+      const emp = employees.find(e => e.data.id === log.data.employeeId);
       const result: PhotoItem[] = [];
       
       if (log.data.imageIn) {
         result.push({
-          id: `${log.data.id}-in`,
+          id: `${log.data.id || (log as any).id}-in`,
           image: log.data.imageIn,
           name: emp?.data.name || 'Unknown Employee',
           employeeId: log.data.employeeId,
@@ -62,7 +62,7 @@ export function PhotosView() {
       
       if (log.data.imageOut) {
         result.push({
-          id: `${log.data.id}-out`,
+          id: `${log.data.id || (log as any).id}-out`,
           image: log.data.imageOut,
           name: emp?.data.name || 'Unknown Employee',
           employeeId: log.data.employeeId,

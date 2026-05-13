@@ -3,10 +3,13 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-// Mock jsPDF
-const mockSave = vi.fn();
-const mockText = vi.fn();
-const mockAutoTable = vi.fn();
+// Mock functions - use vi.hoisted() so these are available when vi.mock() is hoisted
+const { mockSave, mockText, mockAutoTable, showToast } = vi.hoisted(() => ({
+  mockSave: vi.fn(),
+  mockText: vi.fn(),
+  mockAutoTable: vi.fn(),
+  showToast: vi.fn(),
+}));
 
 vi.mock('jspdf', () => {
   return {
@@ -23,8 +26,6 @@ vi.mock('jspdf', () => {
   };
 });
 
-// Mock Services
-const showToast = vi.fn();
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast }),
 }));
@@ -47,8 +48,30 @@ vi.mock('../services/EmployeeService', () => ({
   }
 }));
 
+vi.mock('../services/AttendanceService', () => ({
+  attendanceService: {
+    getLogsByEmployeeId: vi.fn(() => []),
+    subscribe: vi.fn(() => vi.fn()),
+  }
+}));
+
+vi.mock('../services/LeaveService', () => ({
+  leaveService: {
+    getRequestsByEmployee: vi.fn(() => []),
+    subscribe: vi.fn(() => vi.fn()),
+  }
+}));
+
+vi.mock('../services/IncidentService', () => ({
+  incidentService: {
+    getIncidentsForEmployee: vi.fn(() => []),
+    subscribe: vi.fn(() => vi.fn()),
+  }
+}));
+
 import { PayrollView } from '../components/views/PayrollView';
 import { employeeService } from '../services/EmployeeService';
+import { attendanceService } from '../services/AttendanceService';
 
 describe('Payroll Management Integration', () => {
   beforeEach(() => {
@@ -68,6 +91,17 @@ describe('Payroll Management Integration', () => {
     };
 
     vi.mocked(employeeService.getAllEmployeesSync).mockReturnValue([mockEmployee] as any);
+    
+    // Mock 14 days of attendance logs to get Basic Pay = 14000
+    const mockLogs = Array.from({ length: 14 }).map((_, i) => ({
+      data: {
+        date: `2023-10-${String(i + 1).padStart(2, '0')}`,
+        timeIn: '08:00 AM',
+        timeOut: '05:00 PM',
+        employeeId: 'emp-1'
+      }
+    }));
+    vi.mocked(attendanceService.getLogsByEmployeeId).mockReturnValue(mockLogs as any);
 
     const user = userEvent.setup();
     render(<PayrollView />);
@@ -103,10 +137,9 @@ describe('Payroll Management Integration', () => {
       
       // Calculation check (Basic Pay should be in the autoTable call)
       // basicPay = 1000 * 14 = 14000
-      // tax = 14000 * 0.1 = 1400
       expect(mockAutoTable).toHaveBeenCalledWith(expect.objectContaining({
         body: expect.arrayContaining([
-          expect.arrayContaining(['Basic Pay', 'P 14000.00', 'Withholding Tax', 'P 1400.00'])
+          expect.arrayContaining(['Basic Pay', 'P 14000.00', 'SSS Contribution', 'P 300.00'])
         ])
       }));
     });

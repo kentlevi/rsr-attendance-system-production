@@ -4,15 +4,16 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 
 // Mock Services - use vi.hoisted() so these are available when vi.mock() is hoisted
-const { showToast, hideToast, updateLog, updateRequest, updateEmployee, getAllLogs, getAllRequests, getEmployeeByIdSync } = vi.hoisted(() => ({
+const { showToast, hideToast, updateLog, updateRequest, updateEmployee, getAllLogs, getAllRequests, getEmployeeByIdSync, getAllEmployeesSync } = vi.hoisted(() => ({
   showToast: vi.fn(),
   hideToast: vi.fn(),
   updateLog: vi.fn(),
   updateRequest: vi.fn(),
   updateEmployee: vi.fn(),
-  getAllLogs: vi.fn(),
-  getAllRequests: vi.fn(),
-  getEmployeeByIdSync: vi.fn(),
+  getAllLogs: vi.fn(() => []),
+  getAllRequests: vi.fn(() => []),
+  getEmployeeByIdSync: vi.fn(() => null),
+  getAllEmployeesSync: vi.fn(() => []),
 }));
 
 vi.mock('../context/ToastContext', () => ({
@@ -39,7 +40,9 @@ vi.mock('../services/LeaveService', () => ({
 vi.mock('../services/EmployeeService', () => ({
   employeeService: {
     getEmployeeByIdSync,
+    getAllEmployeesSync,
     updateEmployee,
+    subscribe: vi.fn(() => () => {}),
   },
 }));
 
@@ -47,6 +50,10 @@ vi.mock('../services/AwolService', () => ({
   awolService: {
     processAwolAlerts: vi.fn(async () => {}),
   },
+}));
+
+vi.mock('../components/views/common/FileLeaveModal', () => ({
+  FileLeaveModal: () => <div data-testid="file-leave-modal" />,
 }));
 
 
@@ -71,6 +78,9 @@ const mockLeaveRequest = {
 };
 
 import { ApprovalsView } from '../components/views/ApprovalsView';
+import { leaveService } from '../services/LeaveService';
+import { employeeService } from '../services/EmployeeService';
+import { ToastProvider } from '../context/ToastContext';
 
 describe('Leave Approval Deduction Flow', () => {
   beforeEach(() => {
@@ -78,6 +88,7 @@ describe('Leave Approval Deduction Flow', () => {
     getAllLogs.mockReturnValue([]);
     getAllRequests.mockReturnValue([{ data: mockLeaveRequest }]);
     getEmployeeByIdSync.mockReturnValue({ data: mockEmployee });
+    getAllEmployeesSync.mockReturnValue([mockEmployee]);
   });
 
   it('deducts leave credits from employee balance when leave is approved', async () => {

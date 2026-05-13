@@ -307,7 +307,7 @@ export function calculatePayrollForTimeOut({
   const undertimeDeductionAmount = undertimeMinutes * minuteRate;
   const lateDeductionAmount = parsePeso(existingPayroll?.lateDeduction);
   const overtimePayAmount = (overtimeMinutes / 60) * settings.otAllowance;
-  const flatOtAllowanceAmount = getFlatOtAllowanceAmount(timeInMinutes, timeOutMinutes, shiftStart);
+  const flatOtAllowanceAmount = getFlatOtAllowanceAmount(timeInMinutes, timeOutMinutes, shiftStart, shift.isNightShift);
   const awaySiteAllowanceAmount = getAwaySiteAllowance(employee, actualSite, settings);
   const grossAdjustment = awaySiteAllowanceAmount + overtimePayAmount + flatOtAllowanceAmount + _ndAmount - lateDeductionAmount - undertimeDeductionAmount;
   const requiresApproval = hasSuspiciousPunchSequence || effectiveTimeOutMinutes > shiftEnd + 60 || overtimeMinutes > 0 || undertimeMinutes > 0 || _ndAmount > 0;
@@ -406,7 +406,8 @@ function getAwaySiteAllowance(employee: Employee, actualSite: string, settings: 
   return settings.awaySiteAllowance || 0;
 }
 
-function getFlatOtAllowanceAmount(timeInMinutes: number, actualTimeOutMinutes: number, shiftStart: number) {
+function getFlatOtAllowanceAmount(timeInMinutes: number, actualTimeOutMinutes: number, shiftStart: number, isNightShift?: boolean) {
+  if (isNightShift) return 0; // Night shift workers have their own differential logic
   const onTimeThreshold = 21 * 60;
   const lateThreshold = 22 * 60;
   const wasLate = timeInMinutes > shiftStart + 10;
