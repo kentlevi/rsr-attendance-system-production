@@ -207,16 +207,20 @@ export function DataTable<T>({
                         : (item[columns[0].accessor] as React.ReactNode)}
                     </div>
                     {/* Actions - Move to Top Right */}
-                    {columns[columns.length - 1].header === "Actions" && (
-                      <div 
-                        className="shrink-0 pt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {typeof columns[columns.length - 1].accessor === "function"
-                          ? columns[columns.length - 1].accessor(item)
-                          : (item[columns[columns.length - 1].accessor] as React.ReactNode)}
-                      </div>
-                    )}
+                    {(() => {
+                      const lastCol = columns[columns.length - 1];
+                      if (lastCol.header !== "Actions") return null;
+                      return (
+                        <div
+                          className="shrink-0 pt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {typeof lastCol.accessor === "function"
+                            ? lastCol.accessor(item)
+                            : (item[lastCol.accessor] as React.ReactNode)}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Data Grid - Middle */}

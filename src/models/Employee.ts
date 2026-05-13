@@ -10,6 +10,7 @@ export interface Employee {
   avatar: string;
   facialRecognitionProfileId?: string;
   employeeId?: string; // Company / Login ID
+  firebaseUid?: string; // Firebase Auth UID — set on first employee-portal sign-in to link the auth user to this record.
   facialDataImage?: string; // Reference image for registration
   phone?: string;
   dob?: string;

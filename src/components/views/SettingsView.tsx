@@ -23,6 +23,7 @@ import {
   Hash,
   MapPin,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "../common/Button";
 
@@ -215,10 +216,9 @@ export function SettingsView() {
                       <p className="text-[12px] text-slate-500 font-medium">Define operational boundaries for each site</p>
                     </div>
                   </div>
-                  <Toggle 
-                    enabled={settings.geofencingEnabled ?? false} 
-                    onChange={v => handleUpdate("geofencingEnabled", v)} 
-                    label="Enable Geofencing"
+                  <Toggle
+                    enabled={settings.geofencingEnabled ?? false}
+                    onChange={v => handleUpdate("geofencingEnabled", v)}
                   />
                 </div>
                 
