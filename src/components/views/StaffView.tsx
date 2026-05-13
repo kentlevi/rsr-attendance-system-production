@@ -126,6 +126,32 @@ export function StaffView() {
     setStatusFilter("");
   };
 
+  // Detect rows sharing the same Employee ID or email. These cause silent
+  // wrong-row resolution in clock-in / facial recognition (since cache lookups
+  // use find() and return the first array hit).
+  const duplicateIssues = (() => {
+    const idCounts = new Map<string, string[]>();
+    const emailCounts = new Map<string, string[]>();
+    employees.forEach((e) => {
+      const empId = (e.data.employeeId || "").trim();
+      if (empId) {
+        idCounts.set(empId, [...(idCounts.get(empId) ?? []), e.data.name]);
+      }
+      const email = (e.data.email || "").trim().toLowerCase();
+      if (email) {
+        emailCounts.set(email, [...(emailCounts.get(email) ?? []), e.data.name]);
+      }
+    });
+    const dupes: { kind: "id" | "email"; value: string; names: string[] }[] = [];
+    idCounts.forEach((names, value) => {
+      if (names.length > 1) dupes.push({ kind: "id", value, names });
+    });
+    emailCounts.forEach((names, value) => {
+      if (names.length > 1) dupes.push({ kind: "email", value, names });
+    });
+    return dupes;
+  })();
+
   const [deleteConfirmState, setDeleteConfirmState] = useState<{
     isOpen: boolean;
     id: string;
@@ -432,6 +458,42 @@ export function StaffView() {
           iconColor="text-red-600"
         />
       </div>
+
+      {duplicateIssues.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <Activity size={18} className="text-amber-700 flex-shrink-0" />
+            <span className="text-[14px] font-bold text-amber-900">
+              {duplicateIssues.length} duplicate{duplicateIssues.length > 1 ? "s" : ""} detected — review to avoid wrong-row clock-ins
+            </span>
+          </div>
+          <p className="text-[13px] text-amber-800">
+            Two or more employee records share the same Employee ID or email. This silently breaks facial recognition and clock-in resolution.
+          </p>
+          <div className="flex flex-col gap-1.5 mt-1">
+            {duplicateIssues.slice(0, 5).map((dupe) => (
+              <div key={`${dupe.kind}:${dupe.value}`} className="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2 border border-amber-200">
+                <span className="text-[13px] text-amber-900 truncate">
+                  <strong>{dupe.kind === "id" ? "Employee ID" : "Email"}:</strong>{" "}
+                  <code className="bg-amber-100 px-1.5 py-0.5 rounded">{dupe.value}</code>{" "}
+                  used by {dupe.names.length} records ({dupe.names.join(", ")})
+                </span>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => setSearchQuery(dupe.value)}
+                  className="flex-shrink-0"
+                >
+                  Review
+                </Button>
+              </div>
+            ))}
+            {duplicateIssues.length > 5 && (
+              <span className="text-[12px] text-amber-700 italic">+ {duplicateIssues.length - 5} more</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white sm:rounded-2xl border-y sm:border border-border/60 shadow-sm flex flex-col min-w-0 overflow-hidden">
         {/* Actions & Filters Section */}

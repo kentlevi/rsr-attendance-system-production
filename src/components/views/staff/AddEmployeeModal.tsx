@@ -15,6 +15,7 @@ import { Button } from "../../common/Button";
 import { cn, formatTimeTo12h, resizeImage } from "../../../lib/utils";
 import Webcam from "react-webcam";
 import { settingsService } from "../../../services/SettingsService";
+import { employeeService } from "../../../services/EmployeeService";
 import { useToast } from "../../../context/ToastContext";
 
 export function AddEmployeeModal({
@@ -218,17 +219,54 @@ export function AddEmployeeModal({
       return;
     }
 
+    // Uniqueness check: the human-readable Employee ID must not collide with another row.
+    // Two rows sharing the same employeeId silently break facial recognition and clock-in
+    // resolution because EmployeeService.getEmployeeByIdSync matches on either `id` or
+    // `employeeId` and returns the first array hit.
+    const enteredEmployeeId = formData.employeeId.trim();
+    if (enteredEmployeeId) {
+      const existing = employeeService.getAllEmployeesSync().find(
+        (emp) =>
+          (emp.data.employeeId === enteredEmployeeId || emp.data.id === enteredEmployeeId) &&
+          emp.data.id !== employeeToEdit?.id
+      );
+      if (existing) {
+        showToast(
+          `Employee ID "${enteredEmployeeId}" is already used by ${existing.data.name}. Choose a different ID.`,
+          "warning"
+        );
+        return;
+      }
+    }
+
+    // Email uniqueness — same reason: duplicate emails confuse the auth-store email lookup.
+    const enteredEmail = formData.email.trim().toLowerCase();
+    if (enteredEmail) {
+      const existingEmail = employeeService.getAllEmployeesSync().find(
+        (emp) =>
+          (emp.data.email || "").trim().toLowerCase() === enteredEmail &&
+          emp.data.id !== employeeToEdit?.id
+      );
+      if (existingEmail) {
+        showToast(
+          `Email "${enteredEmail}" is already used by ${existingEmail.data.name}.`,
+          "warning"
+        );
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const employeeId = employeeToEdit ? employeeToEdit.id : Date.now().toString();
       
-      // Face registration
+      // Face registration. Always key the face profile to the canonical Firestore
+      // doc ID (never the human-readable Employee ID field) so it cannot collide
+      // with another row's `employeeId` value and resolve to the wrong person.
       let facialRecognitionProfileId = employeeToEdit?.facialRecognitionProfileId || null;
       if (capturedDescriptors.length > 0) {
         const { facialRecognitionService } = await import("../../../services/FacialRecognitionService");
-        // Registration ID should be the human-readable ID or internal ID
-        const regId = formData.employeeId || employeeId;
-        const newProfileId = await facialRecognitionService.registerFace(regId, capturedDescriptors);
+        const newProfileId = await facialRecognitionService.registerFace(employeeId, capturedDescriptors);
         if (newProfileId) {
           facialRecognitionProfileId = newProfileId;
         }

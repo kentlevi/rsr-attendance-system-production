@@ -95,7 +95,11 @@ class EmployeeService {
   }
 
   getEmployeeByIdSync(id: string): EmployeeModel | null {
-    const emp = this.employees.find((e) => e.id === id || e.employeeId === id);
+    // Prefer the canonical Firestore doc id over the human-readable `employeeId` field.
+    // Two rows can share an `employeeId` value (we now block that on create, but legacy
+    // data may already have duplicates) — doc id is unique by definition.
+    const byDocId = this.employees.find((e) => e.id === id);
+    const emp = byDocId ?? this.employees.find((e) => e.employeeId === id);
     return emp ? new EmployeeModel(emp) : null;
   }
 
