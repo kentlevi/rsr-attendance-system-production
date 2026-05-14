@@ -51,6 +51,29 @@ vi.mock('../services/AdminAccountService', () => ({
   adminAccountService: { getAccount },
 }));
 
+// authStore transitively pulls in FacialRecognitionService -> @vladmandic/human
+// which requires @tensorflow/tfjs-node at runtime. Mock the store directly so the
+// test doesn't need the native TFJS binding installed.
+vi.mock('../store/authStore', () => ({
+  useAuthStore: Object.assign(
+    (selector: any) => selector({ setOfflineAdmin: vi.fn() }),
+    { getState: () => ({ setOfflineAdmin: vi.fn() }) }
+  ),
+}));
+
+// offlineCache uses IndexedDB which jsdom doesn't ship. The online path doesn't
+// touch it but cacheAdminCredential is fire-and-forget on success, so a no-op
+// mock keeps the test from logging a warning.
+vi.mock('../lib/offlineCache', () => ({
+  cacheAdminCredential: vi.fn(() => Promise.resolve()),
+  verifyCachedAdminCredential: vi.fn(() => Promise.resolve(null)),
+}));
+
+vi.mock('../lib/useOnlineStatus', () => ({
+  useOnlineStatus: () => true,
+  isOffline: () => false,
+}));
+
 describe('AdminLogin', () => {
   beforeEach(() => {
     vi.clearAllMocks();

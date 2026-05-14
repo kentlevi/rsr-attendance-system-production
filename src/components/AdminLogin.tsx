@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { Button } from './common/Button';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { cacheAdminCredential, verifyCachedAdminCredential } from '../lib/offlineCache';
+import { useAuthStore } from '../store/authStore';
 
 interface AdminLoginProps {
   onNavigate: (view: 'welcome' | 'employee' | 'admin' | 'adminLogin' | 'timeclock') => void;
@@ -20,6 +21,7 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { showToast } = useToast();
   const isOnline = useOnlineStatus();
+  const setOfflineAdmin = useAuthStore((s) => s.setOfflineAdmin);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +46,9 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
           return;
         }
         sessionStorage.setItem("rsr_admin_login_id", cached.username);
-        sessionStorage.setItem("rsr_admin_offline_session", "1");
+        // setOfflineAdmin writes the offline-session sentinel AND flips isAdmin
+        // in the auth store so the App-level navigation guard accepts the route.
+        setOfflineAdmin(true);
         showToast("Logged in (offline mode). Changes will sync when online.", "warning");
         onNavigate('admin');
       } catch (err) {
@@ -175,7 +179,7 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
         password: password.trim(),
         role: isAssistant ? 'Assistant' : 'Administrator',
       }).catch((err) => console.warn('Failed to cache admin credentials:', err));
-      sessionStorage.removeItem("rsr_admin_offline_session");
+      setOfflineAdmin(false);
 
       showToast("Login successful!", "success");
       onNavigate('admin');

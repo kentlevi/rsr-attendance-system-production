@@ -16,20 +16,57 @@ interface AuthState {
   user: User | null;
   isAdmin: boolean;
   isEmployee: boolean;
+  isOfflineAdmin: boolean;
   isLoading: boolean;
   init: () => () => void;
+  setOfflineAdmin: (active: boolean) => void;
   signOut: () => Promise<void>;
 }
 
+const OFFLINE_ADMIN_KEY = 'rsr_admin_offline_session';
+
+const hasOfflineAdminSession = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return sessionStorage.getItem(OFFLINE_ADMIN_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAdmin: false,
+  isAdmin: hasOfflineAdminSession(),
   isEmployee: false,
+  isOfflineAdmin: hasOfflineAdminSession(),
   isLoading: true,
+
+  setOfflineAdmin: (active: boolean) => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (active) sessionStorage.setItem(OFFLINE_ADMIN_KEY, '1');
+        else sessionStorage.removeItem(OFFLINE_ADMIN_KEY);
+      } catch {
+        // ignore
+      }
+    }
+    // When activating: flip isAdmin true so the App's navigation guard accepts /admin.
+    // When deactivating: leave isAdmin alone — Firebase Auth's onAuthStateChanged
+    // is the source of truth in the online path and will set it independently.
+    set((state) => ({
+      isOfflineAdmin: active,
+      isAdmin: active ? true : state.isAdmin,
+      isLoading: false,
+    }));
+  },
 
   init: () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      let isAdmin = false;
+      // If we already authenticated offline via cached credentials, don't let a
+      // null Firebase Auth state knock us back to the login screen. The offline
+      // session is the source of truth until the user explicitly signs out.
+      const offlineActive = hasOfflineAdminSession();
+      let isAdmin = offlineActive;
       let isEmployee = false;
 
       if (user) {
@@ -122,11 +159,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         undertimeService.stopSubscription();
       }
       
-      set({ 
-        user, 
+      set({
+        user,
         isAdmin,
         isEmployee,
-        isLoading: false 
+        isOfflineAdmin: offlineActive && !user,
+        isLoading: false,
       });
     });
 
@@ -147,7 +185,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       allowanceService.stopSubscription();
       undertimeService.stopSubscription();
       await firebaseSignOut(auth);
-      set({ user: null, isAdmin: false, isEmployee: false, isLoading: false });
+      if (typeof window !== 'undefined') {
+        try { sessionStorage.removeItem(OFFLINE_ADMIN_KEY); } catch { /* ignore */ }
+      }
+      set({ user: null, isAdmin: false, isEmployee: false, isOfflineAdmin: false, isLoading: false });
     } catch (error) {
       console.error("Sign out error", error);
       set({ isLoading: false });
