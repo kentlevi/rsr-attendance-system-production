@@ -1,5 +1,6 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { assertWritable } from "../lib/readOnlyMode";
 import type { AdminProfile } from "./AdminProfileService";
 
 export interface AdminAccountRecord extends AdminProfile {
@@ -39,6 +40,7 @@ class AdminAccountService {
     loginId: string,
     updates: Partial<AdminAccountRecord>,
   ): Promise<void> {
+    assertWritable("updating an admin account");
     try {
       await setDoc(this.getAccountRef(loginId), updates, { merge: true });
     } catch (error) {

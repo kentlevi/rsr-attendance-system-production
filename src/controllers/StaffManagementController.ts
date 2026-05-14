@@ -5,6 +5,17 @@ import { employeeService } from "../services/EmployeeService";
 import { Employee } from "../models/Employee";
 import { useToast } from "../context/ToastContext";
 import { getEmployeeStatusTransitionUpdate } from "../lib/EmployeeStatusRules";
+import { ReadOnlyOfflineError } from "../lib/readOnlyMode";
+
+// If a service mutation throws because we're in offline read-only mode, show a
+// clear warning instead of a generic failure. Re-throws anything else.
+function handleMutationError(error: unknown, showToast: (msg: string, kind?: any) => void): boolean {
+  if (error instanceof ReadOnlyOfflineError) {
+    showToast(error.message, "warning");
+    return true;
+  }
+  return false;
+}
 
 // Controller to manage state and actions for Staff Management view
 export function useStaffManagementController() {
@@ -51,7 +62,12 @@ export function useStaffManagementController() {
   };
 
   const handleAddEmployee = async (data: Employee) => {
-    await employeeService.addEmployee(data);
+    try {
+      await employeeService.addEmployee(data);
+    } catch (e) {
+      if (handleMutationError(e, showToast)) return;
+      throw e;
+    }
     refreshEmployees();
     setIsAddEmployeeModalOpen(false);
     setEditingEmployeeId(null);
@@ -59,7 +75,12 @@ export function useStaffManagementController() {
   };
 
   const handleDeleteEmployee = async (id: string) => {
-    await employeeService.deleteEmployee(id);
+    try {
+      await employeeService.deleteEmployee(id);
+    } catch (e) {
+      if (handleMutationError(e, showToast)) return;
+      throw e;
+    }
     refreshEmployees();
     showToast("Employee deleted.");
   };
@@ -69,7 +90,12 @@ export function useStaffManagementController() {
     data: Partial<Employee>,
     options?: { toastMessage?: string },
   ) => {
-    await employeeService.updateEmployee(id, data);
+    try {
+      await employeeService.updateEmployee(id, data);
+    } catch (e) {
+      if (handleMutationError(e, showToast)) return;
+      throw e;
+    }
     refreshEmployees();
     if (editingEmployeeId === id) {
       setEditingEmployeeId(null);
@@ -96,11 +122,16 @@ export function useStaffManagementController() {
 
   const handleResetEmployeeAccess = async (id: string) => {
     const newPin = Math.floor(100000 + Math.random() * 900000).toString();
-    await employeeService.updateEmployee(id, {
-      pin: newPin,
-      facialRecognitionProfileId: deleteField(),
-      facialDataImage: deleteField(),
-    } as any);
+    try {
+      await employeeService.updateEmployee(id, {
+        pin: newPin,
+        facialRecognitionProfileId: deleteField(),
+        facialDataImage: deleteField(),
+      } as any);
+    } catch (e) {
+      if (handleMutationError(e, showToast)) return;
+      throw e;
+    }
     refreshEmployees();
     showToast(`Access reset. New PIN: ${newPin}`, "warning");
   };

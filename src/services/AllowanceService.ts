@@ -10,6 +10,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError, logFirestoreError } from '../lib/firebase';
+import { assertWritable } from '../lib/readOnlyMode';
 import { AllowanceRecord, AllowanceRecordModel } from '../models/AllowanceRecord';
 
 export class AllowanceService {
@@ -78,6 +79,7 @@ export class AllowanceService {
   }
 
   async addRecord(record: Omit<AllowanceRecord, 'id'>): Promise<void> {
+    assertWritable("adding an allowance record");
     try {
       await addDoc(collection(db, this.collectionPath), record);
     } catch (e) {
@@ -86,6 +88,7 @@ export class AllowanceService {
   }
 
   async updateRecord(id: string, data: Partial<AllowanceRecord>): Promise<void> {
+    assertWritable("updating an allowance record");
     try {
       const docRef = doc(db, this.collectionPath, id);
       await updateDoc(docRef, data);

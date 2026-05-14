@@ -11,6 +11,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError, logFirestoreError } from '../lib/firebase';
+import { assertWritable } from '../lib/readOnlyMode';
 import { LeaveRequest, LeaveRequestModel } from '../models/LeaveRequest';
 import { notificationService } from './NotificationService';
 import { employeeService } from './EmployeeService';
@@ -85,6 +86,7 @@ export class LeaveService {
   }
 
   async addRequest(request: Omit<LeaveRequest, 'id'>): Promise<void> {
+    assertWritable("filing a leave request");
     try {
       await addDoc(collection(db, this.collectionPath), request);
       
@@ -104,6 +106,7 @@ export class LeaveService {
   }
 
   async updateRequest(id: string, data: Partial<LeaveRequest>): Promise<void> {
+    assertWritable("approving / rejecting a leave request");
     try {
       const docRef = doc(db, this.collectionPath, id);
       await updateDoc(docRef, data);

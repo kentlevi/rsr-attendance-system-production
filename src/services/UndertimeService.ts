@@ -11,6 +11,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError, logFirestoreError } from '../lib/firebase';
+import { assertWritable } from '../lib/readOnlyMode';
 import { UndertimeRequest, UndertimeRequestModel } from '../models/UndertimeRequest';
 
 export class UndertimeService {
@@ -79,6 +80,7 @@ export class UndertimeService {
   }
 
   async addRequest(request: Omit<UndertimeRequest, 'id'>): Promise<void> {
+    assertWritable("submitting an undertime request");
     try {
       await addDoc(collection(db, this.collectionPath), request);
     } catch (e) {
@@ -87,6 +89,7 @@ export class UndertimeService {
   }
 
   async updateRequest(id: string, data: Partial<UndertimeRequest>): Promise<void> {
+    assertWritable("updating an undertime request");
     try {
       const docRef = doc(db, this.collectionPath, id);
       await updateDoc(docRef, data);

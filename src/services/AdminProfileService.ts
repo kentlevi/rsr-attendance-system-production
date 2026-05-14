@@ -1,5 +1,6 @@
 import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { db, handleFirestoreError, logFirestoreError, OperationType } from "../lib/firebase";
+import { assertWritable } from "../lib/readOnlyMode";
 
 export interface AdminProfile {
   fullName: string;
@@ -58,6 +59,7 @@ class AdminProfileService {
   }
 
   async updateProfile(username: string, updates: Partial<AdminProfile>): Promise<void> {
+    assertWritable("updating admin profile");
     await setDoc(this.getProfileRef(username), updates, { merge: true }).catch((error) => {
       handleFirestoreError(error, OperationType.UPDATE, `${this.collectionPath}/${username}`);
     });

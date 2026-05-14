@@ -11,6 +11,7 @@ import { notificationService } from '../services/NotificationService';
 import { smsService } from '../services/SmsService';
 import { allowanceService } from '../services/AllowanceService';
 import { undertimeService } from '../services/UndertimeService';
+import { setReadOnlyOffline } from '../lib/readOnlyMode';
 
 interface AuthState {
   user: User | null;
@@ -34,6 +35,10 @@ const hasOfflineAdminSession = (): boolean => {
   }
 };
 
+// Sync the module-level read-only flag with any pre-existing offline session
+// (e.g. user reloaded the page while offline).
+setReadOnlyOffline(hasOfflineAdminSession());
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAdmin: hasOfflineAdminSession(),
@@ -50,6 +55,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         // ignore
       }
     }
+    // Service mutations check this flag to short-circuit before issuing
+    // doomed Firestore writes.
+    setReadOnlyOffline(active);
     // When activating: flip isAdmin true so the App's navigation guard accepts /admin.
     // When deactivating: leave isAdmin alone — Firebase Auth's onAuthStateChanged
     // is the source of truth in the online path and will set it independently.
@@ -159,11 +167,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         undertimeService.stopSubscription();
       }
       
+      const stillOffline = offlineActive && !user;
+      setReadOnlyOffline(stillOffline);
       set({
         user,
         isAdmin,
         isEmployee,
-        isOfflineAdmin: offlineActive && !user,
+        isOfflineAdmin: stillOffline,
         isLoading: false,
       });
     });
@@ -188,6 +198,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (typeof window !== 'undefined') {
         try { sessionStorage.removeItem(OFFLINE_ADMIN_KEY); } catch { /* ignore */ }
       }
+      setReadOnlyOffline(false);
       set({ user: null, isAdmin: false, isEmployee: false, isOfflineAdmin: false, isLoading: false });
     } catch (error) {
       console.error("Sign out error", error);

@@ -14,6 +14,7 @@ import {
   Unsubscribe
 } from "firebase/firestore";
 import { auth, db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
+import { assertWritable } from "../lib/readOnlyMode";
 import { Employee, EmployeeModel } from "../models/Employee";
 import { calculateLeaveReplenishment } from "../lib/LeaveReplenishmentRules";
 
@@ -142,6 +143,7 @@ class EmployeeService {
   }
 
   async addEmployee(employee: Employee): Promise<void> {
+    assertWritable("adding an employee");
     try {
       if (employee.id) {
         await setDoc(doc(db, this.collectionPath, employee.id), employee);
@@ -149,7 +151,7 @@ class EmployeeService {
         const docRef = await addDoc(collection(db, this.collectionPath), employee);
         employee.id = docRef.id;
       }
-      
+
       // Update local cache manually just in case subscription is slow
       this.employees = [...this.employees.filter(e => e.id !== employee.id), employee];
       this.notifyListeners();
@@ -159,9 +161,10 @@ class EmployeeService {
   }
 
   async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
+    assertWritable("editing an employee");
     try {
       await updateDoc(doc(db, this.collectionPath, id), data);
-      
+
       // Update local cache manually
       const index = this.employees.findIndex(e => e.id === id);
       if (index !== -1) {
@@ -174,6 +177,7 @@ class EmployeeService {
   }
 
   async deleteEmployee(id: string): Promise<void> {
+    assertWritable("deleting an employee");
     try {
       await deleteDoc(doc(db, this.collectionPath, id));
     } catch (e) {

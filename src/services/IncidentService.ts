@@ -11,6 +11,7 @@ import {
   where
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
+import { assertWritable } from "../lib/readOnlyMode";
 import { notificationService } from "./NotificationService";
 import { employeeService } from "./EmployeeService";
 
@@ -93,6 +94,7 @@ class IncidentService {
   }
 
   async add(data: Omit<IncidentReport['data'], 'id'>) {
+    assertWritable("filing an incident report");
     try {
       const docRef = await addDoc(collection(db, this.collectionPath), data);
       
@@ -116,6 +118,7 @@ class IncidentService {
   }
 
   async acknowledgeIncident(id: string) {
+    assertWritable("acknowledging an incident");
     try {
       await updateDoc(doc(db, this.collectionPath, id), {
         acknowledged: true,

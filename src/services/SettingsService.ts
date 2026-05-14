@@ -6,6 +6,7 @@ import {
   Unsubscribe
 } from "firebase/firestore";
 import { db, OperationType, handleFirestoreError } from "../lib/firebase";
+import { assertWritable } from "../lib/readOnlyMode";
 
 export interface SiteCoordinate {
   address?: string;
@@ -159,6 +160,7 @@ export class SettingsService {
   }
 
   async updateSettings(updates: Partial<SystemSettings>): Promise<void> {
+    assertWritable("updating settings");
     const oldSettings = this.settings;
     this.settings = { ...this.settings, ...updates };
     this.notifyListeners();

@@ -1,9 +1,10 @@
 import React, { ReactNode, useEffect, useState } from 'react';
-import { Menu, WifiOff, CloudUpload } from 'lucide-react';
+import { Menu, WifiOff, CloudUpload, Lock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../common/Button';
 import { useOnlineStatus } from '../../lib/useOnlineStatus';
 import { syncService } from '../../services/SyncService';
+import { useAuthStore } from '../../store/authStore';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -27,6 +28,7 @@ export function PageLayout({
   className
 }: PageLayoutProps) {
   const isOnline = useOnlineStatus();
+  const isOfflineAdmin = useAuthStore((s) => s.isOfflineAdmin);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -139,6 +141,21 @@ export function PageLayout({
           </div>
         )}
       </header>
+
+      {/* Offline read-only admin banner — full-width strip under the header so it's
+          visible on every page without the admin missing it. Editing buttons still
+          render, but the underlying service mutations short-circuit and surface a
+          warning toast (see lib/readOnlyMode.ts). */}
+      {isOfflineAdmin && (
+        <div className="relative z-30 bg-amber-50 border-b border-amber-200 text-amber-900">
+          <div className="w-full max-w-[1200px] mx-auto flex items-center gap-2 px-4 sm:px-6 md:px-8 py-2 text-[13px] sm:text-[14px]">
+            <Lock size={16} className="flex-shrink-0" />
+            <span className="font-medium">
+              Offline admin — read-only mode. Changes can't be saved until you reconnect.
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       {/* Page padding is centralised here so mobile spacing is identical across all

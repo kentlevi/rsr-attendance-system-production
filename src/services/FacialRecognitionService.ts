@@ -8,6 +8,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db, handleFirestoreError, logFirestoreError, OperationType } from '../lib/firebase';
+import { assertWritable } from '../lib/readOnlyMode';
 import { Human, Config } from '@vladmandic/human';
 import { settingsService } from './SettingsService';
 import { cacheFaceProfiles, getCachedFaceProfiles } from '../lib/offlineCache';
@@ -205,6 +206,7 @@ export class FacialRecognitionService {
   }
 
   async registerFace(employeeId: string, faceData: number[][]): Promise<string> {
+    assertWritable("registering a face profile");
     const profileId = employeeId; // Standardize ID to employeeId for de-duplication
     const newProfile = new FacialRecognitionProfile(
       profileId,
