@@ -149,17 +149,40 @@ export function PageLayout({
           block when running version is below minSupportedVersion. */}
       <UpdateAvailableBanner />
 
-      {/* Offline read-only admin banner — full-width strip under the header so it's
-          visible on every page without the admin missing it. Editing buttons still
-          render, but the underlying service mutations short-circuit and surface a
-          warning toast (see lib/readOnlyMode.ts). */}
+      {/* Offline read-only admin banner — full-width strip under the header so
+          it's visible on every page without the admin missing it. Editing
+          buttons still render, but service mutations short-circuit and surface
+          a warning toast (see lib/readOnlyMode.ts).
+          The banner flips to a "reconnect" CTA once the network is back so the
+          admin knows to sign in again to unlock writes. Re-auth needs the
+          plaintext password (the cached one is PBKDF2-hashed) so we can't do it
+          silently — they tap the button → routed to AdminLogin → sign in. */}
       {isOfflineAdmin && (
-        <div className="relative z-30 bg-amber-50 border-b border-amber-200 text-amber-900">
+        <div className={cn(
+          "relative z-30 border-b",
+          isOnline ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"
+        )}>
           <div className="w-full max-w-[1200px] mx-auto flex items-center gap-2 px-4 sm:px-6 md:px-8 py-2 text-[13px] sm:text-[14px]">
             <Lock size={16} className="flex-shrink-0" />
-            <span className="font-medium">
-              Offline admin — read-only mode. Changes can't be saved until you reconnect.
-            </span>
+            {isOnline ? (
+              <>
+                <span className="font-medium flex-1">
+                  Internet restored — sign in again to unlock editing.
+                </span>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => useAuthStore.getState().signOut().then(() => onNavigate('welcome'))}
+                  className="text-[12px] sm:text-[13px] font-semibold px-3 py-1 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white h-auto"
+                >
+                  Sign in
+                </Button>
+              </>
+            ) : (
+              <span className="font-medium">
+                Offline admin — read-only mode. Changes can't be saved until you reconnect.
+              </span>
+            )}
           </div>
         </div>
       )}
