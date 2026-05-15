@@ -7,7 +7,12 @@ import { Button } from "./Button";
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  /** Title rendered in the header bar. Omit to drop the header bar entirely
+   *  (the close button then floats over the body's top-right). Used by screens
+   *  whose content already provides its own visual header. */
+  title?: string;
+  /** Accessible label when no visible title — required for screen readers. */
+  ariaLabel?: string;
   children: ReactNode;
   footer?: ReactNode;
   maxWidth?: string;
@@ -17,6 +22,7 @@ export function Modal({
   isOpen,
   onClose,
   title,
+  ariaLabel,
   children,
   footer,
   maxWidth = "max-w-2xl",
@@ -54,24 +60,40 @@ export function Modal({
             transition={{ type: "spring", duration: 0.4, bounce: 0 }}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-title"
+            aria-labelledby={title ? "modal-title" : undefined}
+            aria-label={!title ? (ariaLabel || "Dialog") : undefined}
             className={`relative w-full h-fit flex flex-col sm:max-h-[85vh] max-h-[90vh] ${maxWidth} bg-white rounded-3xl shadow-2xl overflow-hidden`}
           >
-            {/* Header */}
-            <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 bg-white sm:rounded-t-3xl">
-              <h3 id="modal-title" className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
-                {title}
-              </h3>
+            {title ? (
+              /* Header bar with visible title */
+              <div className="px-5 py-4 sm:px-8 sm:py-6 border-b border-border flex items-center justify-between shrink-0 bg-white sm:rounded-t-3xl">
+                <h3 id="modal-title" className="text-[17px] sm:text-[20px] font-bold text-[#1a1a1a] tracking-tight">
+                  {title}
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="w-10 h-10 p-0 min-w-0 rounded-full bg-slate-50 hover:bg-slate-100"
+                  aria-label="Close"
+                >
+                  <X size={20} className="text-slate-500" />
+                </Button>
+              </div>
+            ) : (
+              /* Headerless — float the close button so the body's own visual
+                 header (e.g. <ManualAccessForm/>'s icon-on-top) is the only
+                 chrome the user sees. */
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="w-10 h-10 p-0 min-w-0 rounded-full bg-slate-50 hover:bg-slate-100"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-10 h-10 p-0 min-w-0 rounded-full bg-slate-50 hover:bg-slate-100"
                 aria-label="Close"
               >
                 <X size={20} className="text-slate-500" />
               </Button>
-            </div>
+            )}
 
             {/* Body */}
             <div id="modal-scroll-container" className="flex-1 overflow-y-auto custom-scrollbar">

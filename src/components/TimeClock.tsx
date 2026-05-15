@@ -720,7 +720,12 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
           setIsPinModalOpen(false);
           setPendingAction(null);
         }}
-        title={pendingAction ? `Manual Entry: ${pendingAction}` : "Manual Entry Override"}
+        // Pendinng-action state shows the shared <ManualAccessForm/> which
+        // brings its own icon-on-top header — render the modal headerless so
+        // there isn't a duplicate. The action-picker state still benefits
+        // from a visible "Manual Entry Override" title at the top.
+        title={pendingAction ? undefined : "Manual Entry Override"}
+        ariaLabel={pendingAction ? `Manual entry: ${pendingAction}` : undefined}
       >
         <div className="p-6">
           {!pendingAction ? (
