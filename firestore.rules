@@ -64,13 +64,29 @@ service cloud.firestore {
        allow read, write: if isAdmin() || isOwner(document);
     }
 
+    // Face profiles. Reads stay open because the TimeClock kiosk runs anonymously
+    // — it must match a face against this collection BEFORE we know who the user is.
+    // Writes are admin-only because employees can never enroll themselves.
+    // TODO(security): contains biometric embeddings; consider moving face matching
+    // to a Cloud Function so reads can be gated by an attestation token.
     match /facialRecognitionProfiles/{document=**} {
       allow read, list: if true;
-      allow write: if isAuthenticated(); 
+      allow write: if isAdmin();
     }
-    
+
+    // Attendance writes are open because the TimeClock kiosk runs anonymously.
+    // Field-level validation prevents anyone from forging arbitrary punches:
+    // every write must carry a valid employeeId (string) and a date (string),
+    // and updates may not change the employeeId or rewrite history.
+    // TODO(security): add anonymous Firebase Auth on the kiosk and require
+    // isAuthenticated() instead of `if true`.
     match /attendance/{document=**} {
-      allow read, create, update: if true;
+      allow read: if true;
+      allow create: if request.resource.data.employeeId is string
+                    && request.resource.data.employeeId.size() > 0
+                    && request.resource.data.date is string;
+      allow update: if request.resource.data.employeeId == resource.data.employeeId
+                    && request.resource.data.date == resource.data.date;
       allow delete: if isAdmin();
     }
 

@@ -6,11 +6,17 @@ import { Employee } from "../models/Employee";
 import { useToast } from "../context/ToastContext";
 import { getEmployeeStatusTransitionUpdate } from "../lib/EmployeeStatusRules";
 import { ReadOnlyOfflineError } from "../lib/readOnlyMode";
+import { ConcurrentEditError } from "../lib/concurrentEdit";
 
-// If a service mutation throws because we're in offline read-only mode, show a
-// clear warning instead of a generic failure. Re-throws anything else.
+// If a service mutation throws a known soft-error (offline read-only mode or a
+// concurrent edit by another admin), surface a clear warning instead of a
+// generic failure. Re-throws anything else.
 function handleMutationError(error: unknown, showToast: (msg: string, kind?: any) => void): boolean {
   if (error instanceof ReadOnlyOfflineError) {
+    showToast(error.message, "warning");
+    return true;
+  }
+  if (error instanceof ConcurrentEditError) {
     showToast(error.message, "warning");
     return true;
   }

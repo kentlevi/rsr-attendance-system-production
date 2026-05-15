@@ -9,6 +9,10 @@ export interface Employee {
   lastLogin?: string;
   avatar: string;
   facialRecognitionProfileId?: string;
+  faceConsentAt?: string;       // ISO timestamp of consent capture (PH Data Privacy Act).
+  faceConsentedBy?: string;     // Admin username/email that recorded the consent.
+  updatedAt?: string;           // ISO timestamp of the most recent write (audit trail).
+  updatedBy?: string;           // Admin login id that performed the most recent write.
   employeeId?: string; // Company / Login ID
   firebaseUid?: string; // Firebase Auth UID — set on first employee-portal sign-in to link the auth user to this record.
   facialDataImage?: string; // Reference image for registration

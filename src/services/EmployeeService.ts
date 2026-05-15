@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { auth, db, OperationType, handleFirestoreError, logFirestoreError } from "../lib/firebase";
 import { assertWritable } from "../lib/readOnlyMode";
+import { ConcurrentEditError, stampAuditMeta } from "../lib/concurrentEdit";
 import { Employee, EmployeeModel } from "../models/Employee";
 import { calculateLeaveReplenishment } from "../lib/LeaveReplenishmentRules";
 
@@ -144,34 +145,57 @@ class EmployeeService {
 
   async addEmployee(employee: Employee): Promise<void> {
     assertWritable("adding an employee");
+    const stamped: Employee = { ...employee, ...stampAuditMeta() };
     try {
-      if (employee.id) {
-        await setDoc(doc(db, this.collectionPath, employee.id), employee);
+      if (stamped.id) {
+        await setDoc(doc(db, this.collectionPath, stamped.id), stamped);
       } else {
-        const docRef = await addDoc(collection(db, this.collectionPath), employee);
-        employee.id = docRef.id;
+        const docRef = await addDoc(collection(db, this.collectionPath), stamped);
+        stamped.id = docRef.id;
       }
 
       // Update local cache manually just in case subscription is slow
-      this.employees = [...this.employees.filter(e => e.id !== employee.id), employee];
+      this.employees = [...this.employees.filter(e => e.id !== stamped.id), stamped];
       this.notifyListeners();
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
     }
   }
 
-  async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
+  /**
+   * Update an employee. Pass `expectedUpdatedAt` from the version the admin saw at
+   * load time to opt in to soft concurrent-edit detection — if another admin has
+   * written the record in the meantime, the call throws ConcurrentEditError instead
+   * of silently overwriting their work.
+   */
+  async updateEmployee(
+    id: string,
+    data: Partial<Employee>,
+    expectedUpdatedAt?: string
+  ): Promise<void> {
     assertWritable("editing an employee");
     try {
-      await updateDoc(doc(db, this.collectionPath, id), data);
+      if (expectedUpdatedAt) {
+        const snapshot = await getDoc(doc(db, this.collectionPath, id));
+        const current = snapshot.exists() ? (snapshot.data() as Employee) : null;
+        if (current?.updatedAt && current.updatedAt !== expectedUpdatedAt) {
+          throw new ConcurrentEditError(
+            current.updatedAt,
+            current.updatedBy || "another admin",
+          );
+        }
+      }
+      const stamped = { ...data, ...stampAuditMeta() };
+      await updateDoc(doc(db, this.collectionPath, id), stamped);
 
       // Update local cache manually
       const index = this.employees.findIndex(e => e.id === id);
       if (index !== -1) {
-        this.employees[index] = { ...this.employees[index], ...data };
+        this.employees[index] = { ...this.employees[index], ...stamped };
         this.notifyListeners();
       }
     } catch (e) {
+      if (e instanceof ConcurrentEditError) throw e;
       handleFirestoreError(e, OperationType.UPDATE, `${this.collectionPath}/${id}`);
     }
   }

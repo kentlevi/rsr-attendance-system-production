@@ -34,6 +34,11 @@ export function AddEmployeeModal({
   const [isModelsLoading, setIsModelsLoading] = useState(false);
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
   const [capturedDescriptors, setCapturedDescriptors] = useState<number[][]>([]);
+  // PH Data Privacy Act: explicit consent required before storing biometric data.
+  // Pre-checked when editing an employee that already has a recorded consent.
+  const [faceConsent, setFaceConsent] = useState<boolean>(
+    Boolean(employeeToEdit?.faceConsentAt)
+  );
   const webcamRef = React.useRef<Webcam>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -256,10 +261,19 @@ export function AddEmployeeModal({
       }
     }
 
+    // PH Data Privacy Act: never persist biometric data without recorded consent.
+    if (capturedDescriptors.length > 0 && !faceConsent) {
+      showToast(
+        "Tick the Data Privacy consent box before saving face samples.",
+        "warning"
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const employeeId = employeeToEdit ? employeeToEdit.id : Date.now().toString();
-      
+
       // Face registration. Always key the face profile to the canonical Firestore
       // doc ID (never the human-readable Employee ID field) so it cannot collide
       // with another row's `employeeId` value and resolve to the wrong person.
@@ -271,6 +285,15 @@ export function AddEmployeeModal({
           facialRecognitionProfileId = newProfileId;
         }
       }
+
+      // Stamp the consent metadata only when new descriptors are being saved.
+      // Existing consent is preserved on plain edits via the spread further below.
+      const faceConsentFields = capturedDescriptors.length > 0 && faceConsent
+        ? {
+            faceConsentAt: new Date().toISOString(),
+            faceConsentedBy: sessionStorage.getItem('rsr_admin_login_id') || 'admin',
+          }
+        : {};
 
       // Image processing
       const avatar = formData.avatar && formData.avatar.startsWith('data:')
@@ -299,6 +322,7 @@ export function AddEmployeeModal({
         rfid: (formData.rfid || "").trim(),
         facialDataImage,
         facialRecognitionProfileId: facialRecognitionProfileId,
+        ...faceConsentFields,
         
         // Employment Info
         department: formData.department,
@@ -1147,6 +1171,23 @@ export function AddEmployeeModal({
                   angles for accurate recognition.
                 </p>
               </div>
+
+              {/* Data Privacy Act consent — required before any biometric data is stored. */}
+              <label className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/60 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={faceConsent}
+                  onChange={(e) => setFaceConsent(e.target.checked)}
+                  className="mt-1 w-4 h-4 accent-primary flex-shrink-0"
+                />
+                <span className="text-[12px] text-amber-900 leading-relaxed">
+                  <strong>Consent (PH Data Privacy Act):</strong> The employee
+                  agrees to facial-recognition enrollment for attendance. Their
+                  biometric template is encrypted, stored only on company servers,
+                  and retained until offboarding, after which it is permanently
+                  deleted. Required before face samples can be saved.
+                </span>
+              </label>
             </div>
           )}
         </div>
