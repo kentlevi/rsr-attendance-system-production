@@ -3,14 +3,21 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 
 import { VitePWA } from 'vite-plugin-pwa';
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
+// Bake the package.json version into the bundle so the running app can compare
+// itself against the latest version published in Firestore (in-app update banner).
+const pkgVersion = JSON.parse(readFileSync(path.join(repoRoot, 'package.json'), 'utf-8')).version;
 
 export default defineConfig({
   root: repoRoot,
   envDir: repoRoot,
+  define: {
+    __APP_VERSION__: JSON.stringify(pkgVersion),
+  },
   plugins: [
     react(), 
     tailwindcss(),

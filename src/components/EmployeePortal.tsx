@@ -904,11 +904,12 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       showMenu={true}
       headerRight={
         <div className="flex items-center gap-6 z-50">
-          <Button 
+          <Button
             variant="ghost"
             size="xs"
             onClick={() => setActiveTab("notifications")}
             className="relative rounded-full text-[#1a1a1a] hover:text-primary h-10 w-10 min-w-0"
+            aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
           >
             <Bell size={20} />
             {unreadCount > 0 && (

@@ -82,16 +82,43 @@ export class NotificationService {
     this.listeners.forEach(l => l());
   }
 
+  // Telegram rate-limiting state. Telegram's documented per-chat limit is ~1
+  // message/second; bursts get the bot 429'd or even banned. We also de-dup
+  // identical messages inside a short window so a button-mash or runaway loop
+  // can't flood the bot.
+  private telegramLastSentAt = 0;
+  private readonly telegramMinIntervalMs = 1100;        // ~1 msg/sec
+  private telegramRecent: Map<string, number> = new Map();
+  private readonly telegramDedupWindowMs = 60_000;      // drop identical msgs in 60s
+
   async sendTelegramNotification(message: string) {
     const settings = settingsService.getSettings();
     if (!settings.telegramEnabled || !settings.telegramChatId || !settings.telegramBotToken) {
       return;
     }
 
+    // Drop duplicate messages within the dedup window. Cleans stale entries
+    // each call so the map can't grow unbounded.
+    const now = Date.now();
+    for (const [k, ts] of this.telegramRecent) {
+      if (now - ts > this.telegramDedupWindowMs) this.telegramRecent.delete(k);
+    }
+    if (this.telegramRecent.has(message)) {
+      return;
+    }
+    this.telegramRecent.set(message, now);
+
     if (isOffline()) {
       await pendingNotificationQueue.enqueue({ kind: 'telegram', message });
       return;
     }
+
+    // Throttle so consecutive sends stay under ~1 msg/sec per chat.
+    const delta = now - this.telegramLastSentAt;
+    if (delta < this.telegramMinIntervalMs) {
+      await new Promise((r) => setTimeout(r, this.telegramMinIntervalMs - delta));
+    }
+    this.telegramLastSentAt = Date.now();
 
     try {
       await this.deliverTelegramDirect(message);

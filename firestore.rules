@@ -150,6 +150,14 @@ service cloud.firestore {
     match /sms_logs/{document} {
       allow read, write: if isAdmin();
     }
+
+    // In-app update banner reads this doc on every page load to surface a
+    // newer-version notice. Open read because we want unauthenticated kiosks
+    // and the welcome screen to know about updates too. Admin-only writes.
+    match /appVersions/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
 

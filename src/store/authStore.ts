@@ -4,7 +4,21 @@ import { auth } from '../lib/firebase';
 import { attendanceService } from '../services/AttendanceService';
 import { leaveService } from '../services/LeaveService';
 import { employeeService } from '../services/EmployeeService';
-import { facialRecognitionService } from '../services/FacialRecognitionService';
+// FacialRecognitionService is intentionally NOT imported eagerly. It transitively
+// pulls in @vladmandic/human + TensorFlow.js (~1.5 MB compressed) which only
+// needs to be on the wire when face capture/match is about to happen. The auth
+// store either initialises or tears down the subscription via dynamic import
+// inside the auth-state callback below, so the chunk stays out of the critical
+// boot path for non-kiosk routes.
+async function withFacialService<T = void>(fn: (svc: typeof import('../services/FacialRecognitionService').facialRecognitionService) => T | Promise<T>): Promise<T | undefined> {
+  try {
+    const mod = await import('../services/FacialRecognitionService');
+    return await fn(mod.facialRecognitionService);
+  } catch (e) {
+    console.warn('FacialRecognitionService lazy-load failed', e);
+    return undefined;
+  }
+}
 import { incidentService } from '../services/IncidentService';
 import { settingsService } from '../services/SettingsService';
 import { notificationService } from '../services/NotificationService';
@@ -122,17 +136,21 @@ export const useAuthStore = create<AuthState>((set) => ({
                 allowanceService.initializeForUser(isAdmin, scopeId);
                 undertimeService.initializeForUser(isAdmin, scopeId);
 
+                // Admin needs face profiles loaded for enrollment + verification UI;
+                // for non-admin (employee/kiosk) the FR service is loaded on demand
+                // by the screens that actually need it. Awaited so the store's
+                // post-set state is consistent for callers / tests.
                 if (isAdmin) {
-                   facialRecognitionService.initializeForAdmin();
+                   await withFacialService((svc) => svc.initializeForAdmin());
                 } else {
-                   facialRecognitionService.stopSubscription();
+                   await withFacialService((svc) => svc.stopSubscription());
                 }
             } else {
                 console.warn('Signed-in user is neither admin nor a registered employee. Skipping subscriptions.', user.email);
                 attendanceService.stopSubscription();
                 leaveService.stopSubscription();
                 employeeService.stopSubscription();
-                facialRecognitionService.stopSubscription();
+                void withFacialService((svc) => svc.stopSubscription());
                 incidentService.stopSubscription();
                 settingsService.stopSubscription();
                 notificationService.stopSubscription();
@@ -146,7 +164,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             attendanceService.stopSubscription();
             leaveService.stopSubscription();
             employeeService.stopSubscription();
-            facialRecognitionService.stopSubscription();
+            void withFacialService((svc) => svc.stopSubscription());
             incidentService.stopSubscription();
             settingsService.stopSubscription();
             notificationService.stopSubscription();
@@ -158,7 +176,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         attendanceService.stopSubscription();
         leaveService.stopSubscription();
         employeeService.stopSubscription();
-        facialRecognitionService.stopSubscription();
+        void withFacialService((svc) => svc.stopSubscription());
         incidentService.stopSubscription();
         settingsService.stopSubscription();
         notificationService.stopSubscription();
@@ -187,7 +205,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       attendanceService.stopSubscription();
       leaveService.stopSubscription();
       employeeService.stopSubscription();
-      facialRecognitionService.stopSubscription();
+      void withFacialService((svc) => svc.stopSubscription());
       incidentService.stopSubscription();
       settingsService.stopSubscription();
       notificationService.stopSubscription();

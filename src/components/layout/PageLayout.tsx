@@ -5,6 +5,7 @@ import { Button } from '../common/Button';
 import { useOnlineStatus } from '../../lib/useOnlineStatus';
 import { syncService } from '../../services/SyncService';
 import { useAuthStore } from '../../store/authStore';
+import { UpdateAvailableBanner } from './UpdateAvailableBanner';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -123,10 +124,11 @@ export function PageLayout({
             {headerRight ? (
               headerRight
             ) : showMenu ? (
-              <Button 
+              <Button
                 variant="ghost"
                 onClick={onMenuClick || (() => onNavigate('welcome'))}
                 className="btn-icon rounded-full text-[#1a1a1a] p-0 h-11 w-11"
+                aria-label="Open menu"
               >
                 <Menu size={24} strokeWidth={1.5} />
               </Button>
@@ -141,6 +143,11 @@ export function PageLayout({
           </div>
         )}
       </header>
+
+      {/* Version-update banner — shown across every page if the running build is
+          behind the version published in Firestore (appVersions/latest). Hard
+          block when running version is below minSupportedVersion. */}
+      <UpdateAvailableBanner />
 
       {/* Offline read-only admin banner — full-width strip under the header so it's
           visible on every page without the admin missing it. Editing buttons still
