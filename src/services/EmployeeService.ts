@@ -186,12 +186,20 @@ class EmployeeService {
         }
       }
       const stamped = { ...data, ...stampAuditMeta() };
-      await updateDoc(doc(db, this.collectionPath, id), stamped);
+      // Firestore rejects updateDoc payloads containing `undefined`. Status
+      // transitions (and any other callers that signal "clear this field")
+      // produce undefined values intentionally — drop those keys here so the
+      // SDK accepts the write. To actually delete an existing field, callers
+      // should pass deleteField() from firebase/firestore explicitly.
+      const sanitized = Object.fromEntries(
+        Object.entries(stamped).filter(([, v]) => v !== undefined),
+      ) as Partial<Employee>;
+      await updateDoc(doc(db, this.collectionPath, id), sanitized);
 
       // Update local cache manually
       const index = this.employees.findIndex(e => e.id === id);
       if (index !== -1) {
-        this.employees[index] = { ...this.employees[index], ...stamped };
+        this.employees[index] = { ...this.employees[index], ...sanitized };
         this.notifyListeners();
       }
     } catch (e) {
