@@ -14,12 +14,36 @@ const settingsServiceMock = {
 };
 const attendancePhotoServiceMock = {
   uploadPhoto: vi.fn(),
+  uploadDirect: vi.fn(),
 };
 const localAttendanceServiceMock = {
   getRetryablePunches: vi.fn(),
   markSyncing: vi.fn(),
   markSynced: vi.fn(),
   markFailed: vi.fn(),
+  getSyncSummary: vi.fn(),
+  pruneSynced: vi.fn(),
+};
+const localUploadQueueMock = {
+  getCount: vi.fn(),
+  getRetryable: vi.fn(),
+  markUploading: vi.fn(),
+  markFailed: vi.fn(),
+  remove: vi.fn(),
+};
+const pendingNotificationQueueMock = {
+  getCount: vi.fn(),
+  getRetryable: vi.fn(),
+  markSending: vi.fn(),
+  markFailed: vi.fn(),
+  remove: vi.fn(),
+};
+const notificationServiceMock = {
+  deliverTelegramDirect: vi.fn(),
+  sendSmsDirect: vi.fn(),
+};
+const requestAttachmentServiceMock = {
+  uploadDirect: vi.fn(),
 };
 const calculatePayrollForTimeIn = vi.fn();
 const calculatePayrollForTimeOut = vi.fn();
@@ -52,6 +76,18 @@ vi.mock('../services/AttendancePhotoService', () => ({
 }));
 vi.mock('../services/LocalAttendanceService', () => ({
   localAttendanceService: localAttendanceServiceMock,
+}));
+vi.mock('../services/LocalUploadQueue', () => ({
+  localUploadQueue: localUploadQueueMock,
+}));
+vi.mock('../services/PendingNotificationQueue', () => ({
+  pendingNotificationQueue: pendingNotificationQueueMock,
+}));
+vi.mock('../services/NotificationService', () => ({
+  notificationService: notificationServiceMock,
+}));
+vi.mock('../services/RequestAttachmentService', () => ({
+  requestAttachmentService: requestAttachmentServiceMock,
 }));
 vi.mock('../lib/PayrollRules', () => ({
   calculatePayrollForTimeIn,
@@ -194,6 +230,160 @@ describe('SyncService', () => {
       location: 'Site A',
     }));
     expect(window.Android?.markPunchSynced).toHaveBeenCalledWith(7);
+  });
+
+  // -------------------------------------------------------------------
+  // getAggregatedSyncSummary — combines per-queue counts into one bag.
+  // -------------------------------------------------------------------
+  it('aggregates pending counts across punches, uploads and notifications', async () => {
+    localAttendanceServiceMock.getSyncSummary.mockResolvedValue({ totalOpen: 3 });
+    localUploadQueueMock.getCount.mockResolvedValue(2);
+    pendingNotificationQueueMock.getCount.mockResolvedValue(5);
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    const summary = await service.getAggregatedSyncSummary();
+
+    expect(summary).toEqual({
+      punches: 3,
+      uploads: 2,
+      notifications: 5,
+      totalOpen: 10,
+    });
+  });
+
+  it('treats failing queue reads as zero so the summary stays usable', async () => {
+    localAttendanceServiceMock.getSyncSummary.mockRejectedValue(new Error('idb dead'));
+    localUploadQueueMock.getCount.mockRejectedValue(new Error('idb dead'));
+    pendingNotificationQueueMock.getCount.mockResolvedValue(7);
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    const summary = await service.getAggregatedSyncSummary();
+
+    expect(summary).toEqual({
+      punches: 0,
+      uploads: 0,
+      notifications: 7,
+      totalOpen: 7,
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // processSync should not run reentrantly and is a no-op when offline.
+  // -------------------------------------------------------------------
+  it('is a no-op when navigator.onLine is false', async () => {
+    Object.defineProperty(global.navigator, 'onLine', { value: false, configurable: true });
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([
+      { id: 'p1', employeeId: 'E', action: 'Time In', date: '2026-05-15', time: '08:00 AM', siteId: 'HQ', timestamp: '2026-05-15T00:00:00Z' },
+    ]);
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    await service.processSync();
+
+    // Should not have entered the punch-processing path
+    expect(localAttendanceServiceMock.markSyncing).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------
+  // Pruning the queue after a sync pass — opportunistic cleanup.
+  // -------------------------------------------------------------------
+  it('opportunistically prunes synced punches after a successful sync pass', async () => {
+    // Prune runs at the end of processLocalAttendancePunches — but that path
+    // exits early when there are no pending punches. Provide one that
+    // intentionally fails sync so we still exercise the prune line.
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([
+      {
+        id: 'p-prune-1',
+        employeeId: 'EMP-X',
+        employeeName: 'X',
+        action: 'Time In',
+        date: '2026-05-15',
+        time: '08:00 AM',
+        siteId: 'HQ',
+        timestamp: '2026-05-15T00:00:00Z',
+      },
+    ]);
+    employeeServiceMock.getEmployeeById.mockResolvedValue(null); // forces sync to fail
+    localAttendanceServiceMock.pruneSynced.mockResolvedValue(0);
+    localUploadQueueMock.getRetryable.mockResolvedValue([]);
+    pendingNotificationQueueMock.getRetryable.mockResolvedValue([]);
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    await service.processSync();
+
+    expect(localAttendanceServiceMock.pruneSynced).toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------
+  // Upload queue replay — should mark items uploading/uploaded/failed
+  // around the upload attempt.
+  // -------------------------------------------------------------------
+  it('replays a queued attendance photo upload and removes it from the queue', async () => {
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([]);
+    localUploadQueueMock.getRetryable.mockResolvedValue([
+      {
+        id: 'up-1',
+        kind: 'attendance-photo',
+        context: { employeeId: 'E', action: 'Time In' },
+        dataUrl: 'data:image/jpeg;base64,xxx',
+      },
+    ]);
+    // attendancePhotoService.uploadDirect is the kind=attendance-photo replay path
+    (attendancePhotoServiceMock as any).uploadDirect = vi.fn().mockResolvedValue('https://cdn/photo.jpg');
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    await service.processSync();
+
+    expect(localUploadQueueMock.markUploading).toHaveBeenCalledWith('up-1');
+    expect(attendancePhotoServiceMock.uploadDirect).toHaveBeenCalledWith(
+      'data:image/jpeg;base64,xxx',
+      'E',
+      'Time In',
+    );
+    expect(localUploadQueueMock.remove).toHaveBeenCalledWith('up-1');
+    expect(localUploadQueueMock.markFailed).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------
+  // Notification queue replay
+  // -------------------------------------------------------------------
+  it('replays a queued telegram notification and marks it sent', async () => {
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([]);
+    pendingNotificationQueueMock.getRetryable.mockResolvedValue([
+      { id: 'n-1', kind: 'telegram', message: '<b>Test</b>' },
+    ]);
+    notificationServiceMock.deliverTelegramDirect.mockResolvedValue(undefined);
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    await service.processSync();
+
+    expect(pendingNotificationQueueMock.markSending).toHaveBeenCalledWith('n-1');
+    expect(notificationServiceMock.deliverTelegramDirect).toHaveBeenCalledWith('<b>Test</b>');
+    expect(pendingNotificationQueueMock.remove).toHaveBeenCalledWith('n-1');
+  });
+
+  it('marks notification queue items failed when delivery throws', async () => {
+    // Reset all queue mocks explicitly so leftover mockResolvedValue from
+    // earlier tests doesn't leak into this one (vi.clearAllMocks only clears
+    // call history, not implementations).
+    localAttendanceServiceMock.getRetryablePunches.mockResolvedValue([]);
+    localUploadQueueMock.getRetryable.mockResolvedValue([]);
+    pendingNotificationQueueMock.getRetryable.mockResolvedValue([
+      { id: 'n-2', kind: 'telegram', message: 'X' },
+    ]);
+    notificationServiceMock.deliverTelegramDirect.mockRejectedValue(new Error('429'));
+    const { SyncService } = await import('../services/SyncService');
+    const service = new SyncService();
+
+    await service.processSync();
+
+    expect(pendingNotificationQueueMock.markFailed).toHaveBeenCalledWith('n-2', expect.any(Error));
+    expect(pendingNotificationQueueMock.remove).not.toHaveBeenCalled();
   });
 });
 

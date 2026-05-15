@@ -31,7 +31,7 @@ export interface IncidentReport {
   }
 }
 
-class IncidentService {
+export class IncidentService {
   private incidents: IncidentReport[] = [];
   private collectionPath = "incidents";
   private unsubscribe: (() => void) | null = null;

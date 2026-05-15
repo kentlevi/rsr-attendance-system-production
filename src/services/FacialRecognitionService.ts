@@ -180,11 +180,9 @@ export class FacialRecognitionService {
             ctx.drawImage(img, 0, 0, width, height);
           }
 
-          console.log("Detecting face with @vladmandic/human...");
           const res = await this.human.detect(canvas);
-          
+
           if (res && res.face && res.face.length > 0) {
-            console.log("Face detected successfully!");
             const desc = Array.from(res.face[0].embedding || []);
             if (desc.length > 0) {
               resolve(desc);

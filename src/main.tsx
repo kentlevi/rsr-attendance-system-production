@@ -18,7 +18,7 @@ const updateSW = registerSW({
     }
   },
   onOfflineReady() {
-    console.log('App is ready to work offline');
+    // Service worker installed and assets cached — no UI prompt needed.
   },
 });
 

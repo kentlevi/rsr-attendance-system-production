@@ -17,7 +17,6 @@ export const storage = getStorage(app);
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("Firebase connection successful");
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
       console.error("Please check your Firebase configuration. The client is reporting as offline.");
@@ -136,8 +135,10 @@ export function logFirestoreError(
   }
 }
 
-export function trackFirestoreUsage(operationType: OperationType, count = 1) {
-    // Temporarily disabled for debugging
-    console.log("Usage tracked:", operationType, count);
+export function trackFirestoreUsage(_operationType: OperationType, _count = 1) {
+    // No-op placeholder. The metering plumbing was intentionally disabled; wire
+    // an actual sink here (Prometheus push, custom Firestore counter, etc.)
+    // when you need per-op telemetry. Leaving it as a no-op keeps the call
+    // sites in services valid without spamming the console.
 }
 
