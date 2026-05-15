@@ -45,6 +45,15 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
   const [showPin, setShowPin] = useState(false);
   const [pendingAction, setPendingAction] = useState<TimeClockAction | null>(null);
 
+  // True once anonymous auth + employee load have completed. Punch buttons are
+  // disabled until then so face matches can't fire against an empty cache.
+  // Starts true when the employee cache is already populated (admin warmup,
+  // test mocks) — there's nothing to wait for in that case.
+  const [isKioskReady, setIsKioskReady] = useState(() =>
+    employeeService.getAllEmployeesSync().length > 0
+  );
+  const [kioskReadyError, setKioskReadyError] = useState<string | null>(null);
+
   const webcamRef = useRef<Webcam>(null);
 
   useEffect(() => {
@@ -54,7 +63,9 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     // Kiosk operates anonymously, but our Firestore rules require an authenticated
     // session (any session — including anonymous) to LIST employees / read
     // settings. Silently sign in via Firebase Anonymous Auth so the kiosk can
-    // resolve face matches without exposing a real account.
+    // resolve face matches without exposing a real account. Punch UI is gated
+    // on this completing successfully so face matches can't run against an
+    // empty employee cache.
     const ensureKioskAuth = async () => {
       try {
         const { getAuth, signInAnonymously } = await import('firebase/auth');
@@ -62,21 +73,23 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         if (!auth.currentUser) {
           await signInAnonymously(auth);
         }
-      } catch (err) {
-        console.warn('Kiosk anonymous auth failed; Firestore reads may be denied.', err);
+        if (employeeService.getAllEmployeesSync().length === 0) {
+          const loaded = await employeeService.loadEmployees();
+          setEmployees(loaded.map(e => e.data));
+        }
+        setIsKioskReady(true);
+      } catch (err: any) {
+        console.warn('Kiosk anonymous auth / employee load failed.', err);
+        const code = err?.code || err?.message || 'unknown';
+        setKioskReadyError(
+          code.includes('admin-restricted-operation') || code.includes('operation-not-allowed')
+            ? 'Anonymous sign-in is disabled. Ask the admin to enable it in Firebase Console → Authentication → Sign-in method.'
+            : `Could not prepare kiosk (${code}). Try refreshing.`
+        );
       }
     };
 
-    ensureKioskAuth().then(() => {
-      // Load employees for kiosk mode if they aren't already loaded. Deferred
-      // until after anonymous auth so the LIST query has a valid token.
-      const currentEmployees = employeeService.getAllEmployeesSync();
-      if (currentEmployees.length === 0) {
-        employeeService.loadEmployees().then(loaded => {
-          setEmployees(loaded.map(e => e.data));
-        });
-      }
-    });
+    ensureKioskAuth();
 
     // Load settings to get sites
     const settings = settingsService.getSettings();
@@ -594,16 +607,27 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
                  {identifiedEmpName ? <Check size={28} strokeWidth={2.4} /> : <UserCircle size={28} strokeWidth={1.75} />}
                </div>
                <div className="flex flex-col gap-0.5 min-w-0">
-                 <span className="font-medium text-[#1a1a1a] text-[13px] sm:text-[16px] truncate">
-                   {identifiedEmpName || "Align your face within the frame"}
+                 <span className={cn(
+                   "font-medium text-[13px] sm:text-[16px] truncate",
+                   kioskReadyError ? "text-red-600" : "text-[#1a1a1a]",
+                 )}>
+                   {kioskReadyError
+                     ? 'Kiosk unavailable'
+                     : !isKioskReady
+                       ? 'Preparing kiosk…'
+                       : (identifiedEmpName || 'Align your face within the frame')}
                  </span>
                  <span className="text-[12px] text-[#64748B] font-medium">
-                   {identifiedEmpName ? "Identity verified" : "Select an action below to scan and record attendance"}
+                   {kioskReadyError
+                     ? kioskReadyError
+                     : !isKioskReady
+                       ? 'Loading employee data — punching disabled until ready'
+                       : (identifiedEmpName ? 'Identity verified' : 'Select an action below to scan and record attendance')}
                  </span>
                </div>
              </div>
-             
-             {!identifiedEmpName && !isProcessing && (
+
+             {!identifiedEmpName && !isProcessing && isKioskReady && (
                <Button
                  variant="ghost"
                  onClick={() => setIsPinModalOpen(true)}
@@ -621,7 +645,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         <div className="w-full grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
           <Button 
             onClick={() => handleTimeAction("Time In")}
-            disabled={isProcessing}
+            disabled={isProcessing || !isKioskReady}
             className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#0E8A54] text-white flex flex-col items-center justify-center gap-2 hover:bg-primary-dark transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
@@ -632,7 +656,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         
         <Button 
           onClick={() => handleTimeAction("Lunch Out")}
-          disabled={isProcessing}
+          disabled={isProcessing || !isKioskReady}
           variant="secondary"
           className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
@@ -644,7 +668,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
         <Button 
           onClick={() => handleTimeAction("Lunch In")}
-          disabled={isProcessing}
+          disabled={isProcessing || !isKioskReady}
           variant="secondary"
           className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
@@ -656,7 +680,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
         <Button 
           onClick={() => handleTimeAction("PM Break Out")}
-          disabled={isProcessing}
+          disabled={isProcessing || !isKioskReady}
           variant="secondary"
           className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
@@ -668,7 +692,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
         <Button 
           onClick={() => handleTimeAction("PM Break In")}
-          disabled={isProcessing}
+          disabled={isProcessing || !isKioskReady}
           variant="secondary"
           className="h-[80px] sm:h-[100px] rounded-[24px] flex flex-col items-center justify-center gap-2 hover:bg-surface-muted transition-all active:scale-95 disabled:opacity-50 p-0 shadow-none"
         >
@@ -680,7 +704,7 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
 
           <Button 
             onClick={() => handleTimeAction("Time Out")}
-            disabled={isProcessing}
+            disabled={isProcessing || !isKioskReady}
             variant="danger"
             className="h-[80px] sm:h-[100px] rounded-[24px] bg-[#E03A2E] text-white flex flex-col items-center justify-center gap-2 hover:bg-danger transition-all active:scale-95 border-2 border-transparent disabled:opacity-50 p-0"
           >

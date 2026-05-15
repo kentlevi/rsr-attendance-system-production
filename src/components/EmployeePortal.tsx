@@ -62,6 +62,15 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
   const [employeeLoginPin, setEmployeeLoginPin] = useState("");
   const [isEmployeeLoggingIn, setIsEmployeeLoggingIn] = useState(false);
   const [isFaceScanning, setIsFaceScanning] = useState(false);
+  // True only when anonymous auth has succeeded AND the employee cache is
+  // populated. Face login is disabled until then so verifyFace can't resolve
+  // an ID against an empty cache (the cause of "Identity recognized but
+  // employee not found in database"). Starts true when the cache is already
+  // populated (admin warmup, test mocks).
+  const [isPortalReady, setIsPortalReady] = useState(() =>
+    employeeService.getAllEmployeesSync().length > 0
+  );
+  const [portalReadyError, setPortalReadyError] = useState<string | null>(null);
   const [showEmployeePin, setShowEmployeePin] = useState(false);
   const [isTimeDetailsOpen, setIsTimeDetailsOpen] = useState(false);
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0);
@@ -609,8 +618,13 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
   // silently sign in via Firebase Anonymous Auth and pre-load the employee
   // cache. Mirrors the kiosk TimeClock flow.
   useEffect(() => {
-    if (isAuthenticated) return;
+    if (isAuthenticated) {
+      setIsPortalReady(true);
+      return;
+    }
     let cancelled = false;
+    setIsPortalReady(false);
+    setPortalReadyError(null);
     (async () => {
       try {
         const { getAuth, signInAnonymously } = await import('firebase/auth');
@@ -618,12 +632,21 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
         if (!auth.currentUser) {
           await signInAnonymously(auth);
         }
-      } catch (err) {
+        if (cancelled) return;
+        if (employeeService.getAllEmployeesSync().length === 0) {
+          await employeeService.loadEmployees();
+        }
+        if (cancelled) return;
+        setIsPortalReady(true);
+      } catch (err: any) {
+        if (cancelled) return;
         console.warn('Employee portal anonymous auth failed; face login may fail.', err);
-      }
-      if (cancelled) return;
-      if (employeeService.getAllEmployeesSync().length === 0) {
-        await employeeService.loadEmployees();
+        const code = err?.code || err?.message || 'unknown';
+        setPortalReadyError(
+          code.includes('admin-restricted-operation') || code.includes('operation-not-allowed')
+            ? 'Anonymous sign-in is disabled. Ask the admin to enable it in Firebase Console → Authentication → Sign-in method.'
+            : `Could not prepare portal (${code}). Try refreshing.`
+        );
       }
     })();
     return () => {
@@ -785,12 +808,22 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
 
                 <Button
                   onClick={handleFaceLogin}
-                  isLoading={isFaceScanning}
+                  isLoading={isFaceScanning || !isPortalReady}
+                  disabled={!isPortalReady || Boolean(portalReadyError)}
                   fullWidth
                   className="h-12 rounded-xl transition-all active:scale-95"
                 >
-                  {isFaceScanning ? "Processing..." : "Continue with Facial Login"}
+                  {isFaceScanning
+                    ? 'Processing...'
+                    : !isPortalReady && !portalReadyError
+                      ? 'Preparing…'
+                      : 'Continue with Facial Login'}
                 </Button>
+                {portalReadyError && (
+                  <p className="text-[13px] text-red-600 leading-snug text-center px-2">
+                    {portalReadyError}
+                  </p>
+                )}
             </div>
           ) : (
             <form onSubmit={handleEmployeeLogin} className="flex flex-col gap-6">

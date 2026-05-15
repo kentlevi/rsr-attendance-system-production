@@ -89,6 +89,11 @@ vi.mock('firebase/auth', () => ({
       return () => {};
     }),
   })),
+  // Resolve immediately so the kiosk / employee-portal "ready" gates flip
+  // true under test without needing a real Firebase Auth context.
+  signInAnonymously: vi.fn(() => Promise.resolve({ user: { uid: 'anon-test' } })),
+  signInWithEmailAndPassword: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('firebase/firestore', () => ({
