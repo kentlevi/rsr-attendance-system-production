@@ -485,23 +485,28 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     }
   };
 
-  /** Receives (loginId, pin) from the shared ManualAccessForm. */
+  /** Receives (loginId, pin) from the shared ManualAccessForm. loginId may be
+   *  either a human-readable employee ID (e.g. "EMP-001") or an email address —
+   *  mirrors the employee portal's manual-access flow. */
   const handlePinSubmit = (loginId: string, pin: string) => {
     if (!loginId || !pin) {
-      showToast("Please enter both Employee ID and PIN", "warning");
+      showToast("Please enter your Employee ID or email and PIN.", "warning");
       return;
     }
 
-    const employee = employees.find(
-      (emp) => emp.employeeId.toLowerCase() === loginId.toLowerCase() && emp.pin === pin,
-    );
+    const needle = loginId.toLowerCase().trim();
+    const employee = employees.find((emp) => {
+      const empIdMatch = (emp.employeeId || "").toLowerCase() === needle;
+      const emailMatch = (emp.email || "").toLowerCase() === needle;
+      return (empIdMatch || emailMatch) && emp.pin === pin;
+    });
 
     if (employee && pendingAction) {
       setIsPinModalOpen(false);
       handleTimeAction(pendingAction, employee.id);
       setPendingAction(null);
     } else {
-      showToast("Invalid Employee ID or PIN", "error");
+      showToast("Invalid credentials.", "error");
     }
   };
 
@@ -773,11 +778,10 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
               title="Manual access"
               description={`Enter your credentials to continue with ${pendingAction}.`}
               subtitle="Your photo will still be taken during a manual punch."
-              loginIdLabel="Employee ID"
-              loginIdPlaceholder="e.g. EMP-001"
-              loginIdUppercase
+              loginIdLabel="Employee ID or Email"
+              loginIdPlaceholder="Enter employee ID or email"
               pinLabel="6-Digit PIN"
-              pinPlaceholder="Enter PIN"
+              pinPlaceholder="Enter access PIN"
               pinMaxLength={6}
               submitLabel={`Confirm ${pendingAction}`}
               onSubmit={handlePinSubmit}

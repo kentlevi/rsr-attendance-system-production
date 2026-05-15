@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -229,8 +229,8 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time In/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'EMP-001');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '123456');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'EMP-001');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '123456');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time In/i });
     await user.click(submitBtn);
@@ -265,8 +265,8 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time Out/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'EMP-001');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '123456');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'EMP-001');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '123456');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time Out/i });
     await user.click(submitBtn);
@@ -300,8 +300,8 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time In/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'EMP-001');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '123456');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'EMP-001');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '123456');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time In/i });
     await user.click(submitBtn);
@@ -325,8 +325,8 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time In/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'EMP-001');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '123456');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'EMP-001');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '123456');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time In/i });
     await user.click(submitBtn);
@@ -352,8 +352,8 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time In/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'EMP-001');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '123456');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'EMP-001');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '123456');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time In/i });
     await user.click(submitBtn);
@@ -377,14 +377,14 @@ describe('TimeClock Actions', () => {
     const modal = screen.getByRole('dialog');
     await user.click(within(modal).getByRole('button', { name: /Time In/i }));
 
-    await user.type(within(modal).getByPlaceholderText(/e.g. EMP-001/i), 'WRONG-ID');
-    await user.type(within(modal).getByPlaceholderText(/Enter PIN/i), '000000');
+    await user.type(within(modal).getByPlaceholderText(/Enter employee ID or email/i), 'WRONG-ID');
+    await user.type(within(modal).getByPlaceholderText(/Enter access PIN/i), '000000');
 
     const submitBtn = within(modal).getByRole('button', { name: /Confirm Time In/i });
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/Invalid Employee ID or PIN/i), 'error');
+      expect(showToast).toHaveBeenCalledWith(expect.stringMatching(/Invalid credentials/i), 'error');
     });
   });
 });
