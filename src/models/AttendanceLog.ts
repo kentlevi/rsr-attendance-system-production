@@ -2,6 +2,11 @@ export interface AttendanceLog {
   id: string;
   employeeId: string;
   date: string;
+  /** Firestore serverTimestamp() value, stamped on every write so admins can
+   *  detect clock drift on the punching device (compare to the device-time
+   *  fields). Type is unknown because Firestore returns Timestamp on read but
+   *  expects FieldValue on write. */
+  serverReceivedAt?: unknown;
   actualTimeIn?: string;
   adjustedTimeIn?: string;
   actualTimeOut?: string;

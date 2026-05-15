@@ -236,6 +236,17 @@ export class SyncService {
     if (syncedDates.size > 0) {
       await attendanceService.refreshLogsByDates(Array.from(syncedDates));
     }
+
+    // Opportunistic cleanup so the IndexedDB doesn't accumulate ancient synced
+    // punches (each carries a ~50KB photo data URL).
+    try {
+      const pruned = await localAttendanceService.pruneSynced();
+      if (pruned > 0) {
+        console.log(`SyncService: pruned ${pruned} synced punches older than retention window.`);
+      }
+    } catch (err) {
+      console.warn('SyncService: failed to prune synced punches', err);
+    }
   }
 
   private async syncLocalPunchToCloud(punch: LocalAttendancePunch) {

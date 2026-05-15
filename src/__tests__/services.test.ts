@@ -11,6 +11,7 @@ const deleteField = vi.fn(() => ({ __delete: true }));
 const query = vi.fn((...args: unknown[]) => ({ args }));
 const where = vi.fn((...args: unknown[]) => ({ where: args }));
 const onSnapshot = vi.fn();
+const serverTimestamp = vi.fn(() => ({ __serverTimestamp: true }));
 const ref = vi.fn((storage: unknown, path: string) => ({ storage, path }));
 const uploadString = vi.fn();
 const getDownloadURL = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('firebase/firestore', () => ({
   query,
   where,
   onSnapshot,
+  serverTimestamp,
 }));
 
 vi.mock('firebase/storage', () => ({
@@ -164,7 +166,11 @@ describe('AttendanceService', () => {
     await service.clearLogPhotos('log-1', ['imageIn']);
 
     expect(addDoc).toHaveBeenCalled();
-    expect(updateDoc).toHaveBeenCalledWith(expect.anything(), { timeOut: '05:00 PM' });
+    // updateLog now also stamps serverReceivedAt for clock-drift audit.
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ timeOut: '05:00 PM' }),
+    );
     expect(updateDoc).toHaveBeenCalledWith(expect.anything(), { imageIn: { __delete: true } });
   });
 });

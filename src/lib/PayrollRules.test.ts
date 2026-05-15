@@ -214,4 +214,93 @@ assert.equal(standardPmBreakIn.pmBreakIn, '06:00 PM');
 assert.equal(standardPmBreakIn.pmBreakMinutes, 45);
 assert.equal(standardPmBreakIn.requiresApproval, false);
 
+// ---------------------------------------------------------------------------
+// Edge cases: night shift crossing midnight, half-day undertime, defensive
+// input. These exercise code paths that have no dedicated tests but are
+// reachable in production via custom shift templates and partial-day workflows.
+// ---------------------------------------------------------------------------
+
+const nightShiftSettings: SystemSettings = {
+  ...settings,
+  shiftTemplates: [
+    {
+      id: 'night-1',
+      name: 'Graveyard 10pm-6am',
+      startTime: '22:00',
+      endTime: '06:00',
+      gracePeriodMins: 10,
+      isNightShift: true,
+      nightDifferentialRate: 10, // +10% on night hours
+    },
+  ],
+};
+
+const nightEmployee: Employee = {
+  ...employee,
+  id: 'emp-night',
+  shiftTemplateId: 'night-1',
+};
+
+// Night-shift time-out crosses midnight: 10pm in -> 6:30am out next day.
+// Should NOT be flagged as a suspicious punch sequence even though clock
+// time of out (06:30) is < clock time of in (22:00).
+const nightShiftOut = calculatePayrollForTimeOut({
+  employee: nightEmployee,
+  actualSite: 'Site A',
+  timeIn: '10:00 PM',
+  timeOut: '06:30 AM',
+  settings: nightShiftSettings,
+});
+
+assert.equal(
+  nightShiftOut.payrollNotes?.some((note) => note.includes('Suspicious')),
+  false,
+  'night shift crossing midnight should NOT be flagged as suspicious',
+);
+assert.equal(
+  (nightShiftOut.overtimeMinutes ?? 0) > 0,
+  true,
+  'night shift staying past shift end should produce positive overtime',
+);
+// Night-shift work pays a positive gross adjustment (overtime + ND folded in).
+assert.equal(
+  pesoAmount(nightShiftOut.grossAdjustment) > 0,
+  true,
+  'graveyard shift should produce a positive gross adjustment',
+);
+
+// Half-day undertime: punch out at noon, before lunch break. Workhours should
+// be ~4h and an undertime deduction applied.
+const halfDayUndertime = calculatePayrollForTimeOut({
+  employee,
+  actualSite: 'Site A',
+  timeIn: '08:00 AM',
+  timeOut: '12:00 PM',
+  settings,
+});
+
+assert.equal(
+  (halfDayUndertime.undertimeMinutes ?? 0) >= 180,
+  true,
+  'leaving at noon should produce ≥3h of undertime',
+);
+assert.equal(
+  pesoAmount(halfDayUndertime.undertimeDeduction) > 0,
+  true,
+  'half-day undertime should produce a positive deduction',
+);
+
+// Defensive: timeOut without any existingPayroll context should still produce
+// a valid record (no crash, status set, workHours computed).
+const noContextOut = calculatePayrollForTimeOut({
+  employee,
+  actualSite: 'Site A',
+  timeIn: '08:00 AM',
+  timeOut: '05:00 PM',
+  settings,
+});
+
+assert.equal(typeof noContextOut.workHours === 'string', true);
+assert.equal(noContextOut.workHours.length > 0, true);
+
 console.log('PayrollRules tests passed');

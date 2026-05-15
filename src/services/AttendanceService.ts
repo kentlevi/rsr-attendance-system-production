@@ -1,13 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  addDoc, 
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
   deleteField,
-  updateDoc, 
-  query, 
+  updateDoc,
+  query,
   where,
   onSnapshot,
+  serverTimestamp,
   type QueryConstraint,
   Unsubscribe
 } from 'firebase/firestore';
@@ -162,7 +163,13 @@ export class AttendanceService {
 
   async addLog(log: Omit<AttendanceLog, 'id'>): Promise<void> {
     try {
-      await addDoc(collection(db, this.collectionPath), log);
+      // serverReceivedAt is stamped by Firestore so admins can detect clock drift
+      // on the punching device (compare to the device-time `timestamp` field).
+      // Cast keeps the typed model surface free of FieldValue.
+      await addDoc(collection(db, this.collectionPath), {
+        ...log,
+        serverReceivedAt: serverTimestamp(),
+      } as any);
       trackFirestoreUsage(OperationType.CREATE);
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, this.collectionPath);
@@ -172,7 +179,10 @@ export class AttendanceService {
   async updateLog(id: string, data: Partial<AttendanceLog>): Promise<void> {
     try {
       const docRef = doc(db, this.collectionPath, id);
-      await updateDoc(docRef, data);
+      await updateDoc(docRef, {
+        ...data,
+        serverReceivedAt: serverTimestamp(),
+      } as any);
       trackFirestoreUsage(OperationType.UPDATE);
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `${this.collectionPath}/${id}`);

@@ -40,6 +40,11 @@ const DB_NAME = 'rsr-attendance-local';
 const DB_VERSION = 1;
 const PUNCH_STORE = 'attendancePunches';
 
+// Pruning: punches that synced more than this many days ago are deleted from
+// IndexedDB. Firestore is the authoritative store at that point; keeping the
+// local copy only bloats the device (each punch can carry a ~50KB photo data URL).
+const SYNCED_RETENTION_DAYS = 30;
+
 class LocalAttendanceService {
   private dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -134,6 +139,30 @@ class LocalAttendanceService {
       request.onsuccess = () => resolve(request.result as LocalAttendancePunch[]);
       request.onerror = () => reject(request.error);
     });
+  }
+
+  /**
+   * Delete punches that have been synced for longer than SYNCED_RETENTION_DAYS.
+   * Called opportunistically by SyncService after each successful sync pass.
+   * Returns the number of records pruned.
+   */
+  async pruneSynced(now = new Date()): Promise<number> {
+    const cutoffMs = now.getTime() - SYNCED_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const all = await this.getAllPunches();
+    const stale = all.filter(
+      (p) => p.status === 'synced' && p.syncedAt && new Date(p.syncedAt).getTime() < cutoffMs
+    );
+    if (stale.length === 0) return 0;
+
+    const db = await this.getDb();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(PUNCH_STORE, 'readwrite');
+      const store = transaction.objectStore(PUNCH_STORE);
+      for (const punch of stale) store.delete(punch.id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    return stale.length;
   }
 
   private async patchPunch(id: string, patch: Partial<LocalAttendancePunch>): Promise<void> {
