@@ -324,6 +324,17 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
         return;
       }
 
+      // Cache for offline-login fallback (PBKDF2-hashed PIN; raw PIN not stored).
+      // Fire-and-forget; a failure here must NOT block the login.
+      const { cacheEmployeeCredential } = await import('../lib/offlineCache');
+      cacheEmployeeCredential({
+        loginId,
+        email: emp.data.email || emailToUse,
+        employeeRecordId: emp.data.id,
+        name: emp.data.name || emailToUse,
+        pin,
+      }).catch((err) => console.warn('Failed to cache employee credential:', err));
+
       completeEmployeeLogin(emp.data);
       setEmployeeLoginId("");
       setEmployeeLoginPin("");
@@ -331,6 +342,42 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       console.error(error);
       if (error.code === 'auth/operation-not-allowed') {
         showToast("Email/Password Auth is disabled! Please enable it in Firebase Console.", "error");
+        return;
+      }
+
+      // Network failures (including the case where navigator.onLine lies on
+      // Android WebViews and we still took the online path) fall back to the
+      // cached-credentials path so a previously-logged-in employee can still
+      // get into the portal offline.
+      const looksLikeNetworkFailure =
+        error?.code === 'auth/network-request-failed' ||
+        error?.message?.toLowerCase().includes('network') ||
+        error?.message?.toLowerCase().includes('offline') ||
+        error?.message?.toLowerCase().includes('failed to fetch');
+
+      if (looksLikeNetworkFailure) {
+        try {
+          const { verifyCachedEmployeeCredential } = await import('../lib/offlineCache');
+          const cached = await verifyCachedEmployeeCredential(loginId, pin);
+          if (cached) {
+            // Resolve the cached record id against the in-memory employees cache
+            // (loaded during the pre-login warmup useEffect).
+            const cachedEmpModel = employeeService.getEmployeeByIdSync(cached.employeeRecordId);
+            if (cachedEmpModel) {
+              completeEmployeeLogin(cachedEmpModel.data);
+              setEmployeeLoginId("");
+              setEmployeeLoginPin("");
+              showToast("Signed in (offline mode). Changes will sync when online.", "warning");
+              return;
+            }
+          }
+        } catch (cacheErr) {
+          console.warn('Offline-fallback cached-cred check threw', cacheErr);
+        }
+        showToast(
+          "No internet, and these credentials weren't cached from a previous online login. Reconnect and try again.",
+          "error",
+        );
       } else {
         showToast("Invalid employee credentials or account not provisioned.", "error");
       }

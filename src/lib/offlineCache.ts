@@ -1,8 +1,9 @@
 const DB_NAME = 'rsr-offline-cache';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const FACE_STORE = 'faceProfiles';
 const ADMIN_STORE = 'adminCredentials';
 const EMPLOYEE_STORE = 'employees';
+const EMPLOYEE_CRED_STORE = 'employeeCredentials';
 const SETTINGS_STORE = 'settings';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -21,6 +22,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(EMPLOYEE_STORE)) {
         db.createObjectStore(EMPLOYEE_STORE, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(EMPLOYEE_CRED_STORE)) {
+        db.createObjectStore(EMPLOYEE_CRED_STORE, { keyPath: 'loginId' });
       }
       if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
         db.createObjectStore(SETTINGS_STORE, { keyPath: 'key' });
@@ -183,6 +187,66 @@ export async function clearCachedAdminCredential(email: string): Promise<void> {
     await tx(ADMIN_STORE, 'readwrite', (store) => store.delete(email.toLowerCase().trim()));
   } catch (e) {
     console.warn('Failed to clear cached admin credential', e);
+  }
+}
+
+// ---------- Employee credentials ----------
+//
+// Mirrors the admin credential cache, but the loginId is whatever the employee
+// typed (email or employeeId). PBKDF2 hashing keeps the raw PIN out of
+// IndexedDB so an attacker who exfiltrates the cache can't extract it.
+
+export interface CachedEmployeeCredential {
+  loginId: string;              // normalised lower-case email or employeeId
+  email: string;                // canonical email on the employee record
+  employeeRecordId: string;     // Firestore doc id — used to resolve the record offline
+  name: string;
+  pinHash: string;
+  salt: string;
+  cachedAt: string;
+}
+
+export async function cacheEmployeeCredential(input: {
+  loginId: string;
+  email: string;
+  employeeRecordId: string;
+  name: string;
+  pin: string;
+}): Promise<void> {
+  try {
+    const salt = randomSaltHex();
+    const pinHash = await deriveHash(input.pin, salt);
+    const record: CachedEmployeeCredential = {
+      loginId: input.loginId.toLowerCase().trim(),
+      email: input.email.toLowerCase().trim(),
+      employeeRecordId: input.employeeRecordId,
+      name: input.name,
+      pinHash,
+      salt,
+      cachedAt: new Date().toISOString(),
+    };
+    await tx(EMPLOYEE_CRED_STORE, 'readwrite', (store) => store.put(record));
+  } catch (e) {
+    console.warn('Failed to cache employee credential', e);
+  }
+}
+
+export async function verifyCachedEmployeeCredential(
+  loginId: string,
+  pin: string,
+): Promise<CachedEmployeeCredential | null> {
+  try {
+    const record = await tx<CachedEmployeeCredential | undefined>(
+      EMPLOYEE_CRED_STORE,
+      'readonly',
+      (store) => store.get(loginId.toLowerCase().trim()) as IDBRequest<CachedEmployeeCredential | undefined>,
+    );
+    if (!record) return null;
+    const candidateHash = await deriveHash(pin, record.salt);
+    return candidateHash === record.pinHash ? record : null;
+  } catch (e) {
+    console.warn('Failed to verify cached employee credential', e);
+    return null;
   }
 }
 
