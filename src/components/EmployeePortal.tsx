@@ -603,6 +603,34 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // Before the employee signs in, the portal needs to resolve face-match results
+  // to employee records — which means it needs to LIST the employees collection.
+  // Our Firestore rules require any authenticated session for that, so we
+  // silently sign in via Firebase Anonymous Auth and pre-load the employee
+  // cache. Mirrors the kiosk TimeClock flow.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getAuth, signInAnonymously } = await import('firebase/auth');
+        const auth = getAuth();
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn('Employee portal anonymous auth failed; face login may fail.', err);
+      }
+      if (cancelled) return;
+      if (employeeService.getAllEmployeesSync().length === 0) {
+        await employeeService.loadEmployees();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated) return;
     if (sessionStorage.getItem("rsr_active_role") !== "employee") return;
