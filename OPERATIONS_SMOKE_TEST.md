@@ -6,7 +6,7 @@ Walk this entire checklist on a fresh deploy before declaring a release producti
 
 ## A. Bootstrap — fresh device, no prior state
 
-- [ ] **A1.** Open `https://rsr-attendance-system-production.onrender.com` in a private/incognito window.
+- [ ] **A1.** Open `https://rsr-smart-attendance.onrender.com` in a private/incognito window.
   - Expected: Welcome screen loads in under 5s on a 4G connection.
   - Expected: DevTools Console shows `[errorMonitoring] Sentry initialised. DSN host: o4511391308906496.ingest.de.sentry.io`. *If missing*, the Render env var wasn't set — fix before continuing.
 - [ ] **A2.** Refresh once. Network tab → confirm `vendor-human-*.js` is **NOT** in the initial requests (only loaded when a face screen mounts).

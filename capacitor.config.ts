@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'RSR Attendance',
   webDir: 'dist',
   server: {
-    url: 'https://rsr-attendance-system-production.onrender.com',
+    url: 'https://rsr-smart-attendance.onrender.com',
     cleartext: true
   }
 };
