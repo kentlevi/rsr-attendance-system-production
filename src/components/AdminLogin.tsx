@@ -187,6 +187,37 @@ export default function AdminLogin({ onNavigate }: AdminLoginProps) {
       console.error(error);
       if (error.code === 'auth/operation-not-allowed') {
          setLoginError("Email/Password Auth is disabled! Please enable it in Firebase Console.");
+         setIsLoggingIn(false);
+         return;
+      }
+
+      // Some Android WebViews lie about navigator.onLine (it stays "true"
+      // through airplane-mode toggles). If Firebase Auth failed with a
+      // network error, the device is actually offline — fall through to
+      // the cached-credentials path so the admin still gets in.
+      const looksLikeNetworkFailure =
+        error?.code === 'auth/network-request-failed' ||
+        error?.message?.toLowerCase().includes('network') ||
+        error?.message?.toLowerCase().includes('offline') ||
+        error?.message?.toLowerCase().includes('failed to fetch');
+
+      if (looksLikeNetworkFailure) {
+        try {
+          const cached = await verifyCachedAdminCredential(emailToUse, password);
+          if (cached) {
+            sessionStorage.setItem("rsr_admin_login_id", cached.username);
+            setOfflineAdmin(true);
+            showToast("Logged in (offline mode). Changes will sync when online.", "warning");
+            onNavigate('admin');
+            setIsLoggingIn(false);
+            return;
+          }
+        } catch (cacheErr) {
+          console.warn('Offline-fallback cached-cred check threw', cacheErr);
+        }
+        setLoginError(
+          "No internet, and these credentials weren't cached from a previous online login. Reconnect and try again."
+        );
       } else {
          setLoginError("Invalid credentials. Please try again.");
       }
