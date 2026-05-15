@@ -49,8 +49,9 @@ export function initErrorMonitoring(): void {
     (process.env?.NODE_ENV === "test" || process.env?.VITEST);
 
   if (!dsn || isTest) {
-    // Silent no-op. Captures still work via Sentry.captureException; they just
-    // don't get sent anywhere.
+    if (typeof window !== "undefined") {
+      console.info("[errorMonitoring] Sentry disabled — no VITE_SENTRY_DSN.");
+    }
     return;
   }
 
@@ -74,6 +75,16 @@ export function initErrorMonitoring(): void {
       return event;
     },
   });
+
+  // One-line confirmation in console so deployments are easy to spot-check.
+  // We don't expose `Sentry` on window in production; if you need to manually
+  // capture from DevTools again, import * as Sentry from "@sentry/react"
+  // somewhere temporarily.
+  if (typeof window !== "undefined") {
+    console.info(
+      `[errorMonitoring] Sentry initialised. DSN host: ${new URL(dsn).host}`
+    );
+  }
 }
 
 export { Sentry };
