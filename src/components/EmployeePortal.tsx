@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCircle, Clock, Calendar, ChevronLeft, LogOut, Bell, Briefcase, IdCard, BarChart3, CalendarPlus, Hourglass, ClockAlert, X, ChevronRight, Upload, LayoutDashboard, User, Paperclip, LockKeyhole, ScanFace, Eye, EyeOff } from 'lucide-react';
+import { UserCircle, Clock, Calendar, ChevronLeft, LogOut, Bell, Briefcase, IdCard, BarChart3, CalendarPlus, Hourglass, ClockAlert, X, ChevronRight, Upload, LayoutDashboard, User, Paperclip, LockKeyhole, ScanFace } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn, getFirebasePassword } from '../lib/utils';
 import Webcam from 'react-webcam';
@@ -21,6 +21,7 @@ import { requestAttachmentService } from '../services/RequestAttachmentService';
 import { validateLeaveRequest } from '../lib/LeaveRules';
 import { canEmployeeAccessPortal } from '../lib/EmployeeAccessRules';
 import { PageLayout } from './layout/PageLayout';
+import { ManualAccessForm } from './common/ManualAccessForm';
 import ProfileView from './views/ProfileView';
 import { HrAssistantChatbot } from './views/common/HrAssistantChatbot';
 import { authenticatedFetch } from '../lib/api';
@@ -58,8 +59,9 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     }
   }, [activeTab]);
   const [employeeLoginMode, setEmployeeLoginMode] = useState<"face" | "manual">("face");
-  const [employeeLoginId, setEmployeeLoginId] = useState("");
-  const [employeeLoginPin, setEmployeeLoginPin] = useState("");
+  // Login form fields are owned by <ManualAccessForm/> which the manual-mode
+  // branch renders. We just need the in-flight indicator here for the button
+  // spinner.
   const [isEmployeeLoggingIn, setIsEmployeeLoggingIn] = useState(false);
   const [isFaceScanning, setIsFaceScanning] = useState(false);
   // True only when anonymous auth has succeeded AND the employee cache is
@@ -233,11 +235,10 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
     }
   };
 
-  const handleEmployeeLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const loginId = employeeLoginId.trim().toLowerCase();
-    const pin = employeeLoginPin.trim();
+  /** Receives (loginId, pin) from the shared ManualAccessForm component. */
+  const handleEmployeeLogin = async (rawLoginId: string, rawPin: string) => {
+    const loginId = rawLoginId.trim().toLowerCase();
+    const pin = rawPin.trim();
 
     if (!loginId || !pin) {
       showToast("Enter your employee ID or email and PIN.", "warning");
@@ -336,8 +337,6 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
       }).catch((err) => console.warn('Failed to cache employee credential:', err));
 
       completeEmployeeLogin(emp.data);
-      setEmployeeLoginId("");
-      setEmployeeLoginPin("");
     } catch (error: any) {
       console.error(error);
       if (error.code === 'auth/operation-not-allowed') {
@@ -365,8 +364,6 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
             const cachedEmpModel = employeeService.getEmployeeByIdSync(cached.employeeRecordId);
             if (cachedEmpModel) {
               completeEmployeeLogin(cachedEmpModel.data);
-              setEmployeeLoginId("");
-              setEmployeeLoginPin("");
               showToast("Signed in (offline mode). Changes will sync when online.", "warning");
               return;
             }
@@ -873,65 +870,13 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
                 )}
             </div>
           ) : (
-            <form onSubmit={handleEmployeeLogin} className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="block text-[16px] font-medium text-text-primary">
-                      Employee ID or Email
-                    </label>
-                    <div className="relative">
-                      <IdCard
-                        size={18}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
-                      />
-                      <input
-                        type="text"
-                        value={employeeLoginId}
-                        onChange={(event) => setEmployeeLoginId(event.target.value)}
-                        placeholder="Enter employee ID or email"
-                        className="control-field pl-10"
-                        autoComplete="username"
-                      />
-                    </div>
-                  </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="block text-[16px] font-medium text-text-primary">
-                      PIN
-                    </label>
-                    <div className="relative">
-                      <LockKeyhole
-                        size={18}
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
-                      />
-                      <input
-                    type={showEmployeePin ? "text" : "password"}
-                        value={employeeLoginPin}
-                        onChange={(event) => setEmployeeLoginPin(event.target.value)}
-                        placeholder="Enter access PIN"
-                    className="control-field h-12 pl-10 pr-12"
-                        autoComplete="current-password"
-                      />
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    type="button"
-                    onClick={() => setShowEmployeePin((visible) => !visible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors p-1 h-auto w-auto min-w-0"
-                    aria-label={showEmployeePin ? "Hide PIN" : "Show PIN"}
-                  >
-                    {showEmployeePin ? <Eye size={20} /> : <EyeOff size={20} />}
-                  </Button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    isLoading={isEmployeeLoggingIn}
-                    fullWidth
-                >
-                  {isEmployeeLoggingIn ? "Verifying" : "Login"}
-                </Button>
-              </form>
+            <ManualAccessForm
+              showHeader={false}
+              submitLabel="Login"
+              submittingLabel="Verifying"
+              isSubmitting={isEmployeeLoggingIn}
+              onSubmit={handleEmployeeLogin}
+            />
           )}
 
           <div className="flex flex-col pt-6 border-t border-border/60 relative">
@@ -943,9 +888,9 @@ export default function EmployeePortal({ onNavigate }: EmployeePortalProps) {
               fullWidth
               className="text-primary"
               onClick={() => {
+                // Toggling unmounts <ManualAccessForm/> which discards its
+                // internal PIN state — no manual reset needed here.
                 setEmployeeLoginMode((mode) => (mode === "face" ? "manual" : "face"));
-                setEmployeeLoginPin("");
-                setShowEmployeePin(false);
               }}
               leftIcon={isFaceLogin ? (
                 <LockKeyhole size={18} strokeWidth={2.5} />

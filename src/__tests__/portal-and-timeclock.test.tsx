@@ -287,9 +287,12 @@ describe('EmployeePortal business flows', () => {
     render(<EmployeePortal onNavigate={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Manual Login' }));
-    await user.click(screen.getByRole('button', { name: 'Login' }));
 
-    expect(showToast).toHaveBeenCalledWith('Enter your employee ID or email and PIN.', 'warning');
+    // The shared <ManualAccessForm/> keeps the submit button disabled until
+    // both fields have content, so an empty Login click can't reach Firebase.
+    const loginBtn = screen.getByRole('button', { name: 'Login' });
+    expect(loginBtn).toBeDisabled();
+    await user.click(loginBtn);
     expect(signInWithEmailAndPassword).not.toHaveBeenCalled();
   });
 

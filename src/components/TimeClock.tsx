@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Menu, UserCircle, LogIn, Coffee, Utensils, LogOut, ChevronDown, Check, MapPin, LockKeyhole, Eye, EyeOff } from 'lucide-react';
+import { Menu, UserCircle, LogIn, Coffee, Utensils, LogOut, ChevronDown, Check, MapPin, LockKeyhole } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Select } from './common/Select';
 import { Modal } from './common/Modal';
 import { Button } from './common/Button';
+import { ManualAccessForm } from './common/ManualAccessForm';
 import Webcam from 'react-webcam';
 import { useToast } from '../context/ToastContext';
 import { attendanceService } from '../services/AttendanceService';
@@ -38,11 +39,9 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     totalOpen: 0,
   });
   
-  // PIN Override State
+  // PIN Override State. The actual login id / pin / show-pin state lives in
+  // <ManualAccessForm/> — the kiosk only owns the modal open + selected action.
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [pinEmpId, setPinEmpId] = useState('');
-  const [pinCode, setPinCode] = useState('');
-  const [showPin, setShowPin] = useState(false);
   const [pendingAction, setPendingAction] = useState<TimeClockAction | null>(null);
 
   // True once anonymous auth + employee load have completed. Punch buttons are
@@ -486,21 +485,19 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
     }
   };
 
-  const handlePinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pinEmpId || !pinCode) {
+  /** Receives (loginId, pin) from the shared ManualAccessForm. */
+  const handlePinSubmit = (loginId: string, pin: string) => {
+    if (!loginId || !pin) {
       showToast("Please enter both Employee ID and PIN", "warning");
       return;
     }
 
     const employee = employees.find(
-      (emp) => emp.employeeId.toLowerCase() === pinEmpId.toLowerCase() && emp.pin === pinCode
+      (emp) => emp.employeeId.toLowerCase() === loginId.toLowerCase() && emp.pin === pin,
     );
 
     if (employee && pendingAction) {
       setIsPinModalOpen(false);
-      setPinEmpId('');
-      setPinCode('');
       handleTimeAction(pendingAction, employee.id);
       setPendingAction(null);
     } else {
@@ -722,8 +719,6 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
         onClose={() => {
           setIsPinModalOpen(false);
           setPendingAction(null);
-          setPinEmpId('');
-          setPinCode('');
         }}
         title={pendingAction ? `Manual Entry: ${pendingAction}` : "Manual Entry Override"}
       >
@@ -769,66 +764,30 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
               </div>
             </div>
           ) : (
-            <form onSubmit={handlePinSubmit} className="flex flex-col gap-5">
-              <div className="flex flex-col gap-2">
-                <p className="text-[14px] text-[#64748B]">
-                  Your photo will still be taken during a manual punch to ensure accuracy.
-                </p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-[14px] font-medium text-[#1a1a1a] mb-2">Employee ID</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. EMP-001"
-                    className="w-full h-12 px-4 rounded-[14px] border border-[#E2E8F0] bg-[#F8FAFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1a1a1a] uppercase"
-                    value={pinEmpId}
-                    onChange={(e) => setPinEmpId(e.target.value.toUpperCase())}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[14px] font-medium text-[#1a1a1a] mb-2">6-Digit PIN</label>
-                  <div className="relative">
-                    <input
-                      type={showPin ? "text" : "password"}
-                      required
-                      placeholder="Enter PIN"
-                      maxLength={6}
-                      className="w-full h-12 pl-4 pr-12 rounded-[14px] border border-[#E2E8F0] bg-[#F8FAFC] focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-[#1a1a1a] tracking-[0.2em] font-medium"
-                      value={pinCode}
-                      onChange={(e) => setPinCode(e.target.value.replace(/\D/g, ''))}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      type="button"
-                      onClick={() => setShowPin(!showPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#1a1a1a] transition-colors p-1 h-auto w-auto min-w-0"
-                    >
-                      {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
+            <ManualAccessForm
+              title="Manual access"
+              description={`Enter your credentials to continue with ${pendingAction}.`}
+              subtitle="Your photo will still be taken during a manual punch."
+              loginIdLabel="Employee ID"
+              loginIdPlaceholder="e.g. EMP-001"
+              loginIdUppercase
+              pinLabel="6-Digit PIN"
+              pinPlaceholder="Enter PIN"
+              pinMaxLength={6}
+              submitLabel={`Confirm ${pendingAction}`}
+              onSubmit={handlePinSubmit}
+              footer={
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   onClick={() => setPendingAction(null)}
-                  className="flex-1 h-12 rounded-[14px]"
+                  fullWidth
+                  className="text-text-secondary"
                 >
-                  Back
+                  Back to action picker
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={!pinEmpId || pinCode.length !== 6}
-                  className="flex-1 h-12 rounded-[14px]"
-                >
-                  Confirm {pendingAction}
-                </Button>
-              </div>
-            </form>
+              }
+            />
           )}
         </div>
       </Modal>
