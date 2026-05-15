@@ -50,14 +50,33 @@ export default function TimeClock({ onNavigate }: TimeClockProps) {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     const unsub = employeeService.subscribe(() => setEmployees(employeeService.getAllEmployeesSync().map(e => e.data)));
-    
-    // Load employees for kiosk mode if they aren't already loaded
-    const currentEmployees = employeeService.getAllEmployeesSync();
-    if (currentEmployees.length === 0) {
-      employeeService.loadEmployees().then(loaded => {
-        setEmployees(loaded.map(e => e.data));
-      });
-    }
+
+    // Kiosk operates anonymously, but our Firestore rules require an authenticated
+    // session (any session — including anonymous) to LIST employees / read
+    // settings. Silently sign in via Firebase Anonymous Auth so the kiosk can
+    // resolve face matches without exposing a real account.
+    const ensureKioskAuth = async () => {
+      try {
+        const { getAuth, signInAnonymously } = await import('firebase/auth');
+        const auth = getAuth();
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn('Kiosk anonymous auth failed; Firestore reads may be denied.', err);
+      }
+    };
+
+    ensureKioskAuth().then(() => {
+      // Load employees for kiosk mode if they aren't already loaded. Deferred
+      // until after anonymous auth so the LIST query has a valid token.
+      const currentEmployees = employeeService.getAllEmployeesSync();
+      if (currentEmployees.length === 0) {
+        employeeService.loadEmployees().then(loaded => {
+          setEmployees(loaded.map(e => e.data));
+        });
+      }
+    });
 
     // Load settings to get sites
     const settings = settingsService.getSettings();
