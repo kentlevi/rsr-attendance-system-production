@@ -1,9 +1,5 @@
 {
 	"appId": "com.rsrengineering.attendance",
 	"appName": "RSR Attendance",
-	"webDir": "dist",
-	"server": {
-		"url": "https://rsr-attendance-system-production.onrender.com",
-		"cleartext": true
-	}
+	"webDir": "dist"
 }
