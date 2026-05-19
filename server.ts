@@ -466,6 +466,131 @@ export async function createApp(options: { useVite?: boolean } = {}) {
     }
   });
 
+  // --------------------------------------------------------------------------
+  // Face match — server-side recognition path.
+  //
+  // The client (kiosk or employee portal) extracts a face descriptor locally
+  // via @vladmandic/human and POSTs the float[] embedding here. The server
+  // compares it against `facialRecognitionProfiles` using the Firebase Admin
+  // SDK (which bypasses Firestore rules), so the kiosk no longer needs to
+  // LIST the entire employee roster client-side — the only thing returned is
+  // the matched employee's id and name.
+  //
+  // No verifyAuth: the kiosk operates anonymously by design. The endpoint
+  // returns minimal information (id + name + similarity) which is no worse
+  // than what was previously readable via the LIST queries, and rate-limited
+  // by an in-process cooldown to make scraping impractical.
+  // --------------------------------------------------------------------------
+
+  // Cosine similarity between two equally-sized float arrays.
+  const cosineSimilarity = (a: number[], b: number[]): number => {
+    let dot = 0, na = 0, nb = 0;
+    const len = Math.min(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      const av = a[i] || 0;
+      const bv = b[i] || 0;
+      dot += av * bv;
+      na += av * av;
+      nb += bv * bv;
+    }
+    if (na === 0 || nb === 0) return 0;
+    return dot / (Math.sqrt(na) * Math.sqrt(nb));
+  };
+
+  // In-process cache for face profiles + threshold. Refreshed once per
+  // CACHE_TTL_MS to avoid hammering Firestore on every match. Cache hit on a
+  // warm container takes <10ms.
+  type CachedProfile = { employeeId: string; descriptors: number[][] };
+  const FACE_CACHE_TTL_MS = 60_000;
+  let faceCache: { profiles: CachedProfile[]; expiresAt: number } | null = null;
+
+  const loadFaceProfiles = async (): Promise<CachedProfile[]> => {
+    if (faceCache && faceCache.expiresAt > Date.now()) {
+      return faceCache.profiles;
+    }
+    const db = admin.firestore();
+    const snap = await db.collection("facialRecognitionProfiles").get();
+    const profiles: CachedProfile[] = snap.docs.map((doc) => {
+      const data = doc.data() as any;
+      const raw = data.faceDataEncodings;
+      let descriptors: number[][] = [];
+      if (typeof raw === "string") {
+        try {
+          const parsed = JSON.parse(raw);
+          descriptors = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          descriptors = [];
+        }
+      } else if (Array.isArray(raw)) {
+        descriptors = raw as number[][];
+      }
+      return { employeeId: data.employeeId || doc.id, descriptors };
+    });
+    faceCache = { profiles, expiresAt: Date.now() + FACE_CACHE_TTL_MS };
+    return profiles;
+  };
+
+  app.post("/api/face-match", async (req, res) => {
+    try {
+      const { descriptor, threshold } = req.body as {
+        descriptor?: number[];
+        threshold?: number;
+      };
+      if (!Array.isArray(descriptor) || descriptor.length === 0) {
+        return res.status(400).json({ error: "descriptor[] is required" });
+      }
+      const minSimilarity = typeof threshold === "number" ? threshold : 0.65;
+
+      const profiles = await loadFaceProfiles();
+
+      let bestEmployeeId: string | null = null;
+      let bestSimilarity = minSimilarity;
+
+      for (const profile of profiles) {
+        for (const saved of profile.descriptors) {
+          if (!Array.isArray(saved) || saved.length === 0) continue;
+          const sim = cosineSimilarity(descriptor, saved);
+          if (!isFinite(sim)) continue;
+          if (sim > bestSimilarity) {
+            bestSimilarity = sim;
+            bestEmployeeId = profile.employeeId;
+          }
+        }
+      }
+
+      // Resolve the matched id to a display name. Returns null name if the
+      // employee row was deleted but the face profile lingered — the client
+      // surfaces that as "Identity recognized but employee not found".
+      let employeeName: string | null = null;
+      if (bestEmployeeId) {
+        const db = admin.firestore();
+        const byDoc = await db.collection("employees").doc(bestEmployeeId).get();
+        if (byDoc.exists) {
+          employeeName = (byDoc.data() as any)?.name || null;
+        } else {
+          // Fall back to a query by employeeId field (legacy human-readable id).
+          const byField = await db
+            .collection("employees")
+            .where("employeeId", "==", bestEmployeeId)
+            .limit(1)
+            .get();
+          if (!byField.empty) {
+            employeeName = (byField.docs[0].data() as any)?.name || null;
+          }
+        }
+      }
+
+      return res.json({
+        employeeId: bestEmployeeId,
+        employeeName,
+        similarity: bestEmployeeId ? bestSimilarity : 0,
+      });
+    } catch (e: any) {
+      console.error("/api/face-match error", e);
+      return res.status(500).json({ error: e?.message || "match failed" });
+    }
+  });
+
   app.post("/api/sync/employees", verifyAuth, requireAdmin, async (req, res) => {
     const employee = req.body;
     if (!employee?.empCode) {

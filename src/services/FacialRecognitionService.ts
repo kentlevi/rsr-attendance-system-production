@@ -236,12 +236,22 @@ export class FacialRecognitionService {
     return profileId;
   }
 
+  /**
+   * Verify a captured face image and return the matched employee id.
+   *
+   * Primary path: extract the descriptor locally (still client-side so we
+   * don't ship raw photos over the wire), then POST it to /api/face-match
+   * where the server compares against `facialRecognitionProfiles` via the
+   * Firebase Admin SDK. The kiosk + employee portal no longer need to LIST
+   * the entire employees collection client-side.
+   *
+   * Fallback path: when the network call fails (offline, server cold-start
+   * timeout, etc.) we fall back to local matching against this.profiles —
+   * hydrated from IndexedDB cache or Firestore depending on online state.
+   * This keeps the offline-first contract intact.
+   */
   async verifyFace(base64Image: string): Promise<string | null> {
     if (!base64Image) return null;
-
-    if (this.profiles.length === 0) {
-      await this.loadProfiles();
-    }
 
     const descriptor = await this.extractFaceDescriptor(base64Image);
     if (!descriptor) return null;
@@ -249,54 +259,69 @@ export class FacialRecognitionService {
     const settings = settingsService.getSettings();
     const threshold = settings.facialRecognitionThreshold || 0.65;
 
+    // --- Primary: server-side match ----------------------------------------
+    if (!isOffline()) {
+      try {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 8000);
+        const resp = await fetch('/api/face-match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ descriptor, threshold }),
+          signal: ac.signal,
+        });
+        clearTimeout(timer);
+        if (resp.ok) {
+          const data = (await resp.json()) as { employeeId: string | null };
+          return data.employeeId;
+        }
+        console.warn('Server face-match returned non-OK status — falling back to local match.', resp.status);
+      } catch (err) {
+        console.warn('Server face-match unreachable — falling back to local match.', err);
+      }
+    }
+
+    // --- Fallback: local match against cached profiles ---------------------
+    if (this.profiles.length === 0) {
+      await this.loadProfiles();
+    }
+
     let bestMatchEmployeeId: string | null = null;
-    let minSimilarity = threshold; // Threshold for cosine similarity (1.0 is perfect match)
-    
+    let minSimilarity = threshold;
 
     for (const profile of this.profiles) {
       const encodings = this.parseFaceEncodings(profile.faceDataEncodings);
-        
       if (!encodings || !Array.isArray(encodings) || encodings.length === 0) continue;
 
       for (const savedDescriptorArray of encodings) {
-         if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
-          
-          let similarity = 0;
-          try {
-            // First try built-in similarity if it exists in this version
-            if (this.human.match && this.human.match.similarity) {
-              similarity = this.human.match.similarity(descriptor, savedDescriptorArray);
-            } else {
-               throw new Error("Fallback");
-            }
-          } catch (e) {
-            // Fallback manual Cosine Similarity
-            let dotProduct = 0;
-            let normA = 0;
-            let normB = 0;
-            for (let i = 0; i < descriptor.length; i++) {
-              const a = descriptor[i] || 0;
-              const b = savedDescriptorArray[i] || 0;
-              dotProduct += a * b;
-              normA += a * a;
-              normB += b * b;
-            }
-            if (normA === 0 || normB === 0) {
-              similarity = 0;
-            } else {
-              similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-            }
+        if (!savedDescriptorArray || !Array.isArray(savedDescriptorArray)) continue;
+
+        let similarity = 0;
+        try {
+          if (this.human.match && this.human.match.similarity) {
+            similarity = this.human.match.similarity(descriptor, savedDescriptorArray);
+          } else {
+            throw new Error("Fallback");
           }
-          
-          if (isNaN(similarity) || similarity == null) {
-            similarity = 0;
+        } catch {
+          // Manual cosine similarity
+          let dotProduct = 0, normA = 0, normB = 0;
+          for (let i = 0; i < descriptor.length; i++) {
+            const a = descriptor[i] || 0;
+            const b = savedDescriptorArray[i] || 0;
+            dotProduct += a * b;
+            normA += a * a;
+            normB += b * b;
           }
-          
-          if (similarity > minSimilarity) {
-            // We want the HIGHEST similarity
-            minSimilarity = similarity;
-            bestMatchEmployeeId = profile.employeeId;
-          }
+          similarity = (normA === 0 || normB === 0) ? 0 : dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        if (isNaN(similarity) || similarity == null) similarity = 0;
+
+        if (similarity > minSimilarity) {
+          minSimilarity = similarity;
+          bestMatchEmployeeId = profile.employeeId;
+        }
       }
     }
 
